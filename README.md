@@ -1,47 +1,35 @@
 # FrozenApps
 
-FrozenApps is an iPhone and iPad-first sideloading project with a green, white, and blue interface, subtle animated particles, and three main areas: **Signer**, **Settings**, and **Files**.
+FrozenApps is an iPhone/iPad-first sideloading installer. The planned workflow pairs the device, authenticates for signing, provisions/signs an IPA, installs it, and offers a local files library—all from the device where the supported iOS version allows it.
 
-## Current app features
+## Installer engine
 
-- First-launch terms screen; acceptance is saved locally.
-- Native Sign in with Apple UI. This signs the user into an app identity flow; it is **not** the Apple Account developer sign-in used by an IPA signing engine.
-- Local IPA import from Files, local file listing, and deletion.
-- Developer Mode guidance that explains the steps the user must take on the device.
-- Optional local notifications and a test alert.
-- No FrozenApps database or server upload is implemented in this version.
+FrozenApps integrates the source of [SideInstaller by FrizzleM](https://github.com/FrizzleM/SideInstaller) as a pinned Git submodule at `Vendor/SideInstaller`. The upstream engine implements device pairing, LocalDevVPN/tunnel communication, Apple developer-session authentication with a two-factor callback, certificate/App ID/provisioning setup, IPA signing, and installation.
 
-## Important: the sideloading engine is not complete yet
+FrozenApps adds its own green/white/blue branding, subtle animated white particles, local terms notice, and three tabs: Signer, Settings, Files.
 
-The current source is an app interface and local file library; it does **not** yet do the complete SideInstaller-style workflow. In particular, it does not perform on-device Apple developer authentication, Anisette, device pairing, provisioning-profile/certificate creation, IPA signing, device installation, or pairing-file handoff to SideStore.
+## Compatibility and requirements
 
-Those steps require a real on-device engine—not just an Apple sign-in button or a Developer Mode help screen. We must not show a successful signing/installation status until the underlying operation actually succeeds.
+The upstream engine's requirements are version-dependent. Its documented self-pair workflow targets iOS/iPadOS 27; iOS 17.4–26.7 requires an existing pairing file, and versions below 17.4 are listed as unsupported. A supported device, working Wi-Fi/local-network access, the required LocalDevVPN setup, account eligibility and physical-device testing are still necessary. Developer Mode, when required, must be enabled by the device owner in Settings.
 
-## SideInstaller research
+## Build validation
 
-The upstream [SideInstaller repository](https://github.com/FrizzleM/SideInstaller) documents an on-device pipeline that combines remote pairing, a LocalDevVPN-style network tunnel, Apple developer-account authentication, IPA signing, and installation. Its documented compatibility is version-sensitive: iOS 27+ can pair on-device, iOS 17.4–26.7 requires an existing pairing file, and versions below iOS 17.4 are listed as unsupported. These are SideInstaller's stated compatibility notes, not a claim that FrozenApps supports those workflows today.
+Prerequisites on a Mac: Xcode 27, Rust (rustup), XcodeGen, and Git with submodule support.
 
-SideInstaller's source licence is custom and non-commercial. It requires attribution for incorporated code and restricts commercial use and distribution of its compiled releases/derivatives. FrozenApps should not copy the upstream engine into a public IPA build without confirming that the planned use and distribution are permitted. See the upstream [licence](https://github.com/FrizzleM/SideInstaller/blob/main/LICENSE.md) before reusing code.
+```bash
+git clone --recurse-submodules https://github.com/itzmnyzzzXD/frozenapps.git
+cd frozenapps
+bash scripts/build-engine.sh
+```
 
-## Build an unsigned IPA
-
-The GitHub Actions workflow builds an **unsigned** iOS app and packages it as `FrozenApps-unsigned.ipa`.
-
-1. Open this repository's **Actions** tab.
-2. Select **Build FrozenApps IPA**.
-3. Open the latest completed successful run.
-4. Download the **FrozenApps-iOS-build** artifact and extract the ZIP.
-
-The output is a build artifact, not a ready-to-install signed app. It needs a supported signing method before ordinary installation on iOS. This repository does not contain signing certificates or provisioning profiles.
+GitHub Actions builds the Rust engine and iOS app and uploads the build log only. It does not publish an IPA because the upstream engine uses a custom licence with restrictions around redistribution and monetization. Obtain written permission from the upstream copyright holder before distributing a compiled derivative. The upstream licence is preserved in the submodule.
 
 ## Privacy
 
-Preferences, terms acceptance, Apple sign-in profile fields, and imported IPA files are kept in app-local storage in the current version. This version does not send those fields or files to a FrozenApps database. The native Sign in with Apple flow does not expose the Apple Account password to FrozenApps. No two-factor verification codes are requested by the current implementation.
+FrozenApps does not operate a FrozenApps-owned credential database. Apple Account credentials are stored on the device by the upstream code using Keychain and are used to authenticate with Apple. The selected Anisette provider may also receive protocol data required for authentication, so local storage does not mean all network traffic stays on-device. Review the source and terms before entering credentials.
 
-Local-only storage is a technical design choice, not a guarantee of legal immunity. The app's terms should describe actual behavior accurately and should not claim that a privacy policy prevents every possible legal claim.
+## Attribution
 
-## Project
+**SideInstaller by FrizzleM** — https://github.com/FrizzleM/SideInstaller
 
-- Bundle identifier: `com.itzmnyzzz.frozenapps`
-- Minimum iOS version: `16.0`
-- UI: SwiftUI
+FrozenApps is a separate project with its own branding and UI modifications. The pinned upstream source and licence are preserved as a Git submodule. No official SideInstaller IPA is copied or rehosted by this repository.
