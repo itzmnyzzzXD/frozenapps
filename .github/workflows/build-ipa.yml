@@ -12,10 +12,12 @@ jobs:
   build:
     runs-on: xcode-27
     steps:
-      - name: Checkout including pinned installer engine
+      - name: Checkout FrozenApps source
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
+
+      - name: Prepare pinned installer engine (sparse checkout)
+        shell: bash
+        run: bash scripts/prepare-engine-source.sh
 
       - name: Select Xcode and install Rust toolchain
         shell: bash
@@ -53,6 +55,7 @@ jobs:
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
             build | tee "$GITHUB_WORKSPACE/build.log"
 
+      # No IPA is published until binary redistribution permissions are obtained.
       - name: Upload build diagnostics only
         if: always()
         uses: actions/upload-artifact@v4

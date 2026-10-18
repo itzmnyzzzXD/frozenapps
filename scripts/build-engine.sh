@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
-git submodule update --init --recursive Vendor/SideInstaller
+bash scripts/prepare-engine-source.sh
 
 if ! command -v cargo >/dev/null 2>&1; then
   echo "Rust is required. Install rustup from https://rustup.rs and rerun this script." >&2
