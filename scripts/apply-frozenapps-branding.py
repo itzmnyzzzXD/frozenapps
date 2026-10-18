@@ -150,6 +150,18 @@ replace_once(
     /// Notice for iOS below 27'''
 )
 
+replace_once(
+    "ios-app/ContentView.swift",
+    "@State private var showSettings = false",
+    "// Settings are available in FrozenApps' dedicated bottom tab."
+)
+replace_once(
+    "ios-app/ContentView.swift",
+    """            .toolbar { settingsToolbarItem(isPresented: $showSettings) }
+            .sheet(isPresented: $showSettings) { SettingsView() }""",
+    """            // Settings is a dedicated tab in FrozenApps."""
+)
+
 replace_once("ios-app/AccountViews.swift",
     """Text(L("Don't worry, these are stored locally"))""",
     """Text("Password stored in iOS Keychain · No FrozenApps database")""")
