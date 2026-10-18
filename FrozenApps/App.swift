@@ -134,7 +134,7 @@ struct ContentView: View {
                 VStack(alignment: .leading, spacing: 13) {
                     Text("DEVICE SETUP").font(.system(size: 10, weight: .bold)).tracking(1.5).foregroundStyle(.white.opacity(0.4))
                     HStack(spacing: 12) {
-                        tile("iphone.gen3", .cyan)
+                        tile("iphone.gen3", FrozenPalette.green)
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Developer Mode").font(.system(size: 16, weight: .semibold))
                             Text("Review on-device setup and limitations.")
@@ -152,7 +152,7 @@ struct ContentView: View {
                 Button { showImporter = true } label: {
                     Label("Choose IPA from Files", systemImage: "square.and.arrow.down")
                         .font(.system(size: 14, weight: .semibold)).foregroundStyle(.white)
-                        .frame(maxWidth: .infinity).padding(16).background(.cyan.opacity(0.13), in: RoundedRectangle(cornerRadius: 16))
+                        .frame(maxWidth: .infinity).padding(16).background(FrozenPalette.blue.opacity(0.13), in: RoundedRectangle(cornerRadius: 16))
                 }.buttonStyle(.plain)
                 Text("Importing only copies a file into app storage. A compatible on-device signing method is still needed to sign and install it.")
                     .font(.system(size: 12)).foregroundStyle(.white.opacity(0.42))
@@ -172,7 +172,7 @@ struct ContentView: View {
                             Text("Local notifications").font(.system(size: 14, weight: .semibold))
                             Text("Allow FrozenApps to send its own alerts.").font(.system(size: 12)).foregroundStyle(.white.opacity(0.45))
                         }
-                    }.tint(.cyan).padding(17)
+                    }.tint(FrozenPalette.green).padding(17)
                     Divider().overlay(.white.opacity(0.06))
                     actionRow("Send test notification", "Check local alerts.", "bell.badge") { sendTest() }
                     if signedIn {
@@ -201,7 +201,7 @@ struct ContentView: View {
             }.buttonStyle(.plain)
             if files.isEmpty {
                 VStack(spacing: 12) {
-                    tile("folder", .cyan)
+                    tile("folder", FrozenPalette.green)
                     Text("No IPA files yet").font(.system(size: 17, weight: .semibold))
                     Text("Choose an IPA from the Files app. It will be copied into local app storage.")
                         .font(.system(size: 13)).foregroundStyle(.white.opacity(0.43)).multilineTextAlignment(.center)
@@ -212,7 +212,7 @@ struct ContentView: View {
                     VStack(spacing: 10) {
                         ForEach(files) { file in
                             HStack(spacing: 12) {
-                                Image(systemName: "doc.zipper").foregroundStyle(.cyan).font(.system(size: 20))
+                                Image(systemName: "doc.zipper").foregroundStyle(FrozenPalette.blue).font(.system(size: 20))
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(file.name).font(.system(size: 13, weight: .semibold)).lineLimit(1)
                                     Text(ByteCountFormatter.string(fromByteCount: file.size, countStyle: .file))
@@ -244,7 +244,7 @@ struct ContentView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 19) {
-                    tile("iphone.gen3", .cyan)
+                    tile("iphone.gen3", FrozenPalette.green)
                     Text("Developer Mode").font(.system(size: 24, weight: .bold))
                     step("01", "Open Settings", "On your iPhone or iPad, open Settings, then Privacy & Security.")
                     step("02", "Look for Developer Mode", "Scroll down to Developer Mode if the option is available on your device.")
@@ -370,7 +370,7 @@ struct ContentView: View {
 
     private func policy(_ icon: String, _ title: String, _ detail: String) -> some View {
         HStack(alignment: .top, spacing: 11) {
-            Image(systemName: icon).foregroundStyle(.cyan).frame(width: 27)
+            Image(systemName: icon).foregroundStyle(FrozenPalette.green).frame(width: 27)
             VStack(alignment: .leading, spacing: 5) {
                 Text(title).font(.system(size: 14, weight: .semibold))
                 Text(detail).font(.system(size: 12)).foregroundStyle(.white.opacity(0.5)).fixedSize(horizontal: false, vertical: true)
@@ -380,8 +380,8 @@ struct ContentView: View {
 
     private func step(_ number: String, _ title: String, _ detail: String) -> some View {
         HStack(alignment: .top, spacing: 13) {
-            Text(number).font(.system(size: 12, weight: .bold, design: .monospaced)).foregroundStyle(.cyan)
-                .frame(width: 36, height: 36).background(.cyan.opacity(0.12), in: RoundedRectangle(cornerRadius: 11))
+            Text(number).font(.system(size: 12, weight: .bold, design: .monospaced)).foregroundStyle(FrozenPalette.green)
+                .frame(width: 36, height: 36).background(FrozenPalette.green.opacity(0.12), in: RoundedRectangle(cornerRadius: 11))
             VStack(alignment: .leading, spacing: 6) {
                 Text(title).font(.system(size: 15, weight: .semibold))
                 Text(detail).font(.system(size: 13)).foregroundStyle(.white.opacity(0.52)).fixedSize(horizontal: false, vertical: true)
@@ -432,7 +432,7 @@ private struct InboxItem: Identifiable {
 
 private enum FrozenPalette {
     static let green = Color(red: 0.20, green: 0.88, blue: 0.58)
-    static let blue = Color(red: 0.32, green: 0.66, blue: 1.00)
+    static let blue = Color(red: 0.28, green: 0.65, blue: 1.00)
 }
 
 private struct ParticleField: View {
