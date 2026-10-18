@@ -4,23 +4,33 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 SUBMODULE="Vendor/SideInstaller"
+UPSTREAM="https://github.com/FrizzleM/SideInstaller.git"
 
-if [ ! -f .gitmodules ]; then
-  echo "Missing .gitmodules; installer engine source cannot be fetched." >&2
-  exit 2
-fi
 PIN="$(git ls-tree HEAD "$SUBMODULE" | awk '{print $3}')"
 if [ -z "$PIN" ]; then
   echo "No pinned SideInstaller commit found in the FrozenApps tree." >&2
   exit 2
 fi
 
-# Use a shallow, blob-filtered submodule checkout and sparse checkout so the
-# upstream repository's build caches and prebuilt IPA artifacts are not pulled.
-git -c protocol.version=2 submodule update --init --depth 1 --filter=blob:none --no-checkout "$SUBMODULE"
+# The upstream Git tree also contains large build caches and prebuilt IPA
+# files. Clone without checking files out, enable sparse checkout first, and
+# only materialize source directories needed to compile the engine.
+if [ ! -e "$SUBMODULE/.git" ]; then
+  if [ -d "$SUBMODULE" ]; then
+    if [ -n "$(find "$SUBMODULE" -mindepth 1 -maxdepth 1 -print -quit)" ]; then
+      echo "$SUBMODULE exists but is not a Git checkout. Remove it and retry." >&2
+      exit 2
+    fi
+    rmdir "$SUBMODULE"
+  fi
+  git clone --filter=blob:none --no-checkout --depth 1 --branch main "$UPSTREAM" "$SUBMODULE"
+fi
 
 git -C "$SUBMODULE" sparse-checkout init --cone
 git -C "$SUBMODULE" sparse-checkout set ios-app ios-live-activity rust-core
+if ! git -C "$SUBMODULE" cat-file -e "$PIN^{commit}" 2>/dev/null; then
+  git -C "$SUBMODULE" fetch --filter=blob:none --depth 1 origin "$PIN"
+fi
 git -C "$SUBMODULE" checkout --detach "$PIN"
 
 test -f "$SUBMODULE/ios-app/Engine.swift"
