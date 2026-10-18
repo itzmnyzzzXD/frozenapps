@@ -17,7 +17,7 @@ The upstream engine's requirements are version-dependent. Its documented self-pa
 Prerequisites on a Mac: Xcode 27, Rust (rustup), XcodeGen, and Git with submodule support.
 
 ```bash
-git clone --recurse-submodules https://github.com/itzmnyzzzXD/frozenapps.git
+git clone https://github.com/itzmnyzzzXD/frozenapps.git
 cd frozenapps
 bash scripts/build-engine.sh
 ```

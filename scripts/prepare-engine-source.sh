@@ -31,7 +31,7 @@ git -C "$SUBMODULE" sparse-checkout set ios-app ios-live-activity rust-core
 if ! git -C "$SUBMODULE" cat-file -e "$PIN^{commit}" 2>/dev/null; then
   git -C "$SUBMODULE" fetch --filter=blob:none --depth 1 origin "$PIN"
 fi
-git -C "$SUBMODULE" checkout --detach "$PIN"
+git -C "$SUBMODULE" checkout --detach --force "$PIN"
 
 test -f "$SUBMODULE/ios-app/Engine.swift"
 test -f "$SUBMODULE/rust-core/Cargo.toml"
