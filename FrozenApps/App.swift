@@ -28,7 +28,18 @@ struct ContentView: View {
 
     var body: some View {
         ZStack {
-            Color(red: 0.035, green: 0.04, blue: 0.06).ignoresSafeArea()
+            ZStack {
+                LinearGradient(
+                    colors: [
+                        Color(red: 0.025, green: 0.07, blue: 0.12),
+                        Color(red: 0.025, green: 0.06, blue: 0.09),
+                        Color(red: 0.025, green: 0.10, blue: 0.08)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ).ignoresSafeArea()
+                ParticleField().ignoresSafeArea().allowsHitTesting(false)
+            }
             VStack(spacing: 0) {
                 header
                 if termsAccepted {
@@ -56,7 +67,7 @@ struct ContentView: View {
                 .frame(width: 44, height: 44).background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 14))
             VStack(alignment: .leading, spacing: 3) {
                 Text("FrozenApps").font(.system(size: 21, weight: .bold))
-                Text("ON-DEVICE WORKSPACE").font(.system(size: 9, weight: .semibold)).tracking(1.5).foregroundStyle(.white.opacity(0.4))
+                Text("ON-DEVICE SIGNING WORKSPACE").font(.system(size: 9, weight: .semibold)).tracking(1.5).foregroundStyle(.white.opacity(0.4))
             }
             Spacer()
             if termsAccepted {
@@ -70,7 +81,7 @@ struct ContentView: View {
     private var termsPage: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                tile("hand.raised.fill", .cyan)
+                tile("hand.raised.fill", FrozenPalette.green)
                 Text("Your device. Your data.").font(.system(size: 30, weight: .bold, design: .rounded))
                 Text("Please review and accept these terms before continuing.")
                     .font(.system(size: 15)).foregroundStyle(.white.opacity(0.55))
@@ -257,7 +268,7 @@ struct ContentView: View {
                         Text(item.title).font(.system(size: 15, weight: .semibold))
                         Text(item.detail).font(.system(size: 13)).foregroundStyle(.secondary)
                         Text(item.date).font(.system(size: 11)).foregroundStyle(.tertiary)
-                    }.padding(.vertical, 5).listRowBackground(.white.opacity(0.035))
+                    }.padding(.vertical, 5).listRowBackground(Color.white.opacity(0.035))
                 }
             }.scrollContentBackground(.hidden).background(Color(red: 0.035, green: 0.04, blue: 0.06))
                 .navigationTitle("Notifications").navigationBarTitleDisplayMode(.inline)
@@ -416,4 +427,33 @@ private struct InboxItem: Identifiable {
     let title: String
     let detail: String
     let date: String
+}
+
+
+private enum FrozenPalette {
+    static let green = Color(red: 0.20, green: 0.88, blue: 0.58)
+    static let blue = Color(red: 0.32, green: 0.66, blue: 1.00)
+}
+
+private struct ParticleField: View {
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 12.0, paused: false)) { timeline in
+            Canvas { context, size in
+                guard size.width > 0, size.height > 0 else { return }
+                let time = timeline.date.timeIntervalSinceReferenceDate
+                for index in 0..<42 {
+                    let seed = Double(index)
+                    let rawX = (sin(seed * 12.9898) * 0.5 + 0.5) * size.width
+                    let baseY = (cos(seed * 78.233) * 0.5 + 0.5) * size.height
+                    let speed = 1.2 + (Double(index % 5) * 0.55)
+                    var y = (baseY - time * speed).truncatingRemainder(dividingBy: size.height)
+                    if y < 0 { y += size.height }
+                    let diameter = 1.2 + Double(index % 3) * 0.75
+                    let rect = CGRect(x: rawX, y: y, width: diameter, height: diameter)
+                    context.fill(Path(ellipseIn: rect), with: .color(Color.white.opacity(0.12 + Double(index % 5) * 0.055)))
+                }
+            }
+        }
+        .accessibilityHidden(true)
+    }
 }
