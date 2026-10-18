@@ -4,9 +4,11 @@ on:
   workflow_dispatch:
   push:
     branches: [main, master]
+    tags:
+      - "v*"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -57,3 +59,10 @@ jobs:
             build.log
           if-no-files-found: warn
           retention-days: 14
+
+      - name: Publish IPA to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v3
+        with:
+          files: FrozenApps-unsigned.ipa
+          generate_release_notes: true
