@@ -101,12 +101,12 @@ replace_once(
         }
     }''',
     '''    private enum Page: Hashable {
-        case install, network, settings, files
+        case install, network, tools, settings, files
 
         var wash: Backdrop.Level {
             switch self {
             case .install, .network, .files: .bright
-            case .settings: .dark
+            case .tools, .settings: .dark
             }
         }
     }'''
@@ -137,6 +137,14 @@ replace_once(
             FrozenNetworkView()
                 .tabItem { Label("Network", systemImage: "point.3.connected.trianglepath.dotted") }
                 .tag(Page.network)
+            ToolsView(pairingManager: pairingManager,
+                      certManager: certManager,
+                      locationManager: locationManager,
+                      entitlementsManager: entitlementsManager,
+                      appsManager: appsManager,
+                      sideBySideManager: sideBySideManager)
+                .tabItem { Label("Tools", systemImage: "wrench.and.screwdriver") }
+                .tag(Page.tools)
             FrozenFilesView()
                 .tabItem { Label("Files", systemImage: "folder") }
                 .tag(Page.files)
