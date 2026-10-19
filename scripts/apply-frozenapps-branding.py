@@ -641,7 +641,7 @@ replace_section(
                 .padding(.vertical, 12)
                 .fieldBackground()
                 .onChange(of: code) { _, typed in
-                    let digits = String(typed.filter(\\.isNumber).prefix(6))
+                    let digits = String(typed.filter(\.isNumber).prefix(6))
                     if digits != typed { code = digits }
                 }
 
@@ -691,7 +691,7 @@ replace_section(
         if prompt.method != .device {
             option(L("Send a code to my Apple devices"), "laptopcomputer.and.iphone", .devices)
         }
-        ForEach(Array(prompt.numbers.enumerated()), id: \\.element.id) { _, number in
+        ForEach(Array(prompt.numbers.enumerated()), id: \.element.id) { _, number in
             let inUse = number.id == prompt.selectedNumberId
             if number.takesTexts && !(inUse && prompt.method == .sms) {
                 option(L("Text %@", number.number), "message.fill", .sms(number.id))
@@ -1213,7 +1213,7 @@ replace_once(
                         .tracking(0.7)
                 }
                 .font(.system(size: 8, weight: .heavy, design: .rounded))
-                .foregroundStyle(isActive ? Theme.accent2 : .secondary)
+                .foregroundStyle(isActive ? Theme.accent2 : Color.white.opacity(0.46))
             }
 
             Spacer(minLength: 6)
