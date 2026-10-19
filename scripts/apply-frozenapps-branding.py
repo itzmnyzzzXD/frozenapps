@@ -274,6 +274,28 @@ replace_once(
     '"https://github.com/itzmnyzzzXD/frozenapps"'
 )
 
+# Add a branded control-center card without changing the existing signer engine flow.
+replace_once(
+    "ios-app/ContentView.swift",
+    '''                    header.cascadeItem(0)
+                    if updateChecker.showBanner {''',
+    '''                    header.cascadeItem(0)
+                    FrozenHomePanel(
+                        wifiConnected: engine.wifiConnected,
+                        tunnelConnected: engine.vpnConnected,
+                        deviceSummary: engine.deviceSummary
+                    ) {
+                        NotificationCenter.default.post(name: .frozenAppsOpenNetwork, object: nil)
+                    }
+                    .cascadeItem(1)
+                    if updateChecker.showBanner {'''
+)
+replace_once(
+    "ios-app/ContentView.swift",
+    '''                    appCard.cascadeItem(1)''',
+    '''                    appCard.cascadeItem(2)'''
+)
+
 # Use FrozenApps identity in the actual signer header and user-facing messaging.
 replace_once(
     "ios-app/ContentView.swift",
