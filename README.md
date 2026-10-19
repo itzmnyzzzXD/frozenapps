@@ -4,11 +4,13 @@ FrozenApps is an iPhone/iPad-first IPA signing and installation app project buil
 
 ## Status and release notes
 
-The engine integration and FrozenApps branding are merged into `main`. GitHub Actions compiled the native Rust pairing/signing engine and iOS app for the `v1.0.2` tag, then passed bundle checks for the app identifier, display name, version/build, minimum OS, Live Activity extension, and arm64 executable/native library.
+The engine integration and FrozenApps branding are merged into `main`. GitHub Actions compiled the native Rust pairing/signing engine and iOS app for the `v1.0.2` tag, and passed bundle checks for the app identifier, display name, version/build, minimum OS, Live Activity extension, and arm64 executable/native library.
 
-**Important: the GitHub `v1.0.2` release currently reports zero attached assets.** The tag points to source commit `eac167c4493046405278fa0a14315529e2622a3b`; the successful CI run built and validated the app, but intentionally uploaded build diagnostics only—not an IPA. The older `v1.0.1` release does have an IPA asset, but it predates the engine integration and is not the current engine-enabled build. The repository's `latest_version.txt` therefore remains at `1.0.1` until a legitimate, installable release asset is available.
+**The `v1.0.2` GitHub Release currently has no attached assets.** The older `v1.0.1` release has an IPA asset, but it predates the engine integration and is not the current engine-enabled build. The repository's `latest_version.txt` remains `1.0.1` until a valid, downloadable release is published.
 
-A public binary release also needs explicit written authorization for distribution of the compiled derivative under the upstream custom licence, plus physical-iPad testing. CI success is a compile/package-structure check, not proof that pairing, Apple authentication, provisioning, signing, or installation works on a real device. See [release readiness](RELEASE_READINESS.md).
+The build workflow now packages the compiled app as `FrozenApps-unsigned.ipa`, checks the archive structure, calculates a SHA-256 checksum, and stores the output as a GitHub Actions artifact. Uploading the IPA to a public Release is intentionally gated by the repository variable `FROZENAPPS_BINARY_RELEASE_ALLOWED=true`. Set that variable only after written permission for binary distribution has been obtained from the upstream copyright holder. Then edit and save the existing release to trigger the release workflow again. The workflow responds to release publication and edits, so an already-created tag/release can be processed without moving the tag.
+
+**The generated IPA is unsigned.** It is not a ready-to-install signed app, and CI success is not proof that pairing, Apple authentication, provisioning, signing, or installation works on a physical iPad. Physical-device testing remains required; see [release readiness](RELEASE_READINESS.md).
 
 ## What is included
 
@@ -46,10 +48,10 @@ bash scripts/build-engine.sh
 bash scripts/validate-build.sh
 ```
 
-GitHub Actions runs the source build and bundle validation and uploads diagnostic logs only. It does not export or publish the compiled app/IPA.
+GitHub Actions builds and validates the app, packages an unsigned IPA, and stores the build output as a workflow artifact. It uploads the IPA to a public release only when the binary-release authorization variable described above is enabled.
 
 ## Attribution and licence
 
 **SideInstaller by FrizzleM** — https://github.com/FrizzleM/SideInstaller
 
-The upstream source is pinned as a Git submodule. The full upstream custom licence is also included at [LICENSES/SideInstaller-LICENSE.md](LICENSES/SideInstaller-LICENSE.md) so it is visible in source archives. FrozenApps changes the app branding, privacy terms, navigation, and local file-library experience. Source distribution must retain the upstream copyright and licence notices and comply with the licence conditions. Obtain explicit written authorization before distributing compiled derivatives or using the engine commercially.
+The upstream source is pinned as a Git submodule. The full upstream custom licence is also kept at [LICENSES/SideInstaller-LICENSE.md](LICENSES/SideInstaller-LICENSE.md) so it is visible in source archives. Source distribution must retain the upstream copyright and licence notices and comply with the licence conditions. Obtain explicit written authorization before distributing compiled derivatives or using the engine commercially.
