@@ -774,11 +774,11 @@ replace_once(
         }
     }''',
     '''    private enum Page: Hashable {
-        case install, network, tools, settings, files
+        case install, center, network, tools, settings, files
 
         var wash: Backdrop.Level {
             switch self {
-            case .install, .network, .files: .bright
+            case .install, .center, .network, .files: .bright
             case .tools, .settings: .dark
             }
         }
@@ -985,6 +985,9 @@ replace_once(
             ContentView()
                 .tabItem { Label("Signer", systemImage: "signature") }
                 .tag(Page.install)
+            FrozenControlCenterView()
+                .tabItem { Label("Frozen", systemImage: "snowflake") }
+                .tag(Page.center)
             FrozenNetworkView()
                 .tabItem { Label("Network", systemImage: "point.3.connected.trianglepath.dotted") }
                 .tag(Page.network)
