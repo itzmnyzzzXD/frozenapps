@@ -54,16 +54,16 @@ struct FrozenNetworkView: View {
                 }
                 .frame(width: 48, height: 48)
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("LOCAL NETWORK STUDIO")
+                    Text("PAIRING SETUP")
                         .font(.system(size: 9, weight: .heavy, design: .rounded))
                         .tracking(1.5)
                         .foregroundStyle(Theme.accent2)
-                    Text("See what your iPad sees.")
+                    Text("Pair with FrozenApps")
                         .font(.system(size: 23, weight: .bold, design: .rounded))
                         .tracking(-0.5)
                 }
             }
-            Text("Check Wi-Fi connectivity, inspect local addresses, and request permission to discover nearby Bonjour services.")
+            Text("Prepare this iPad for pairing. Check Local Network access, confirm Wi-Fi, and inspect local addresses before connecting a device.")
                 .font(.system(size: 13))
                 .foregroundStyle(.white.opacity(0.56))
                 .fixedSize(horizontal: false, vertical: true)
@@ -145,7 +145,7 @@ struct FrozenNetworkView: View {
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: diagnostics.isBrowsing ? "dot.radiowaves.left.and.right" : "shield.lefthalf.filled")
-                        Text(diagnostics.isBrowsing ? "Scanning local network…" : "Check Local Network access")
+                        Text(diagnostics.isBrowsing ? "Checking nearby devices…" : "Check pairing access")
                         Spacer()
                         if diagnostics.isBrowsing {
                             ProgressView().tint(.white).controlSize(.small)

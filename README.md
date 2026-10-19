@@ -1,43 +1,39 @@
 # FrozenApps
 
-FrozenApps is an iPhone/iPad-first IPA signing and installation app project built around the pinned [SideInstaller by FrizzleM](https://github.com/FrizzleM/SideInstaller) engine. Its goal is to pair a supported device, authenticate for signing, provision and sign an IPA, install it, and keep a local library of IPA files—all from the device where the required iOS workflow supports it.
+FrozenApps is an iPhone/iPad-first signing and installation workspace. It brings device pairing, Apple developer authentication, provisioning, IPA signing, app installation, local network diagnostics, and a personal IPA library into one native SwiftUI app.
 
-## Status and release notes
+## Current build
 
-FrozenApps is built around the pinned [SideInstaller by FrizzleM](https://github.com/FrizzleM/SideInstaller) engine, with a separate FrozenApps UI, library, icon and setup flow. The `v1.0.3` UI redesign is being developed in [pull request #2](https://github.com/itzmnyzzzXD/frozenapps/pull/2). It introduces a new violet/ice-cyan visual system, a control-center style Signer home, a Local Network diagnostics tab, and a five-tab layout that keeps the existing engine Tools, Files and Settings available.
+The v1.0.3 redesign uses a custom violet-and-ice-cyan identity, five purpose-built tabs, redesigned Apple Account setup/edit screens, refreshed utility icons, a pairing-first onboarding path, and a more visible live install-progress ring with percentages. Downloading a custom IPA from a link also shows a numeric percentage when the server reports transfer progress.
 
-The redesign sets the app version to `1.0.3` (build 4). It must be merged and successfully rebuilt before a new IPA can contain these UI changes; the existing release tag is not moved by this branch.
-
-The build workflow packages the compiled app as `FrozenApps-unsigned.ipa`, checks the archive structure, calculates a SHA-256 checksum, and stores the output as a GitHub Actions artifact. Release publication/edit events and version-tag pushes upload the IPA and checksum to the matching GitHub Release without a repository-variable gate. The IPA is still **unsigned** and is not a ready-to-install signed app.
-
-**The generated IPA is unsigned.** It is not a ready-to-install signed app, and CI success is not proof that pairing, Apple authentication, provisioning, signing, or installation works on a physical iPad. Physical-device testing remains required; see [release readiness](RELEASE_READINESS.md).
+The UI changes are applied by `scripts/apply-frozenapps-branding.py` to the pinned engine checkout during every build. That keeps the customised screens reproducible rather than leaving edits in a generated directory that disappears on the next build. The existing pairing, Apple authentication, two-factor, provisioning, signing, and installation callbacks are retained.
 
 ## What is included
 
-- **Signer:** the engine's on-device pairing, Apple developer-session authentication and two-factor callbacks, certificate/App ID/provisioning setup, IPA signing, and installation workflow.
-- **Custom IPA workflow:** choose a local IPA or direct download link from the Signer screen, import a custom IPA from Files, load it into Signer, and run the engine's install/sign steps.
-- **Files library:** keep multiple IPA packages separately from the signer's working copy, validate that imports are ZIP packages with readable app metadata, search and sort local packages by name, recency, or size, inspect bundle ID/version/size/modification date, calculate and copy a SHA-256 checksum, load a package into Signer, and delete files with confirmation. Multi-file imports report which package is being checked.
-- **Settings:** account/session settings and the upstream engine's diagnostics/logs, plus an in-app privacy and licence notice.
-- **FrozenApps UI:** Custom violet/ice-cyan styling, custom Signer header and control-center card, animated backdrop, app icon, and Signer / Network / Tools / Files / Settings tabs.
-- **Local Network studio:** Active route and Wi-Fi status, interface details, local IPv4 address display/copy, and opt-in Bonjour discovery with iOS Local Network permission messaging. It does not bypass the engine's pairing or LocalDevVPN requirements.
+- **Signer:** on-device pairing, Apple developer-session authentication and two-factor callbacks, certificate/App ID/provisioning setup, IPA signing, and installation.
+- **Pairing and network:** Local Network diagnostics, active route and Wi-Fi status, local IPv4 display/copy, and opt-in Bonjour discovery. The app does not bypass iOS privacy prompts or replace required pairing/tunnel setup.
+- **Custom IPA workflow:** import a local IPA or fetch one from a direct download link, view transfer progress, load a package into Signer, and run signing/install steps.
+- **Files library:** store multiple IPA packages separately from the signer's working copy; validate ZIP structure and app metadata; search/sort by name, date, and size; view bundle ID, version and SHA-256; load, or delete with confirmation.
+- **Tools and settings:** account/session management, pairing tools, certificates, entitlements, location tools, managed apps, language, tunnel settings, logs, privacy and licence information.
+- **Branding:** new FrozenApps app mark and utility glyphs, violet/ice-cyan visual system, glass surfaces, custom onboarding and account editor, animated backdrop, and Signer / Network / Tools / Files / Settings tabs.
 
-## iPad compatibility
+## Compatibility
 
-The upstream engine documents device self-pairing for iOS/iPadOS 27. On iOS/iPadOS 17.4–26.7, an existing pairing file is required; the upstream documentation says generating that pairing file requires a computer. Versions below 17.4 are listed as unsupported. Wi-Fi/local-network access, the required LocalDevVPN setup, eligible Apple Account access, and a user-approved Developer Mode workflow may also be necessary.
+The app targets iOS/iPadOS 17.4 and later, but the supported pairing method depends on OS version. Self-pairing is available only on supported newer versions. On iOS/iPadOS 17.4–26.7, an existing pairing file is required, and creating that pairing file may require a computer. LocalDevVPN, local-network access, eligible Apple Account access, Apple service availability, and user-approved Developer Mode may also be necessary.
 
-That means "computer-free" is not a promise for every iPadOS version. Check [the upstream requirements](https://github.com/FrizzleM/SideInstaller#requirements) before attempting setup.
+"Computer-free" is not a promise for every version or device. Read [release readiness](RELEASE_READINESS.md) and the compatibility details maintained with the underlying engine before setup.
 
-## Use the custom IPA signer
+## Import a custom IPA
 
-1. Open FrozenApps and review the in-app privacy and terms notice.
-2. Open **Files** and import one or more `.ipa` files. The app checks the archive and its main app metadata before saving each package.
-3. Tap the information icon to review the app name, bundle ID, version, file size, modified date, and SHA-256 checksum. The checksum helps compare the file to a trusted source; it does not prove that an app is safe.
-4. Tap **Load into Signer** on the IPA you want to work with. This creates a separate custom-IPA working copy; the saved library copy stays intact.
-5. In **Signer**, select the custom IPA option and follow the engine's device pairing, authentication, two-factor, provisioning, signing, and installation steps. Read any errors carefully; importing an IPA alone does not sign or install it.
+1. Open **Files** and import one or more `.ipa` files. FrozenApps checks the archive and main app metadata before saving the package.
+2. Open the package details to check its app name, bundle ID, version, size, modified date, and SHA-256 checksum.
+3. Tap **Load into Signer**. This creates a separate working copy; the library copy remains intact.
+4. Open **Signer**, choose the imported IPA, and follow the pairing, authentication, two-factor, provisioning, signing, and installation steps.
+5. Follow any device prompts. Importing an IPA alone does not sign or install it.
 
-Only install apps and files you are authorized to use. Never send your Apple Account password or verification code to anyone in chat or issue reports. Credentials are handled by the upstream auth flow and stored using iOS Keychain, but authentication still makes network requests to Apple and may involve the configured Anisette provider. Local storage is not the same as entirely local authentication.
+Only install apps and files you are authorised to use. Never send your Apple Account password or verification code to anyone in chat or issue reports. Saved passwords use iOS Keychain, but Apple authentication still makes network requests and may use the selected authentication provider. Local storage is not the same as entirely local authentication.
 
-## Build validation
+## Build and validate
 
 Build prerequisites on a Mac: Xcode 27, Rust (rustup), XcodeGen, Python 3, and Git.
 
@@ -49,10 +45,10 @@ bash scripts/build-engine.sh
 bash scripts/validate-build.sh
 ```
 
-GitHub Actions builds and validates the app, packages an unsigned IPA, and stores the build output as a workflow artifact. It uploads the IPA to a public release only when the binary-release authorization variable described above is enabled.
+GitHub Actions compiles the app and native engine, validates the app bundle and architecture, packages `FrozenApps-unsigned.ipa`, and calculates a SHA-256 checksum. The generated IPA is **unsigned**; it is not ready to install as-is. CI compilation also cannot prove that Apple authentication, device pairing, provisioning, signing, or installation works on a physical iPad. Physical-device testing remains necessary.
 
 ## Attribution and licence
 
-**SideInstaller by FrizzleM** — https://github.com/FrizzleM/SideInstaller
+**Required upstream attribution:** SideInstaller by FrizzleM — https://github.com/FrizzleM/SideInstaller.
 
-The upstream source is pinned as a Git submodule. The full upstream custom licence is also kept at [LICENSES/SideInstaller-LICENSE.md](LICENSES/SideInstaller-LICENSE.md) so it is visible in source archives. Source distribution must retain the upstream copyright and licence notices and comply with the licence conditions. Obtain explicit written authorization before distributing compiled derivatives or using the engine commercially.
+The upstream source is pinned as a Git submodule. The full upstream custom licence is kept at [LICENSES/SideInstaller-LICENSE.md](LICENSES/SideInstaller-LICENSE.md). Source distributions must retain the copyright and licence notices and clearly identify modifications. The upstream licence restricts redistribution of compiled derivatives and commercial use without written authorization; read it before redistributing an IPA.

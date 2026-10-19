@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Apply FrozenApps branding and navigation to the pinned SideInstaller source."""
 from pathlib import Path
+import re
 import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -20,6 +21,24 @@ def replace_once(relative_path: str, old: str, new: str) -> None:
         path.write_text(text.replace(old, new, 1), encoding="utf-8")
     else:
         raise SystemExit(f"Expected one patch target in {relative_path}; found {count}: {old[:80]!r}")
+
+def replace_section(relative_path: str, start_marker: str, end_marker, replacement: str) -> None:
+    """Replace one complete Swift declaration in the pinned source, idempotently."""
+    path = VENDOR / relative_path
+    source = path.read_text(encoding="utf-8")
+    if replacement.strip() in source:
+        return
+    start = source.find(start_marker)
+    if start < 0:
+        raise SystemExit(f"Could not find section start in {relative_path}: {start_marker!r}")
+    if end_marker is None:
+        end = len(source)
+    else:
+        end = source.find(end_marker, start + len(start_marker))
+        if end < 0:
+            raise SystemExit(f"Could not find section end in {relative_path}: {end_marker!r}")
+    path.write_text(source[:start] + replacement.rstrip() + "\n" + source[end:], encoding="utf-8")
+
 
 # Keep SideInstaller's protocol/pairing host identifiers stable; only update app
 # bundle, Keychain service and visible labels.
@@ -85,6 +104,660 @@ for path in APP.glob("*.swift"):
     changed = changed.replace("SideInstaller walks you through it", "FrozenApps walks you through it")
     if changed != text:
         path.write_text(changed, encoding="utf-8")
+
+
+# Fully rework the first-run Apple-account setup and account editor. These views
+# retain AccountStore's Keychain/save callbacks; authentication remains in Engine.
+replace_section(
+    "ios-app/AccountViews.swift",
+    "struct AccountSetupView: View {",
+    "/// Which of the two credential fields has the keyboard.",
+    r'''struct AccountSetupView: View {
+    @AppStorage("hasCompletedAccountSetup") private var hasCompletedAccountSetup = false
+    @EnvironmentObject private var accounts: AccountStore
+    @EnvironmentObject private var loc: Localizer
+
+    @State private var email = ""
+    @State private var password = ""
+    @State private var passwordVisible = false
+    @FocusState private var focus: AccountField?
+
+    private var canSave: Bool {
+        !email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !password.isEmpty
+    }
+
+    var body: some View {
+        ZStack {
+            AppBackground()
+            ScrollView {
+                VStack(spacing: 22) {
+                    brandHeader
+                    credentialsCard
+                    actions
+                    HStack(spacing: 8) {
+                        Image(systemName: "lock.shield.fill")
+                            .foregroundStyle(Theme.accent2)
+                        Text("Your saved password is stored with iOS Keychain. Apple sign-in and developer signing still require network access.")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.48))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 4)
+                }
+                .padding(22)
+                .padding(.top, 24)
+                .frame(maxWidth: 520)
+                .frame(maxWidth: .infinity)
+            }
+            .scrollDismissesKeyboard(.interactively)
+        }
+        .preferredColorScheme(.dark)
+        .task {
+            try? await Task.sleep(for: .milliseconds(650))
+            focus = .email
+        }
+    }
+
+    private var brandHeader: some View {
+        VStack(spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 27, style: .continuous)
+                    .fill(Theme.brand)
+                    .shadow(color: Theme.accent.opacity(0.34), radius: 24, x: 0, y: 12)
+                Circle()
+                    .strokeBorder(.white.opacity(0.22), lineWidth: 1)
+                    .padding(8)
+                Image(systemName: "snowflake")
+                    .font(.system(size: 39, weight: .medium))
+                    .foregroundStyle(.white)
+                    .shadow(color: Theme.accent2.opacity(0.45), radius: 10)
+            }
+            .frame(width: 88, height: 88)
+            .padding(.bottom, 4)
+
+            Text("FROZENAPPS · ACCOUNT SETUP")
+                .font(.system(size: 9, weight: .heavy, design: .rounded))
+                .tracking(1.8)
+                .foregroundStyle(Theme.accent2)
+
+            Text("Pair with FrozenApps")
+                .font(.system(size: 29, weight: .bold, design: .rounded))
+                .tracking(-0.7)
+                .multilineTextAlignment(.center)
+                .foregroundStyle(.white)
+
+            Text("Connect your Apple Account for provisioning, signing and app installs.")
+                .font(.system(size: 13, weight: .medium))
+                .multilineTextAlignment(.center)
+                .foregroundStyle(.white.opacity(0.57))
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: 8) {
+                Label("On-device setup", systemImage: "iphone")
+                Label("Keychain storage", systemImage: "lock.fill")
+            }
+            .font(.system(size: 10, weight: .semibold))
+            .foregroundStyle(.white.opacity(0.73))
+            .padding(.horizontal, 13)
+            .padding(.vertical, 9)
+            .background(.white.opacity(0.055), in: Capsule())
+            .overlay { Capsule().strokeBorder(.white.opacity(0.09), lineWidth: 1) }
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var credentialsCard: some View {
+        VStack(alignment: .leading, spacing: 15) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("APPLE ACCOUNT")
+                    .font(.system(size: 9, weight: .heavy, design: .rounded))
+                    .tracking(1.4)
+                    .foregroundStyle(Theme.accent2)
+                Text("Sign in details")
+                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+            }
+
+            HStack(spacing: 11) {
+                Image(systemName: "envelope")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Theme.accent2)
+                    .frame(width: 21)
+                TextField(L("Email"), text: $email)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .keyboardType(.emailAddress)
+                    .textContentType(.username)
+                    .textFieldStyle(.plain)
+                    .submitLabel(.next)
+                    .focused($focus, equals: .email)
+                    .onSubmit { focus = .password }
+            }
+            .fieldBackground()
+
+            HStack(spacing: 11) {
+                Image(systemName: "lock")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Theme.accent2)
+                    .frame(width: 21)
+                Group {
+                    if passwordVisible {
+                        TextField(L("Password"), text: $password)
+                            .textContentType(.password)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .submitLabel(.done)
+                            .focused($focus, equals: .password)
+                    } else {
+                        SecureField(L("Password"), text: $password)
+                            .textContentType(.password)
+                            .submitLabel(.done)
+                            .focused($focus, equals: .password)
+                    }
+                }
+                .textFieldStyle(.plain)
+
+                Button {
+                    passwordVisible.toggle()
+                } label: {
+                    Image(systemName: passwordVisible ? "eye.slash" : "eye")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.55))
+                        .frame(width: 28, height: 32)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(passwordVisible ? "Hide password" : "Show password")
+            }
+            .fieldBackground()
+
+            Rectangle()
+                .fill(.white.opacity(0.08))
+                .frame(height: 1)
+
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "checkmark.shield.fill")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Theme.accent2)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Protected account storage")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.88))
+                    Text("Your password is stored in iOS Keychain. Sign-in communicates with Apple, and may use the selected authentication provider.")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.white.opacity(0.48))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+        .padding(19)
+        .background {
+            RoundedRectangle(cornerRadius: 25, style: .continuous)
+                .fill(LinearGradient(colors: [.white.opacity(0.075), .white.opacity(0.025)],
+                                     startPoint: .topLeading, endPoint: .bottomTrailing))
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 25, style: .continuous)
+                .strokeBorder(LinearGradient(colors: [.white.opacity(0.2), Theme.accent.opacity(0.2), .white.opacity(0.05)],
+                                             startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
+        }
+    }
+
+    private var actions: some View {
+        VStack(spacing: 13) {
+            Button {
+                accounts.save(appleID: email, password: password)
+                hasCompletedAccountSetup = true
+            } label: {
+                HStack(spacing: 10) {
+                    Text("Continue to FrozenApps")
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                    Spacer()
+                    Image(systemName: "arrow.right")
+                        .font(.system(size: 13, weight: .bold))
+                }
+                .padding(.horizontal, 18)
+            }
+            .buttonStyle(PrimaryButtonStyle())
+            .disabled(!canSave)
+            .opacity(canSave ? 1 : 0.38)
+            .animation(.snappy(duration: 0.25), value: canSave)
+
+            Button("Set this up later") { hasCompletedAccountSetup = true }
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.53))
+                .buttonStyle(.plain)
+        }
+    }
+}'''
+)
+replace_section(
+    "ios-app/AccountViews.swift",
+    "struct AccountEditor: View {",
+    None,
+    r'''struct AccountEditor: View {
+    @EnvironmentObject private var accounts: AccountStore
+    @EnvironmentObject private var loc: Localizer
+    @Environment(\.dismiss) private var dismiss
+
+    let target: AccountEditorTarget
+
+    @State private var email = ""
+    @State private var password = ""
+    @State private var passwordVisible = false
+    @FocusState private var focus: AccountField?
+
+    private var canSave: Bool {
+        !email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !password.isEmpty
+    }
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                AppBackground()
+                ScrollView {
+                    VStack(spacing: 20) {
+                        VStack(spacing: 10) {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                                    .fill(Theme.brand)
+                                Image(systemName: target.account == nil ? "person.crop.circle.badge.plus" : "person.crop.circle.badge.checkmark")
+                                    .font(.system(size: 31, weight: .medium))
+                                    .foregroundStyle(.white)
+                            }
+                            .frame(width: 70, height: 70)
+
+                            Text("FROZENAPPS · ACCOUNT")
+                                .font(.system(size: 9, weight: .heavy, design: .rounded))
+                                .tracking(1.6)
+                                .foregroundStyle(Theme.accent2)
+
+                            Text(target.account == nil ? "Add Apple Account" : "Update Apple Account")
+                                .font(.system(size: 25, weight: .bold, design: .rounded))
+                                .foregroundStyle(.white)
+
+                            Text("Saved account details are reused by the signing workflow on this device.")
+                                .font(.system(size: 12, weight: .medium))
+                                .multilineTextAlignment(.center)
+                                .foregroundStyle(.white.opacity(0.54))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 12)
+
+                        PanelCard {
+                            VStack(alignment: .leading, spacing: 14) {
+                                HStack(spacing: 10) {
+                                    Image(systemName: "envelope")
+                                        .foregroundStyle(Theme.accent2)
+                                        .frame(width: 21)
+                                    TextField(L("Email"), text: $email)
+                                        .textInputAutocapitalization(.never)
+                                        .autocorrectionDisabled()
+                                        .keyboardType(.emailAddress)
+                                        .textContentType(.username)
+                                        .submitLabel(.next)
+                                        .focused($focus, equals: .email)
+                                        .onSubmit { focus = .password }
+                                }
+                                .fieldBackground()
+
+                                HStack(spacing: 10) {
+                                    Image(systemName: "lock")
+                                        .foregroundStyle(Theme.accent2)
+                                        .frame(width: 21)
+                                    Group {
+                                        if passwordVisible {
+                                            TextField(L("Password"), text: $password)
+                                                .textContentType(.password)
+                                                .textInputAutocapitalization(.never)
+                                                .autocorrectionDisabled()
+                                                .focused($focus, equals: .password)
+                                        } else {
+                                            SecureField(L("Password"), text: $password)
+                                                .textContentType(.password)
+                                                .focused($focus, equals: .password)
+                                        }
+                                    }
+                                    .textFieldStyle(.plain)
+
+                                    Button { passwordVisible.toggle() } label: {
+                                        Image(systemName: passwordVisible ? "eye.slash" : "eye")
+                                            .foregroundStyle(.white.opacity(0.55))
+                                            .frame(width: 28, height: 30)
+                                            .contentShape(Rectangle())
+                                    }
+                                    .buttonStyle(.plain)
+                                    .accessibilityLabel(passwordVisible ? "Hide password" : "Show password")
+                                }
+                                .fieldBackground()
+
+                                HStack(alignment: .top, spacing: 10) {
+                                    Image(systemName: "lock.shield.fill")
+                                        .foregroundStyle(Theme.accent2)
+                                    Text(target.account == nil
+                                         ? "The password is stored in iOS Keychain. Authentication uses network access to Apple and may use the selected authentication provider."
+                                         : "Enter the password again to replace the saved value. It will be stored in iOS Keychain.")
+                                        .font(.system(size: 11))
+                                        .foregroundStyle(.white.opacity(0.5))
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                            }
+                        }
+                    }
+                    .padding(20)
+                    .frame(maxWidth: 520)
+                    .frame(maxWidth: .infinity)
+                }
+                .scrollDismissesKeyboard(.interactively)
+            }
+            .navigationTitle(target.account == nil ? L("Add Apple Account") : L("Update Apple Account"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button(L("Cancel")) { dismiss() }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(L("Save")) {
+                        accounts.save(appleID: email, password: password, replacing: target.account)
+                        dismiss()
+                    }
+                    .disabled(!canSave)
+                }
+            }
+            .toolbarBackground(.hidden, for: .navigationBar)
+            .preferredColorScheme(.dark)
+        }
+        .onAppear {
+            if let account = target.account { email = account.appleID }
+            focus = target.account == nil ? .email : .password
+        }
+    }
+}'''
+)
+
+replace_section(
+    "ios-app/RootView.swift",
+    "struct TwoFactorSheet: View {",
+    "// MARK: - Tools",
+    r'''struct TwoFactorSheet: View {
+    @EnvironmentObject private var engine: Engine
+    @EnvironmentObject private var loc: Localizer
+
+    let phase: TwoFactorPhase
+
+    @State private var code = ""
+    @FocusState private var codeFocused: Bool
+
+    private var prompt: TwoFactorPrompt { phase.prompt }
+
+    private var pending: TwoFactorAnswer? {
+        if case .working(_, let answer) = phase { answer } else { nil }
+    }
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                AppBackground()
+                ScrollView {
+                    VStack(spacing: 17) {
+                        header
+
+                        if let error = prompt.lastError {
+                            HStack(alignment: .top, spacing: 11) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .font(.system(size: 17, weight: .semibold))
+                                    .foregroundStyle(.orange)
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Verification needs another try")
+                                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                        .foregroundStyle(.white)
+                                    Text(error)
+                                        .font(.system(size: 12))
+                                        .foregroundStyle(.white.opacity(0.62))
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                                Spacer(minLength: 0)
+                            }
+                            .padding(15)
+                            .background(.orange.opacity(0.09), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                    .strokeBorder(.orange.opacity(0.25), lineWidth: 1)
+                            }
+                        }
+
+                        if prompt.expectsCode {
+                            codeCard
+                        }
+
+                        if let pending {
+                            VStack(alignment: .leading, spacing: 10) {
+                                HStack(spacing: 10) {
+                                    ProgressView()
+                                        .tint(Theme.accent2)
+                                    Text("Waiting for Apple")
+                                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                        .foregroundStyle(.white)
+                                }
+                                Text(status(for: pending))
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(.white.opacity(0.52))
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(16)
+                            .background(.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                    .strokeBorder(.white.opacity(0.1), lineWidth: 1)
+                            }
+                        }
+
+                        optionsCard
+                    }
+                    .padding(20)
+                    .frame(maxWidth: 520)
+                    .frame(maxWidth: .infinity)
+                }
+                .scrollDismissesKeyboard(.interactively)
+            }
+            .navigationTitle("Account verification")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button(L("Cancel")) { engine.cancelTwoFactor() }
+                }
+                if prompt.expectsCode {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button(L("Verify")) { engine.answerTwoFactor(.code(code)) }
+                            .disabled(pending != nil || code.count != 6)
+                    }
+                }
+            }
+            .toolbarBackground(.hidden, for: .navigationBar)
+            .preferredColorScheme(.dark)
+        }
+        .onAppear { codeFocused = prompt.expectsCode }
+        .onChange(of: phase) { _, phase in
+            guard case .asking(let prompt) = phase else { return }
+            code = ""
+            codeFocused = prompt.expectsCode
+        }
+    }
+
+    private var header: some View {
+        VStack(spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(Theme.brand)
+                Circle()
+                    .strokeBorder(.white.opacity(0.22), lineWidth: 1)
+                    .padding(7)
+                Image(systemName: "lock.shield.fill")
+                    .font(.system(size: 31, weight: .semibold))
+                    .foregroundStyle(.white)
+            }
+            .frame(width: 74, height: 74)
+            .shadow(color: Theme.accent.opacity(0.3), radius: 20, x: 0, y: 8)
+
+            Text("APPLE ACCOUNT · SECURITY")
+                .font(.system(size: 9, weight: .heavy, design: .rounded))
+                .tracking(1.7)
+                .foregroundStyle(Theme.accent2)
+
+            Text(prompt.expectsCode ? "Verify your account" : "Choose where to get a code")
+                .font(.system(size: 24, weight: .bold, design: .rounded))
+                .tracking(-0.5)
+                .multilineTextAlignment(.center)
+                .foregroundStyle(.white)
+
+            Text(instructions)
+                .font(.system(size: 12, weight: .medium))
+                .multilineTextAlignment(.center)
+                .foregroundStyle(.white.opacity(0.57))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 8)
+    }
+
+    private var codeCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("VERIFICATION CODE")
+                .font(.system(size: 9, weight: .heavy, design: .rounded))
+                .tracking(1.4)
+                .foregroundStyle(Theme.accent2)
+
+            TextField(L("6-digit code"), text: $code)
+                .keyboardType(.numberPad)
+                .textContentType(.oneTimeCode)
+                .font(.system(size: 26, weight: .bold, design: .rounded).monospacedDigit())
+                .multilineTextAlignment(.center)
+                .textFieldStyle(.plain)
+                .focused($codeFocused)
+                .disabled(pending != nil)
+                .padding(.vertical, 12)
+                .fieldBackground()
+                .onChange(of: code) { _, typed in
+                    let digits = String(typed.filter(\.isNumber).prefix(6))
+                    if digits != typed { code = digits }
+                }
+
+            Text("Enter the six digits you received. Codes are used for this sign-in attempt only.")
+                .font(.system(size: 11))
+                .foregroundStyle(.white.opacity(0.48))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(17)
+        .background {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(LinearGradient(colors: [.white.opacity(0.075), .white.opacity(0.025)],
+                                     startPoint: .topLeading, endPoint: .bottomTrailing))
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .strokeBorder(.white.opacity(0.12), lineWidth: 1)
+        }
+    }
+
+    private var optionsCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(prompt.expectsCode ? "TRY ANOTHER METHOD" : "SEND A VERIFICATION CODE")
+                .font(.system(size: 9, weight: .heavy, design: .rounded))
+                .tracking(1.35)
+                .foregroundStyle(.white.opacity(0.52))
+                .padding(.horizontal, 3)
+            options
+        }
+        .padding(14)
+        .background(.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .strokeBorder(.white.opacity(0.075), lineWidth: 1)
+        }
+        .disabled(pending != nil)
+    }
+
+    @ViewBuilder
+    private var options: some View {
+        switch prompt.method {
+        case .device: option(L("Send a new code to my devices"), "arrow.clockwise", .resend)
+        case .sms:    option(L("Text me a new code"), "arrow.clockwise", .resend)
+        case .voice:  option(L("Call me again"), "arrow.clockwise", .resend)
+        case .choose: EmptyView()
+        }
+        if prompt.method != .device {
+            option(L("Send a code to my Apple devices"), "laptopcomputer.and.iphone", .devices)
+        }
+        ForEach(Array(prompt.numbers.enumerated()), id: \.element.id) { _, number in
+            let inUse = number.id == prompt.selectedNumberId
+            if number.takesTexts && !(inUse && prompt.method == .sms) {
+                option(L("Text %@", number.number), "message.fill", .sms(number.id))
+            }
+            if !(inUse && prompt.method == .voice) {
+                option(L("Call %@", number.number), "phone.fill", .voice(number.id))
+            }
+        }
+    }
+
+    private func option(_ title: String, _ systemImage: String, _ answer: TwoFactorAnswer) -> some View {
+        Button { engine.answerTwoFactor(answer) } label: {
+            HStack(spacing: 12) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 11, style: .continuous)
+                        .fill(Theme.brand.opacity(0.82))
+                    Image(systemName: systemImage)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.white)
+                }
+                .frame(width: 38, height: 38)
+
+                Text(title)
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.leading)
+
+                Spacer(minLength: 4)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.35))
+            }
+            .padding(10)
+            .background(.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var instructions: String {
+        switch prompt.method {
+        case .device:
+            L("Enter the code Apple just sent to your trusted device.")
+        case .sms:
+            prompt.selectedNumber.map { L("Enter the code Apple texted to %@.", $0.number) }
+                ?? L("Enter the code Apple texted to your phone.")
+        case .voice:
+            prompt.selectedNumber.map { L("Apple is calling %@. Enter the code you hear.", $0.number) }
+                ?? L("Apple is calling your phone. Enter the code you hear.")
+        case .choose:
+            L("Choose how Apple should send your verification code.")
+        }
+    }
+
+    private func status(for answer: TwoFactorAnswer) -> String {
+        let number = { (id: UInt32) in prompt.numbers.first { $0.id == id }?.number ?? "" }
+        return switch answer {
+        case .code:          L("Checking the code…")
+        case .resend:        L("Requesting a new code…")
+        case .devices:       L("Sending a code to your devices…")
+        case .sms(let id):   L("Texting a code to %@…", number(id))
+        case .voice(let id): L("Calling %@…", number(id))
+        }
+    }
+}'''
+)
 
 replace_once(
     "ios-app/RootView.swift",
@@ -341,6 +1014,56 @@ replace_once(
         }'''
 )
 
+
+replace_once(
+    "ios-app/RootView.swift",
+    '''    @ViewBuilder
+    private var glyph: some View {
+        if let image {
+            Image(image)
+                .resizable()
+                .scaledToFill()
+        } else {
+            ZStack {
+                Rectangle().fill(Theme.brand)
+                Image(systemName: icon ?? "questionmark")
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(.white)
+            }
+        }
+    }''',
+    '''    private var resolvedIcon: String {
+        switch image ?? "" {
+        case "SideBySideLogo": "rectangle.3.group.fill"
+        case "PairingLogo": "point.3.connected.trianglepath.dotted"
+        case "CertsLogo": "checkmark.seal.fill"
+        case "EntitlementsLogo": "lock.shield.fill"
+        case "LocationLogo": "location.fill"
+        case "AppsLogo": "square.grid.2x2.fill"
+        default: icon ?? "snowflake"
+        }
+    }
+
+    private var glyph: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 15, style: .continuous)
+                .fill(LinearGradient(
+                    colors: [Theme.accent.opacity(0.95), Theme.accent2.opacity(0.64)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ))
+            Circle()
+                .strokeBorder(.white.opacity(0.18), lineWidth: 1)
+                .padding(5)
+            Image(systemName: resolvedIcon)
+                .font(.system(size: 21, weight: .semibold))
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(.white)
+                .shadow(color: .black.opacity(0.12), radius: 4, x: 0, y: 2)
+        }
+    }'''
+)
+
 replace_once("ios-app/Theme.swift",
     "static let accent = Color(red: 0.13, green: 0.44, blue: 0.96)",
     "static let accent = Color(red: 0.43, green: 0.29, blue: 1.0)")
@@ -400,7 +1123,7 @@ replace_once(
                         Text("Authentication: the installer communicates with Apple to authenticate and request developer signing resources. The selected Anisette provider may also receive protocol data needed to complete authentication. Local storage does not mean every network request stays on this device.")
                         Text("Device setup: supported versions may require LocalDevVPN, local-network permission, and user-approved Developer Mode. FrozenApps cannot turn Developer Mode on without your action.")
                         Text("Compatibility depends on iOS version, account eligibility, Apple service availability, and signing limits. These notes are not legal advice or a promise of legal immunity.")
-                        Text("Installer engine attribution: SideInstaller by FrizzleM. Source and licence: github.com/FrizzleM/SideInstaller.")
+                        Text("Project source credits and licence details are available in the FrozenApps repository documentation.")
                             .foregroundStyle(.secondary)
                     }
                     .font(.body)
@@ -436,9 +1159,100 @@ replace_once(
     """            // Settings is a dedicated tab in FrozenApps."""
 )
 
-replace_once("ios-app/AccountViews.swift",
-    """Text(L("Don't worry, these are stored locally"))""",
-    """Text("Password stored in iOS Keychain · No FrozenApps database")""")
+
+replace_once(
+    "ios-app/SettingsView.swift",
+    '''    /// One saved Apple ID, ticked when it is the one in use.
+    private func accountRow(_ account: SavedAccount) -> some View {
+        let isActive = accounts.isActive(account)
+        return HStack(spacing: 12) {
+            Image(systemName: "person.crop.circle.fill")
+                .font(.title3)
+                .foregroundStyle(isActive ? AnyShapeStyle(Theme.brand) : AnyShapeStyle(.secondary))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(account.appleID)
+                    .font(.subheadline.weight(isActive ? .semibold : .regular))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                if isActive {
+                    Text(L("In use"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Spacer(minLength: 8)
+            if isActive {
+                Image(systemName: "checkmark")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(Theme.accent2)
+            }
+        }
+        .foregroundStyle(.primary)
+        .contentShape(Rectangle())
+    }''',
+    '''    /// One saved Apple Account, with a distinct active state.
+    private func accountRow(_ account: SavedAccount) -> some View {
+        let isActive = accounts.isActive(account)
+        return HStack(spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(LinearGradient(colors: [Theme.accent.opacity(0.94), Theme.accent2.opacity(0.66)],
+                                         startPoint: .topLeading, endPoint: .bottomTrailing))
+                Image(systemName: "person.crop.circle.fill")
+                    .font(.system(size: 21, weight: .semibold))
+                    .foregroundStyle(.white)
+            }
+            .frame(width: 46, height: 46)
+
+            VStack(alignment: .leading, spacing: 5) {
+                Text(account.appleID)
+                    .font(.system(size: 13, weight: isActive ? .bold : .medium, design: .rounded))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                HStack(spacing: 5) {
+                    Image(systemName: isActive ? "checkmark.circle.fill" : "person.crop.circle")
+                    Text(isActive ? "ACTIVE ACCOUNT" : "SAVED ACCOUNT")
+                        .tracking(0.7)
+                }
+                .font(.system(size: 8, weight: .heavy, design: .rounded))
+                .foregroundStyle(isActive ? Theme.accent2 : Color.white.opacity(0.46))
+            }
+
+            Spacer(minLength: 6)
+
+            Image(systemName: isActive ? "checkmark.circle.fill" : "circle")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(isActive ? Theme.accent2 : .white.opacity(0.18))
+        }
+        .padding(.vertical, 5)
+        .contentShape(Rectangle())
+    }'''
+)
+replace_once(
+    "ios-app/SettingsView.swift",
+    '''            Button { editorTarget = .new } label: {
+                Label(L("Add Apple ID"), systemImage: "plus.circle.fill")
+            }''',
+    '''            Button { editorTarget = .new } label: {
+                Label(L("Add Apple Account"), systemImage: "plus.circle.fill")
+            }'''
+)
+replace_once(
+    "ios-app/SettingsView.swift",
+    '''        } header: {
+            Text(L("Account"))
+        }
+    }
+
+    /// One saved Apple Account''',
+    '''        } header: {
+            Text("Apple Account")
+        }
+    }
+
+    /// One saved Apple Account'''
+)
+
 replace_once(
     "ios-app/SettingsView.swift",
     '''                advancedSection
@@ -447,16 +1261,31 @@ replace_once(
     '''                advancedSection
                 logSection
                 Section("About FrozenApps") {
-                    Text("The on-device pairing and signing engine is based on SideInstaller by FrizzleM.")
-                    Link("View upstream source and licence",
-                         destination: URL(string: "https://github.com/FrizzleM/SideInstaller")!)
-                    Text("FrozenApps has its own branding and UI changes. The upstream engine's custom licence remains in the source checkout.")
+                    Text("A private, on-device workspace for pairing, signing and managing app installs.")
+                    Text("App signing and device pairing are performed on-device where supported.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
             }'''
 )
 
+
+
+replace_once(
+    "ios-app/Engine.swift",
+    '''SideInstaller couldn't reuse the certificate that's already there''',
+    '''FrozenApps couldn't reuse the certificate that's already there'''
+)
+replace_once(
+    "ios-app/AccountStore.swift",
+    '''so it's kept only until SideInstaller quits.''',
+    '''so it's kept only until FrozenApps quits.'''
+)
+replace_once(
+    "ios-app/WelcomeView.swift",
+    '''Text("SideInstaller")''',
+    '''Text("FrozenApps")'''
+)
 
 # Keep the unused About page accurate if it is opened through a future navigation.
 replace_once(
@@ -608,6 +1437,114 @@ replace_once(
             }'''
 )
 
+
+replace_once(
+    "ios-app/ContentView.swift",
+    '''    private var progressContent: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 10) {
+                Text(progressTitle)
+                    .font(.headline)
+                    .contentTransition(.opacity)
+                Spacer(minLength: 4)
+                Text("\\(Int(engine.overallProgress * 100))%")
+                    .font(.headline.monospacedDigit())
+                    .foregroundStyle(progressTint)
+                    .contentTransition(.numericText(value: engine.overallProgress))
+                    .animation(.smooth(duration: 0.3), value: engine.overallProgress)
+                stepsDisclosure
+                // Only a run in flight can be cancelled.
+                if engine.isRunning {
+                    cancelButton
+                        .transition(.opacity.combined(with: .scale(scale: 0.6)))
+                }
+            }
+
+            InstallProgressBar(progress: engine.overallProgress,
+                               tint: progressTint,
+                               gradient: progressGradient,
+                               animating: engine.isRunning && !engine.finished && !runFailed)
+
+            stepSection
+        }
+    }''',
+    '''    private var progressContent: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(alignment: .center, spacing: 14) {
+                ZStack {
+                    Circle()
+                        .stroke(.white.opacity(0.09), lineWidth: 6)
+                    Circle()
+                        .trim(from: 0, to: max(0.001, min(1, engine.overallProgress)))
+                        .stroke(progressGradient, style: StrokeStyle(lineWidth: 6, lineCap: .round))
+                        .rotationEffect(.degrees(-90))
+                    VStack(spacing: 1) {
+                        Text("\\(Int(engine.overallProgress * 100))%")
+                            .font(.system(size: 18, weight: .bold, design: .rounded).monospacedDigit())
+                            .foregroundStyle(progressTint)
+                            .contentTransition(.numericText(value: engine.overallProgress))
+                        Text("DONE")
+                            .font(.system(size: 8, weight: .heavy, design: .rounded))
+                            .tracking(1)
+                            .foregroundStyle(.white.opacity(0.43))
+                    }
+                }
+                .frame(width: 72, height: 72)
+                .animation(.smooth(duration: 0.3), value: engine.overallProgress)
+
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(progressTitle.uppercased())
+                        .font(.system(size: 9, weight: .heavy, design: .rounded))
+                        .tracking(1.5)
+                        .foregroundStyle(progressTint)
+                    Text(currentStep.title(for: engine.installSource))
+                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text("\\(Step.allCases.filter { engine.stepStates[$0] == .done }.count) of \\(Step.allCases.count) steps complete")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.46))
+                }
+
+                Spacer(minLength: 0)
+
+                VStack(spacing: 8) {
+                    stepsDisclosure
+                    if engine.isRunning {
+                        cancelButton
+                            .transition(.opacity.combined(with: .scale(scale: 0.6)))
+                    }
+                }
+            }
+
+            InstallProgressBar(progress: engine.overallProgress,
+                               tint: progressTint,
+                               gradient: progressGradient,
+                               animating: engine.isRunning && !engine.finished && !runFailed)
+
+            stepSection
+        }
+    }'''
+)
+replace_once(
+    "ios-app/ContentView.swift",
+    '''            if engine.isImportingIPA, let fraction = engine.importProgress {
+                ProgressView(value: fraction)
+                    .tint(Theme.accent2)
+            }''',
+    '''            if engine.isImportingIPA, let fraction = engine.importProgress {
+                HStack(spacing: 10) {
+                    ProgressView(value: fraction)
+                        .tint(Theme.accent2)
+                    Text("\\(Int(fraction * 100))%")
+                        .font(.system(size: 11, weight: .bold, design: .rounded).monospacedDigit())
+                        .foregroundStyle(Theme.accent2)
+                        .contentTransition(.numericText(value: fraction))
+                        .animation(.smooth(duration: 0.25), value: fraction)
+                }
+            }'''
+)
+
 replace_once(
     "ios-app/ContentView.swift",
     '''Text(L("SideInstaller %@ is available — you're on %@.",''',
@@ -643,6 +1580,22 @@ replace_once(
     'req.setValue("SideInstaller", forHTTPHeaderField: "User-Agent")',
     'req.setValue("FrozenApps", forHTTPHeaderField: "User-Agent")'
 )
+
+# Replace upstream product-name mentions inside ordinary Swift string literals only.
+# Preserve explicit licence attribution and source URLs; never rename module/type symbols.
+def frozenapps_ui_literal(match):
+    literal = match.group(0)
+    if "https://github.com/FrizzleM/SideInstaller" in literal:
+        return literal
+    if "SideInstaller by FrizzleM" in literal:
+        return literal
+    return literal.replace("SideInstaller", "FrozenApps")
+
+for swift_path in APP.glob("*.swift"):
+    source = swift_path.read_text(encoding="utf-8")
+    branded = re.sub(r'"(?:\\.|[^"\\])*"', frozenapps_ui_literal, source)
+    if branded != source:
+        swift_path.write_text(branded, encoding="utf-8")
 
 # Generate all declared app-icon sizes from the FrozenApps vector design.
 subprocess.run(["swift", str(ROOT / "scripts" / "generate-app-icon.swift")], cwd=ROOT, check=True)
