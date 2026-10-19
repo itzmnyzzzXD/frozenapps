@@ -876,9 +876,6 @@ replace_once(
     """            // Settings is a dedicated tab in FrozenApps."""
 )
 
-replace_once("ios-app/AccountViews.swift",
-    """Text(L("Don't worry, these are stored locally"))""",
-    """Text("Password stored in iOS Keychain · No FrozenApps database")""")
 replace_once(
     "ios-app/SettingsView.swift",
     '''                advancedSection
