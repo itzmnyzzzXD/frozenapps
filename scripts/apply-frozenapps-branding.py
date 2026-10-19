@@ -112,6 +112,184 @@ replace_once(
     }'''
 )
 
+# Make the engine Tools page read as FrozenApps while retaining its original utility routes.
+replace_once(
+    "ios-app/RootView.swift",
+    '''    private var header: some View {
+        Text(L("Tools"))
+            .font(.largeTitle.weight(.bold))
+            .frame(maxWidth: .infinity)
+            .padding(.top, 8)
+    }''',
+    '''    private var header: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("FROZEN UTILITIES")
+                        .font(.system(size: 9, weight: .heavy, design: .rounded))
+                        .tracking(1.6)
+                        .foregroundStyle(Theme.accent2)
+                    Text("Tools that do more.")
+                        .font(.system(size: 25, weight: .bold, design: .rounded))
+                        .tracking(-0.55)
+                        .foregroundStyle(.white)
+                    Text("Pairing, signing resources and app management.")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.58))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 0)
+                ZStack {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(Theme.brand)
+                    Image(systemName: "slider.horizontal.3")
+                        .font(.system(size: 24, weight: .semibold))
+                        .foregroundStyle(.white)
+                }
+                .frame(width: 58, height: 58)
+                .shadow(color: Theme.accent.opacity(0.3), radius: 14, x: 0, y: 6)
+            }
+            HStack(spacing: 8) {
+                Label(Engine.deviceCanSelfPair ? "6 UTILITIES" : "5 UTILITIES",
+                      systemImage: "square.grid.2x2.fill")
+                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                    .tracking(0.8)
+                    .foregroundStyle(.white.opacity(0.72))
+                Spacer()
+                Text("FROZENAPPS")
+                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                    .tracking(1.2)
+                    .foregroundStyle(.white.opacity(0.35))
+            }
+        }
+        .padding(19)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            ZStack(alignment: .topTrailing) {
+                LinearGradient(
+                    colors: [
+                        Color(red: 0.12, green: 0.09, blue: 0.24),
+                        Color(red: 0.035, green: 0.11, blue: 0.19)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                Circle()
+                    .fill(Theme.accent.opacity(0.18))
+                    .frame(width: 150, height: 150)
+                    .blur(radius: 30)
+                    .offset(x: 40, y: -60)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 25, style: .continuous))
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 25, style: .continuous)
+                .strokeBorder(
+                    LinearGradient(
+                        colors: [.white.opacity(0.22), Theme.accent.opacity(0.38), .white.opacity(0.05)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
+        }
+    }'''
+)
+
+replace_once(
+    "ios-app/RootView.swift",
+    '''    var body: some View {
+        PanelCard {
+            HStack(spacing: 14) {
+                glyph
+                    .frame(width: 46, height: 46)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                Text(title)
+                    .font(.headline)
+                if beta { BetaBadge() }
+                Spacer(minLength: 8)
+                Image(systemName: "chevron.right")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
+        }
+    }''',
+    '''    private var subtitle: String {
+        switch image ?? icon ?? "" {
+        case "SideBySideLogo": "Run a separate app workspace"
+        case "PairingLogo": "Review or create a device pairing file"
+        case "CertsLogo": "Inspect certificates used for signing"
+        case "EntitlementsLogo": "Review app capability declarations"
+        case "LocationLogo": "Manage location-related options"
+        case "AppsLogo": "Review apps managed by this device"
+        default: "Open a FrozenApps utility"
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 14) {
+            glyph
+                .frame(width: 50, height: 50)
+                .clipShape(RoundedRectangle(cornerRadius: 15, style: .continuous))
+            VStack(alignment: .leading, spacing: 5) {
+                HStack(spacing: 8) {
+                    Text(title)
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white)
+                    if beta { BetaBadge() }
+                }
+                Text(subtitle)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.52))
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+            }
+            Spacer(minLength: 4)
+            ZStack {
+                Circle()
+                    .fill(Theme.accent2.opacity(0.12))
+                    .frame(width: 31, height: 31)
+                Image(systemName: "arrow.up.right")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(Theme.accent2)
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(LinearGradient(
+                    colors: [.white.opacity(0.065), .white.opacity(0.022)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ))
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .strokeBorder(
+                    LinearGradient(
+                        colors: [.white.opacity(0.17), Theme.accent.opacity(0.17), .white.opacity(0.04)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
+        }
+    }'''
+)
+
+replace_once(
+    "ios-app/RootView.swift",
+    "    @State private var showSettings = false\\n",
+    ""
+)
+replace_once(
+    "ios-app/RootView.swift",
+    '''            .toolbar { settingsToolbarItem(isPresented: $showSettings) }
+            .sheet(isPresented: $showSettings) { SettingsView() }''',
+    '''            // Settings has its own FrozenApps tab.'''
+)
+
 replace_once(
     "ios-app/RootView.swift",
     '''        TabView(selection: $page) {
