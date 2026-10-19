@@ -477,6 +477,288 @@ replace_section(
 }'''
 )
 
+replace_section(
+    "ios-app/RootView.swift",
+    "struct TwoFactorSheet: View {",
+    "// MARK: - Tools",
+    r'''struct TwoFactorSheet: View {
+    @EnvironmentObject private var engine: Engine
+    @EnvironmentObject private var loc: Localizer
+
+    let phase: TwoFactorPhase
+
+    @State private var code = ""
+    @FocusState private var codeFocused: Bool
+
+    private var prompt: TwoFactorPrompt { phase.prompt }
+
+    private var pending: TwoFactorAnswer? {
+        if case .working(_, let answer) = phase { answer } else { nil }
+    }
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                AppBackground()
+                ScrollView {
+                    VStack(spacing: 17) {
+                        header
+
+                        if let error = prompt.lastError {
+                            HStack(alignment: .top, spacing: 11) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .font(.system(size: 17, weight: .semibold))
+                                    .foregroundStyle(.orange)
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Verification needs another try")
+                                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                        .foregroundStyle(.white)
+                                    Text(error)
+                                        .font(.system(size: 12))
+                                        .foregroundStyle(.white.opacity(0.62))
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                                Spacer(minLength: 0)
+                            }
+                            .padding(15)
+                            .background(.orange.opacity(0.09), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                    .strokeBorder(.orange.opacity(0.25), lineWidth: 1)
+                            }
+                        }
+
+                        if prompt.expectsCode {
+                            codeCard
+                        }
+
+                        if let pending {
+                            VStack(alignment: .leading, spacing: 10) {
+                                HStack(spacing: 10) {
+                                    ProgressView()
+                                        .tint(Theme.accent2)
+                                    Text("Waiting for Apple")
+                                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                        .foregroundStyle(.white)
+                                }
+                                Text(status(for: pending))
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(.white.opacity(0.52))
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(16)
+                            .background(.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                    .strokeBorder(.white.opacity(0.1), lineWidth: 1)
+                            }
+                        }
+
+                        optionsCard
+                    }
+                    .padding(20)
+                    .frame(maxWidth: 520)
+                    .frame(maxWidth: .infinity)
+                }
+                .scrollDismissesKeyboard(.interactively)
+            }
+            .navigationTitle("Account verification")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button(L("Cancel")) { engine.cancelTwoFactor() }
+                }
+                if prompt.expectsCode {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button(L("Verify")) { engine.answerTwoFactor(.code(code)) }
+                            .disabled(pending != nil || code.count != 6)
+                    }
+                }
+            }
+            .toolbarBackground(.hidden, for: .navigationBar)
+            .preferredColorScheme(.dark)
+        }
+        .onAppear { codeFocused = prompt.expectsCode }
+        .onChange(of: phase) { _, phase in
+            guard case .asking(let prompt) = phase else { return }
+            code = ""
+            codeFocused = prompt.expectsCode
+        }
+    }
+
+    private var header: some View {
+        VStack(spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(Theme.brand)
+                Circle()
+                    .strokeBorder(.white.opacity(0.22), lineWidth: 1)
+                    .padding(7)
+                Image(systemName: "lock.shield.fill")
+                    .font(.system(size: 31, weight: .semibold))
+                    .foregroundStyle(.white)
+            }
+            .frame(width: 74, height: 74)
+            .shadow(color: Theme.accent.opacity(0.3), radius: 20, x: 0, y: 8)
+
+            Text("APPLE ACCOUNT · SECURITY")
+                .font(.system(size: 9, weight: .heavy, design: .rounded))
+                .tracking(1.7)
+                .foregroundStyle(Theme.accent2)
+
+            Text(prompt.expectsCode ? "Verify your account" : "Choose where to get a code")
+                .font(.system(size: 24, weight: .bold, design: .rounded))
+                .tracking(-0.5)
+                .multilineTextAlignment(.center)
+                .foregroundStyle(.white)
+
+            Text(instructions)
+                .font(.system(size: 12, weight: .medium))
+                .multilineTextAlignment(.center)
+                .foregroundStyle(.white.opacity(0.57))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 8)
+    }
+
+    private var codeCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("VERIFICATION CODE")
+                .font(.system(size: 9, weight: .heavy, design: .rounded))
+                .tracking(1.4)
+                .foregroundStyle(Theme.accent2)
+
+            TextField(L("6-digit code"), text: $code)
+                .keyboardType(.numberPad)
+                .textContentType(.oneTimeCode)
+                .font(.system(size: 26, weight: .bold, design: .rounded).monospacedDigit())
+                .multilineTextAlignment(.center)
+                .textFieldStyle(.plain)
+                .focused($codeFocused)
+                .disabled(pending != nil)
+                .padding(.vertical, 12)
+                .fieldBackground()
+                .onChange(of: code) { _, typed in
+                    let digits = String(typed.filter(\\.isNumber).prefix(6))
+                    if digits != typed { code = digits }
+                }
+
+            Text("Enter the six digits you received. Codes are used for this sign-in attempt only.")
+                .font(.system(size: 11))
+                .foregroundStyle(.white.opacity(0.48))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(17)
+        .background {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(LinearGradient(colors: [.white.opacity(0.075), .white.opacity(0.025)],
+                                     startPoint: .topLeading, endPoint: .bottomTrailing))
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .strokeBorder(.white.opacity(0.12), lineWidth: 1)
+        }
+    }
+
+    private var optionsCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(prompt.expectsCode ? "TRY ANOTHER METHOD" : "SEND A VERIFICATION CODE")
+                .font(.system(size: 9, weight: .heavy, design: .rounded))
+                .tracking(1.35)
+                .foregroundStyle(.white.opacity(0.52))
+                .padding(.horizontal, 3)
+            options
+        }
+        .padding(14)
+        .background(.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .strokeBorder(.white.opacity(0.075), lineWidth: 1)
+        }
+        .disabled(pending != nil)
+    }
+
+    @ViewBuilder
+    private var options: some View {
+        switch prompt.method {
+        case .device: option(L("Send a new code to my devices"), "arrow.clockwise", .resend)
+        case .sms:    option(L("Text me a new code"), "arrow.clockwise", .resend)
+        case .voice:  option(L("Call me again"), "arrow.clockwise", .resend)
+        case .choose: EmptyView()
+        }
+        if prompt.method != .device {
+            option(L("Send a code to my Apple devices"), "laptopcomputer.and.iphone", .devices)
+        }
+        ForEach(Array(prompt.numbers.enumerated()), id: \\.element.id) { _, number in
+            let inUse = number.id == prompt.selectedNumberId
+            if number.takesTexts && !(inUse && prompt.method == .sms) {
+                option(L("Text %@", number.number), "message.fill", .sms(number.id))
+            }
+            if !(inUse && prompt.method == .voice) {
+                option(L("Call %@", number.number), "phone.fill", .voice(number.id))
+            }
+        }
+    }
+
+    private func option(_ title: String, _ systemImage: String, _ answer: TwoFactorAnswer) -> some View {
+        Button { engine.answerTwoFactor(answer) } label: {
+            HStack(spacing: 12) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 11, style: .continuous)
+                        .fill(Theme.brand.opacity(0.82))
+                    Image(systemName: systemImage)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.white)
+                }
+                .frame(width: 38, height: 38)
+
+                Text(title)
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.leading)
+
+                Spacer(minLength: 4)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.35))
+            }
+            .padding(10)
+            .background(.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var instructions: String {
+        switch prompt.method {
+        case .device:
+            L("Enter the code Apple just sent to your trusted device.")
+        case .sms:
+            prompt.selectedNumber.map { L("Enter the code Apple texted to %@.", $0.number) }
+                ?? L("Enter the code Apple texted to your phone.")
+        case .voice:
+            prompt.selectedNumber.map { L("Apple is calling %@. Enter the code you hear.", $0.number) }
+                ?? L("Apple is calling your phone. Enter the code you hear.")
+        case .choose:
+            L("Choose how Apple should send your verification code.")
+        }
+    }
+
+    private func status(for answer: TwoFactorAnswer) -> String {
+        let number = { (id: UInt32) in prompt.numbers.first { $0.id == id }?.number ?? "" }
+        return switch answer {
+        case .code:          L("Checking the code…")
+        case .resend:        L("Requesting a new code…")
+        case .devices:       L("Sending a code to your devices…")
+        case .sms(let id):   L("Texting a code to %@…", number(id))
+        case .voice(let id): L("Calling %@…", number(id))
+        }
+    }
+}'''
+)
+
 replace_once(
     "ios-app/RootView.swift",
     '''    private enum Page: Hashable {
@@ -875,6 +1157,98 @@ replace_once(
     """            .toolbar { settingsToolbarItem(isPresented: $showSettings) }
             .sheet(isPresented: $showSettings) { SettingsView() }""",
     """            // Settings is a dedicated tab in FrozenApps."""
+)
+
+
+replace_once(
+    "ios-app/SettingsView.swift",
+    '''    /// One saved Apple ID, ticked when it is the one in use.
+    private func accountRow(_ account: SavedAccount) -> some View {
+        let isActive = accounts.isActive(account)
+        return HStack(spacing: 12) {
+            Image(systemName: "person.crop.circle.fill")
+                .font(.title3)
+                .foregroundStyle(isActive ? AnyShapeStyle(Theme.brand) : AnyShapeStyle(.secondary))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(account.appleID)
+                    .font(.subheadline.weight(isActive ? .semibold : .regular))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                if isActive {
+                    Text(L("In use"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Spacer(minLength: 8)
+            if isActive {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+            }
+        }
+        .contentShape(Rectangle())
+    }''',
+    '''    /// One saved Apple Account, with a distinct active state.
+    private func accountRow(_ account: SavedAccount) -> some View {
+        let isActive = accounts.isActive(account)
+        return HStack(spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(LinearGradient(colors: [Theme.accent.opacity(0.94), Theme.accent2.opacity(0.66)],
+                                         startPoint: .topLeading, endPoint: .bottomTrailing))
+                Image(systemName: "person.crop.circle.fill")
+                    .font(.system(size: 21, weight: .semibold))
+                    .foregroundStyle(.white)
+            }
+            .frame(width: 46, height: 46)
+
+            VStack(alignment: .leading, spacing: 5) {
+                Text(account.appleID)
+                    .font(.system(size: 13, weight: isActive ? .bold : .medium, design: .rounded))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                HStack(spacing: 5) {
+                    Image(systemName: isActive ? "checkmark.circle.fill" : "person.crop.circle")
+                    Text(isActive ? "ACTIVE ACCOUNT" : "SAVED ACCOUNT")
+                        .tracking(0.7)
+                }
+                .font(.system(size: 8, weight: .heavy, design: .rounded))
+                .foregroundStyle(isActive ? Theme.accent2 : .secondary)
+            }
+
+            Spacer(minLength: 6)
+
+            Image(systemName: isActive ? "checkmark.circle.fill" : "circle")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(isActive ? Theme.accent2 : .white.opacity(0.18))
+        }
+        .padding(.vertical, 5)
+        .contentShape(Rectangle())
+    }'''
+)
+replace_once(
+    "ios-app/SettingsView.swift",
+    '''            Button { editorTarget = .new } label: {
+                Label(L("Add Apple ID"), systemImage: "plus.circle.fill")
+            }''',
+    '''            Button { editorTarget = .new } label: {
+                Label(L("Add Apple Account"), systemImage: "plus.circle.fill")
+            }'''
+)
+replace_once(
+    "ios-app/SettingsView.swift",
+    '''        } header: {
+            Text(L("Account"))
+        }
+    }
+
+    /// One saved Apple Account''',
+    '''        } header: {
+            Text("Apple Account")
+        }
+    }
+
+    /// One saved Apple Account'''
 )
 
 replace_once(
