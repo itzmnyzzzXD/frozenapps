@@ -86,14 +86,17 @@ replace_once(
         }''',
     '''        TabView(selection: $page) {
             ContentView()
-                .tabItem { Label(L("Signer"), systemImage: "signature") }
+                .tabItem { Label("Signer", systemImage: "signature") }
                 .tag(Page.install)
-            SettingsView()
-                .tabItem { Label(L("Settings"), systemImage: "slider.horizontal.3") }
-                .tag(Page.tools)
+            FrozenNetworkView()
+                .tabItem { Label("Network", systemImage: "point.3.connected.trianglepath.dotted") }
+                .tag(Page.network)
             FrozenFilesView()
-                .tabItem { Label(L("Files"), systemImage: "folder") }
-                .tag(Page.about)
+                .tabItem { Label("Files", systemImage: "folder") }
+                .tag(Page.files)
+            SettingsView()
+                .tabItem { Label("Settings", systemImage: "slider.horizontal.3") }
+                .tag(Page.settings)
         }'''
 )
 
