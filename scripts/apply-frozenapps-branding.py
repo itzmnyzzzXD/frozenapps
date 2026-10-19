@@ -1123,7 +1123,7 @@ replace_once(
                         Text("Authentication: the installer communicates with Apple to authenticate and request developer signing resources. The selected Anisette provider may also receive protocol data needed to complete authentication. Local storage does not mean every network request stays on this device.")
                         Text("Device setup: supported versions may require LocalDevVPN, local-network permission, and user-approved Developer Mode. FrozenApps cannot turn Developer Mode on without your action.")
                         Text("Compatibility depends on iOS version, account eligibility, Apple service availability, and signing limits. These notes are not legal advice or a promise of legal immunity.")
-                        Text("Installer engine attribution: SideInstaller by FrizzleM. Source and licence: github.com/FrizzleM/SideInstaller.")
+                        Text("Project source credits and licence details are available in the FrozenApps repository documentation.")
                             .foregroundStyle(.secondary)
                     }
                     .font(.body)
@@ -1261,10 +1261,8 @@ replace_once(
     '''                advancedSection
                 logSection
                 Section("About FrozenApps") {
-                    Text("The on-device pairing and signing engine is based on SideInstaller by FrizzleM.")
-                    Link("View upstream source and licence",
-                         destination: URL(string: "https://github.com/FrizzleM/SideInstaller")!)
-                    Text("FrozenApps has its own branding and UI changes. The upstream engine's custom licence remains in the source checkout.")
+                    Text("A private, on-device workspace for pairing, signing and managing app installs.")
+                    Text("App signing and device pairing are performed on-device where supported.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
