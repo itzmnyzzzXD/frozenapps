@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Apply FrozenApps branding and navigation to the pinned SideInstaller source."""
 from pathlib import Path
+import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
 VENDOR = ROOT / "Vendor" / "SideInstaller"
@@ -28,6 +29,13 @@ txt = txt.replace("SideInstaller", "FrozenApps")
 txt = txt.replace("com.frizzlem.sideinstaller", "com.itzmnyzzz.frozenapps")
 txt = txt.replace("com.frizzle.sideinstaller", "com.itzmnyzzz.frozenapps")
 info.write_text(txt, encoding="utf-8")
+
+# The Live Activity extension shares the visible product name.
+activity_info = VENDOR / "ios-live-activity" / "Info.plist"
+if activity_info.is_file():
+    activity_text = activity_info.read_text(encoding="utf-8")
+    activity_text = activity_text.replace("SideInstaller", "FrozenApps")
+    activity_info.write_text(activity_text, encoding="utf-8")
 
 for path in APP.glob("*.swift"):
     text = path.read_text(encoding="utf-8")
@@ -184,6 +192,28 @@ replace_once(
 )
 
 
+# Keep the unused About page accurate if it is opened through a future navigation.
+replace_once(
+    "ios-app/AboutView.swift",
+    'BrandHeader(icon: "info.circle.fill", image: "AppLogo", title: "SideInstaller",',
+    'BrandHeader(icon: "info.circle.fill", image: "AppLogo", title: "FrozenApps",'
+)
+replace_once(
+    "ios-app/AboutView.swift",
+    'subtitle: L("an app by Frizzle")',
+    'subtitle: "On-device installer"'
+)
+replace_once(
+    "ios-app/AboutView.swift",
+    '''Text(L("SideInstaller installs SideStore and LiveContainer straight onto your iPhone, with no PC involved."))''',
+    '''Text(L("FrozenApps provides an on-device signing and installation workflow for compatible Apple devices."))'''
+)
+replace_once(
+    "ios-app/AboutView.swift",
+    '"https://github.com/FrizzleM/SideInstaller/tree/main"',
+    '"https://github.com/itzmnyzzzXD/frozenapps"'
+)
+
 # Use FrozenApps identity in the actual signer header and user-facing messaging.
 replace_once(
     "ios-app/ContentView.swift",
@@ -225,5 +255,8 @@ replace_once(
     'req.setValue("SideInstaller", forHTTPHeaderField: "User-Agent")',
     'req.setValue("FrozenApps", forHTTPHeaderField: "User-Agent")'
 )
+
+# Generate all declared app-icon sizes from the FrozenApps vector design.
+subprocess.run(["swift", str(ROOT / "scripts" / "generate-app-icon.swift")], cwd=ROOT, check=True)
 
 print("Applied FrozenApps branding to pinned engine source.")
