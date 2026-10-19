@@ -296,12 +296,112 @@ replace_once(
     '''                    appCard.cascadeItem(2)'''
 )
 
-# Use FrozenApps identity in the actual signer header and user-facing messaging.
+# Use a dedicated FrozenApps visual identity on the Signer screen.
 replace_once(
     "ios-app/ContentView.swift",
-    'BrandHeader(icon: "arrow.down.app.fill", image: "AppLogo", title: "SideInstaller",',
-    'BrandHeader(icon: "signature", title: "FrozenApps",'
+    '''    private var header: some View {
+        BrandHeader(icon: "arrow.down.app.fill", image: "AppLogo", title: "SideInstaller",
+                    animateIcon: engine.isRunning) {
+            statusPill
+                .transition(.opacity.combined(with: .scale(scale: 0.85, anchor: .top)))
+                .id(statusPillID)
+        }
+    }''',
+    '''    private var header: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 13) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 17, style: .continuous)
+                        .fill(Theme.brand)
+                        .shadow(color: Theme.accent.opacity(0.38), radius: 16, x: 0, y: 6)
+                    Image(systemName: engine.isRunning ? "arrow.clockwise" : "snowflake")
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundStyle(.white)
+                }
+                .frame(width: 52, height: 52)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("FROZENAPPS · ON-DEVICE")
+                        .font(.system(size: 9, weight: .heavy, design: .rounded))
+                        .tracking(1.7)
+                        .foregroundStyle(Theme.accent2)
+                    Text("Your install studio")
+                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                }
+                Spacer(minLength: 0)
+            }
+            HStack(spacing: 10) {
+                statusPill
+                    .transition(.opacity.combined(with: .scale(scale: 0.85, anchor: .top)))
+                    .id(statusPillID)
+                Spacer(minLength: 0)
+                Text("PRIVATE WORKSPACE")
+                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                    .tracking(1.2)
+                    .foregroundStyle(.white.opacity(0.42))
+            }
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .fill(LinearGradient(
+                    colors: [
+                        Color(red: 0.12, green: 0.10, blue: 0.24),
+                        Color(red: 0.04, green: 0.13, blue: 0.20)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ))
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .strokeBorder(
+                    LinearGradient(
+                        colors: [.white.opacity(0.24), Theme.accent.opacity(0.42), .white.opacity(0.05)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
+        }
+        .shadow(color: Theme.accent.opacity(0.12), radius: 20, x: 0, y: 8)
+    }'''
 )
+replace_once(
+    "ios-app/ContentView.swift",
+    '''    private var footer: some View {
+        Text(L("an app by Frizzle"))
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity)
+            .padding(.top, 10)
+    }''',
+    '''    private var footer: some View {
+        Text("FROZENAPPS  ·  YOUR DEVICE, YOUR WORKFLOW")
+            .font(.system(size: 9, weight: .semibold, design: .rounded))
+            .tracking(1.2)
+            .foregroundStyle(.white.opacity(0.34))
+            .frame(maxWidth: .infinity)
+            .padding(.top, 10)
+    }'''
+)
+replace_once(
+    "ios-app/SettingsView.swift",
+    '''            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(L("Done")) { dismiss() }
+                }
+            }''',
+    '''            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Text("1.0.3")
+                        .font(.system(size: 10, weight: .bold, design: .rounded).monospacedDigit())
+                        .foregroundStyle(Theme.accent2)
+                }
+            }'''
+)
+
 replace_once(
     "ios-app/ContentView.swift",
     '''Text(L("SideInstaller %@ is available — you're on %@.",''',
