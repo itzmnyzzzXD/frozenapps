@@ -28,6 +28,25 @@ txt = info.read_text(encoding="utf-8")
 txt = txt.replace("SideInstaller", "FrozenApps")
 txt = txt.replace("com.frizzlem.sideinstaller", "com.itzmnyzzz.frozenapps")
 txt = txt.replace("com.frizzle.sideinstaller", "com.itzmnyzzz.frozenapps")
+# Request local-network access only for FrozenApps' explicit diagnostics flow.
+if "<key>NSLocalNetworkUsageDescription</key>" not in txt or "<key>NSBonjourServices</key>" not in txt:
+    entries = []
+    if "<key>NSLocalNetworkUsageDescription</key>" not in txt:
+        entries.append(
+            "\t<key>NSLocalNetworkUsageDescription</key>\n"
+            "\t<string>FrozenApps uses your local network to help diagnose Wi-Fi connectivity and discover nearby services for device setup.</string>\n"
+        )
+    if "<key>NSBonjourServices</key>" not in txt:
+        entries.append(
+            "\t<key>NSBonjourServices</key>\n"
+            "\t<array>\n"
+            "\t\t<string>_http._tcp</string>\n"
+            "\t</array>\n"
+        )
+    close_index = txt.rfind("</dict>")
+    if close_index < 0:
+        raise SystemExit("Could not find the top-level Info.plist dictionary end.")
+    txt = txt[:close_index] + "".join(entries) + txt[close_index:]
 info.write_text(txt, encoding="utf-8")
 
 # The Live Activity extension shares the visible product name.
@@ -80,10 +99,13 @@ replace_once(
 
 replace_once("ios-app/Theme.swift",
     "static let accent = Color(red: 0.13, green: 0.44, blue: 0.96)",
-    "static let accent = Color(red: 0.16, green: 0.86, blue: 0.55)")
+    "static let accent = Color(red: 0.43, green: 0.29, blue: 1.0)")
+replace_once("ios-app/Theme.swift",
+    "static let glow = Color(red: 1 / 255, green: 26 / 255, blue: 92 / 255)",
+    "static let glow = Color(red: 0.035, green: 0.018, blue: 0.09)")
 replace_once("ios-app/Theme.swift",
     "static let accent2 = Color(red: 0.30, green: 0.68, blue: 1.0)",
-    "static let accent2 = Color(red: 0.28, green: 0.65, blue: 1.0)")
+    "static let accent2 = Color(red: 0.20, green: 0.88, blue: 0.98)")
 replace_once(
     "ios-app/Theme.swift",
     '''                Color.black.opacity(Backdrop.wash(at: t))
