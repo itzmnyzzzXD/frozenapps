@@ -1,19 +1,11 @@
-name: Build and validate FrozenApps
+name: Publish verified FrozenApps v1.0.2 IPA
 
 on:
   push:
-    branches: ["**"]
-    tags: ["v*"]
-    paths-ignore:
-      - "*.md"
-      - "**/*.md"
-      - "LICENSES/**"
-      - "latest_version.txt"
-  release:
-    types: [published, edited]
-  workflow_dispatch:
+    branches: ["release/v1.0.2-workflow-fix"]
 
 permissions:
+  actions: read
   contents: write
 
 concurrency:
@@ -21,105 +13,37 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  publish:
     runs-on: xcode-27
     steps:
-      - name: Checkout FrozenApps source
-        uses: actions/checkout@v4
-
-      - name: Prepare pinned installer engine (sparse checkout)
-        shell: bash
-        run: bash scripts/prepare-engine-source.sh
-
-      - name: Cache Rust dependencies and release builds
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            Vendor/SideInstaller/rust-core/target
-          key: ${{ runner.os }}-${{ runner.arch }}-sideinstaller-rust-${{ hashFiles('Vendor/SideInstaller/rust-core/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ runner.arch }}-sideinstaller-rust-
-
-      - name: Select Xcode and install Rust toolchain
-        shell: bash
-        run: |
-          set -euo pipefail
-          xcode-select -p
-          xcodebuild -version
-          swift --version
-          python3 --version
-          if ! command -v cargo >/dev/null 2>&1; then
-            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
-          fi
-          source "$HOME/.cargo/env"
-          rustup target add aarch64-apple-ios aarch64-apple-ios-sim
-          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
-          if ! command -v xcodegen >/dev/null 2>&1; then
-            brew install xcodegen
-          fi
-
-      - name: Apply FrozenApps branding and privacy terms
-        run: python3 scripts/apply-frozenapps-branding.py
-
-      - name: Build Rust pairing and signing engine plus iOS app
-        shell: bash
-        run: |
-          set -euo pipefail
-          export DEVELOPER_DIR="$(xcode-select -p)"
-          export IPHONEOS_DEPLOYMENT_TARGET=17.4
-          bash Vendor/SideInstaller/build-rust.sh
-          xcodegen generate
-          set -o pipefail
-          xcodebuild -project FrozenApps.xcodeproj -scheme FrozenApps \
-            -configuration Release -sdk iphoneos \
-            -derivedDataPath "$GITHUB_WORKSPACE/build/DerivedData" \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
-            build | tee "$GITHUB_WORKSPACE/build.log"
-
-      - name: Validate native engine and app bundle
-        shell: bash
-        run: bash scripts/validate-build.sh
-
-      - name: Package unsigned IPA
-        shell: bash
-        run: |
-          set -euo pipefail
-          APP="$GITHUB_WORKSPACE/build/DerivedData/Build/Products/Release-iphoneos/FrozenApps.app"
-          IPA_ROOT="$GITHUB_WORKSPACE/ipa-root"
-          IPA="$GITHUB_WORKSPACE/FrozenApps-unsigned.ipa"
-          test -d "$APP"
-          rm -rf "$IPA_ROOT" "$IPA"
-          mkdir -p "$IPA_ROOT/Payload"
-          ditto "$APP" "$IPA_ROOT/Payload/FrozenApps.app"
-          (cd "$IPA_ROOT" && /usr/bin/zip -qry "$IPA" Payload)
-          /usr/bin/unzip -t "$IPA"
-          /usr/bin/unzip -Z1 "$IPA" | grep -q '^Payload/FrozenApps.app/Info.plist$'
-          shasum -a 256 "$IPA" | tee "$GITHUB_WORKSPACE/FrozenApps-unsigned.ipa.sha256"
-          ls -lh "$IPA"
-
-      # Upload on release publication/edit and when a version tag is pushed.
-      # No repository variable is required for this workflow.
-      - name: Attach unsigned IPA to the GitHub Release
-        if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/release/v1.0.2-workflow-fix'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.ref == 'refs/heads/release/v1.0.2-workflow-fix' && 'v1.0.2' || (github.event_name == 'release' && github.event.release.tag_name || github.ref_name) }}
-          files: |
-            FrozenApps-unsigned.ipa
-            FrozenApps-unsigned.ipa.sha256
-          fail_on_unmatched_files: true
-
-      - name: Upload build output for repository owner
-        if: always()
-        uses: actions/upload-artifact@v4
+      - name: Download the successful v1.0.2 build artifact
+        uses: actions/download-artifact@v4
         with:
           name: FrozenApps-build-output
-          path: |
-            build.log
-            build-validation.txt
-            FrozenApps-unsigned.ipa
-            FrozenApps-unsigned.ipa.sha256
-          if-no-files-found: warn
-          retention-days: 14
+          run-id: 39241907363
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: release-output
+
+      - name: Verify IPA and checksum
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd release-output
+          test -s FrozenApps-unsigned.ipa
+          test -s FrozenApps-unsigned.ipa.sha256
+          EXPECTED="$(awk 'NR == 1 { print $1 }' FrozenApps-unsigned.ipa.sha256)"
+          ACTUAL="$(shasum -a 256 FrozenApps-unsigned.ipa | awk '{ print $1 }')"
+          test -n "$EXPECTED"
+          test "$ACTUAL" = "$EXPECTED"
+          /usr/bin/unzip -t FrozenApps-unsigned.ipa
+          /usr/bin/unzip -Z1 FrozenApps-unsigned.ipa | grep -q '^Payload/FrozenApps.app/Info.plist$'
+          echo "Verified FrozenApps IPA SHA-256: $ACTUAL"
+
+      - name: Attach verified IPA to the v1.0.2 GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.2
+          files: |
+            release-output/FrozenApps-unsigned.ipa
+            release-output/FrozenApps-unsigned.ipa.sha256
+          fail_on_unmatched_files: true
