@@ -1,18 +1,14 @@
 name: Validate FrozenApps installer engine
 
 on:
-  pull_request:
-    branches: [main]
+  # A push build covers the feature branch and the PR head. Avoid duplicate
+  # seven-minute Xcode builds from separate push and pull_request events.
   push:
     branches: ["**"]
   workflow_dispatch:
 
 permissions:
   contents: read
-
-concurrency:
-  group: frozenapps-build-${{ github.event.pull_request.head.ref || github.ref_name }}
-  cancel-in-progress: true
 
 jobs:
   build:
