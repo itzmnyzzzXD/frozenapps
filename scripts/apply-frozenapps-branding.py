@@ -28,25 +28,45 @@ txt = info.read_text(encoding="utf-8")
 txt = txt.replace("SideInstaller", "FrozenApps")
 txt = txt.replace("com.frizzlem.sideinstaller", "com.itzmnyzzz.frozenapps")
 txt = txt.replace("com.frizzle.sideinstaller", "com.itzmnyzzz.frozenapps")
-# Request local-network access only for FrozenApps' explicit diagnostics flow.
-if "<key>NSLocalNetworkUsageDescription</key>" not in txt or "<key>NSBonjourServices</key>" not in txt:
-    entries = []
-    if "<key>NSLocalNetworkUsageDescription</key>" not in txt:
-        entries.append(
-            "\t<key>NSLocalNetworkUsageDescription</key>\n"
-            "\t<string>FrozenApps uses your local network to help diagnose Wi-Fi connectivity and discover nearby services for device setup.</string>\n"
-        )
-    if "<key>NSBonjourServices</key>" not in txt:
-        entries.append(
-            "\t<key>NSBonjourServices</key>\n"
-            "\t<array>\n"
-            "\t\t<string>_http._tcp</string>\n"
-            "\t</array>\n"
-        )
-    close_index = txt.rfind("</dict>")
-    if close_index < 0:
+# Explain the existing pairing traffic as well as the new, user-triggered diagnostics.
+txt = txt.replace(
+    "FrozenApps advertises an on-device pairing service so this iPhone can pair with it, and connects to the local lockdown daemon to install apps.",
+    "FrozenApps uses the local network for device pairing, app installation, and optional discovery of nearby HTTP services. Scan results stay on this device."
+)
+
+# Preserve the engine's existing Bonjour services and add only the service type
+# used by FrozenNetworkView. This is required for iOS Local Network discovery.
+if "<key>NSBonjourServices</key>" not in txt:
+    root_end = txt.rfind("</dict>")
+    if root_end < 0:
         raise SystemExit("Could not find the top-level Info.plist dictionary end.")
-    txt = txt[:close_index] + "".join(entries) + txt[close_index:]
+    services = (
+        "\t<key>NSBonjourServices</key>\n"
+        "\t<array>\n"
+        "\t\t<string>_http._tcp</string>\n"
+        "\t</array>\n"
+    )
+    txt = txt[:root_end] + services + txt[root_end:]
+elif "<string>_http._tcp</string>" not in txt:
+    services_key = txt.find("<key>NSBonjourServices</key>")
+    services_array = txt.find("<array>", services_key)
+    if services_array < 0:
+        raise SystemExit("NSBonjourServices exists but its array is missing.")
+    insert_at = txt.find("\n", services_array) + 1
+    if insert_at == 0:
+        raise SystemExit("Could not locate the NSBonjourServices array.")
+    txt = txt[:insert_at] + "\t\t<string>_http._tcp</string>\n" + txt[insert_at:]
+
+# Keep a purpose string even if a future upstream version removes its own key.
+if "<key>NSLocalNetworkUsageDescription</key>" not in txt:
+    root_end = txt.rfind("</dict>")
+    if root_end < 0:
+        raise SystemExit("Could not find the top-level Info.plist dictionary end.")
+    purpose = (
+        "\t<key>NSLocalNetworkUsageDescription</key>\n"
+        "\t<string>FrozenApps uses the local network for device pairing, app installation, and optional discovery of nearby HTTP services.</string>\n"
+    )
+    txt = txt[:root_end] + purpose + txt[root_end:]
 info.write_text(txt, encoding="utf-8")
 
 # The Live Activity extension shares the visible product name.
