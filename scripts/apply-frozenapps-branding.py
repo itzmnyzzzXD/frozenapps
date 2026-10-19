@@ -68,6 +68,32 @@ for path in APP.glob("*.swift"):
 
 replace_once(
     "ios-app/RootView.swift",
+    '''    private enum Page: Hashable {
+        case install, tools, about
+
+        var wash: Backdrop.Level {
+            switch self {
+            case .install: .bright
+            case .tools:   .dark
+            // Same as Install, so switching between them doesn't change the backdrop.
+            case .about:   .bright
+            }
+        }
+    }''',
+    '''    private enum Page: Hashable {
+        case install, network, settings, files
+
+        var wash: Backdrop.Level {
+            switch self {
+            case .install, .network, .files: .bright
+            case .settings: .dark
+            }
+        }
+    }'''
+)
+
+replace_once(
+    "ios-app/RootView.swift",
     '''        TabView(selection: $page) {
             ContentView()
                 .tabItem { Label(L("Install"), systemImage: "square.and.arrow.down") }
