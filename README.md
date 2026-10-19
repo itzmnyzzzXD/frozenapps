@@ -12,7 +12,7 @@ The engine integration and FrozenApps branding are now merged into `main`. GitHu
 
 - **Signer:** the engine's on-device pairing, Apple developer-session authentication and two-factor callbacks, certificate/App ID/provisioning setup, IPA signing, and installation workflow.
 - **Custom IPA workflow:** choose a local IPA or direct download link from the Signer screen, import a custom IPA from Files, load it into Signer, and run the engine's install/sign steps.
-- **Files library:** keep multiple IPA packages separately from the signer's working copy, validate that imports are ZIP packages with readable app metadata, search local packages, inspect bundle ID/version/size/modification date, calculate and copy a SHA-256 checksum, load a package into Signer, and delete files with confirmation.
+- **Files library:** keep multiple IPA packages separately from the signer's working copy, validate that imports are ZIP packages with readable app metadata, search and sort local packages by name, recency, or size, inspect bundle ID/version/size/modification date, calculate and copy a SHA-256 checksum, load a package into Signer, and delete files with confirmation. Multi-file imports report which package is being checked.
 - **Settings:** account/session settings and the upstream engine's diagnostics/logs, plus an in-app privacy and licence notice.
 - **Branding:** FrozenApps identity, green/white/blue accents, subtle animated particles, and the Signer / Settings / Files tabs.
 

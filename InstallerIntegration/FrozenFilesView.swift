@@ -3,6 +3,14 @@ import SwiftUI
 import UniformTypeIdentifiers
 import UIKit
 
+private enum FrozenLibrarySort: String, CaseIterable, Identifiable {
+    case recent = "Recently added"
+    case name = "Name"
+    case largest = "Largest first"
+
+    var id: String { rawValue }
+}
+
 private struct FrozenLibraryItem: Identifiable, Equatable {
     let url: URL
     let size: Int
@@ -122,6 +130,9 @@ struct FrozenFilesView: View {
     @State private var libraryItems: [FrozenLibraryItem] = []
     @State private var showImporter = false
     @State private var isImporting = false
+    @State private var importProgress = 0.0
+    @State private var importStatus = ""
+    @State private var sortOrder: FrozenLibrarySort = .recent
     @State private var loadingID: String?
     @State private var message: String?
     @State private var importError: String?
@@ -153,15 +164,33 @@ struct FrozenFilesView: View {
     }
 
     private var visibleLibraryItems: [FrozenLibraryItem] {
-        guard !normalizedSearch.isEmpty else { return libraryItems }
-        return libraryItems.filter { $0.fileName.localizedCaseInsensitiveContains(normalizedSearch) }
+        let filtered = normalizedSearch.isEmpty
+            ? libraryItems
+            : libraryItems.filter { $0.fileName.localizedCaseInsensitiveContains(normalizedSearch) }
+        switch sortOrder {
+        case .recent:
+            return filtered.sorted { ($0.modified ?? .distantPast) > ($1.modified ?? .distantPast) }
+        case .name:
+            return filtered.sorted { $0.fileName.localizedCaseInsensitiveCompare($1.fileName) == .orderedAscending }
+        case .largest:
+            return filtered.sorted { $0.size > $1.size }
+        }
     }
 
     private var visibleDownloads: [DownloadedIPA] {
-        guard !normalizedSearch.isEmpty else { return downloads.downloads }
-        return downloads.downloads.filter {
-            $0.fileName.localizedCaseInsensitiveContains(normalizedSearch)
-            || $0.displayName.localizedCaseInsensitiveContains(normalizedSearch)
+        let filtered = normalizedSearch.isEmpty
+            ? downloads.downloads
+            : downloads.downloads.filter {
+                $0.fileName.localizedCaseInsensitiveContains(normalizedSearch)
+                || $0.displayName.localizedCaseInsensitiveContains(normalizedSearch)
+            }
+        switch sortOrder {
+        case .recent:
+            return filtered.sorted { ($0.modified ?? .distantPast) > ($1.modified ?? .distantPast) }
+        case .name:
+            return filtered.sorted { $0.fileName.localizedCaseInsensitiveCompare($1.fileName) == .orderedAscending }
+        case .largest:
+            return filtered.sorted { $0.size > $1.size }
         }
     }
 
@@ -190,6 +219,32 @@ struct FrozenFilesView: View {
                         summaryTile(value: totalSizeText, label: "Storage used", icon: "externaldrive")
                     }
 
+                    HStack(spacing: 10) {
+                        Label("Sort files", systemImage: "arrow.up.arrow.down")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Menu {
+                            Picker("Sort order", selection: $sortOrder) {
+                                ForEach(FrozenLibrarySort.allCases) { order in
+                                    Text(order.rawValue).tag(order)
+                                }
+                            }
+                        } label: {
+                            HStack(spacing: 6) {
+                                Text(sortOrder.rawValue)
+                                Image(systemName: "chevron.down")
+                                    .font(.system(size: 10, weight: .bold))
+                            }
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(Theme.accent2)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 9)
+                            .background(Theme.accent.opacity(0.10), in: Capsule())
+                        }
+                        .buttonStyle(.plain)
+                    }
+
                     Button { showImporter = true } label: {
                         HStack(spacing: 9) {
                             if isImporting { ProgressView().tint(.black) }
@@ -204,6 +259,19 @@ struct FrozenFilesView: View {
                     }
                     .buttonStyle(.plain)
                     .disabled(isImporting)
+
+                    if isImporting {
+                        VStack(alignment: .leading, spacing: 7) {
+                            ProgressView(value: importProgress)
+                                .tint(Theme.accent)
+                            Text(importStatus.isEmpty ? "Checking selected files…" : importStatus)
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(.secondary)
+                                .lineLimit(2)
+                        }
+                        .padding(13)
+                        .background(.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 14))
+                    }
 
                     if let message {
                         Text(message)
@@ -297,20 +365,32 @@ struct FrozenFilesView: View {
             case .success(let urls):
                 guard !urls.isEmpty else { return }
                 isImporting = true
+                importProgress = 0
+                importStatus = "Preparing selected files…"
                 message = nil
                 Task.detached(priority: .userInitiated) {
                     var imported = 0
                     var failures: [String] = []
-                    for url in urls {
+                    let total = urls.count
+                    for (index, url) in urls.enumerated() {
+                        await MainActor.run {
+                            importStatus = "Validating \(index + 1) of \(total): \(url.lastPathComponent)"
+                            importProgress = Double(index) / Double(max(total, 1))
+                        }
                         do {
                             _ = try FrozenLibraryStore.importIPA(from: url)
                             imported += 1
                         } catch {
                             failures.append("\(url.lastPathComponent): \(error.localizedDescription)")
                         }
+                        await MainActor.run {
+                            importProgress = Double(index + 1) / Double(max(total, 1))
+                        }
                     }
                     await MainActor.run {
                         isImporting = false
+                        importProgress = 1
+                        importStatus = ""
                         refresh()
                         if failures.isEmpty {
                             message = "Imported \(imported) IPA file(s). They are saved separately from the Signer working copy."
