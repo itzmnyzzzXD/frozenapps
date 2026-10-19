@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   publish:
-    runs-on: xcode-27
+    runs-on: ubuntu-latest
     steps:
       - name: Download the successful v1.0.2 build artifact
         uses: actions/download-artifact@v4
