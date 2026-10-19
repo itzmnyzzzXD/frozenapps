@@ -19,6 +19,20 @@ fail() {
   echo
 } > "$SUMMARY"
 
+# Read version/build expectations from the project manifest so a future release
+# doesn't require a second, easy-to-forget version edit in this validator.
+EXPECTED_VERSION=$(awk -F: '/^[[:space:]]*MARKETING_VERSION:/ { gsub(/[[:space:]"]/, "", $2); print $2; exit }' "$ROOT/project.yml")
+EXPECTED_BUILD=$(awk -F: '/^[[:space:]]*CURRENT_PROJECT_VERSION:/ { gsub(/[[:space:]"]/, "", $2); print $2; exit }' "$ROOT/project.yml")
+EXPECTED_MIN_OS=$(awk -F: '
+  /^[[:space:]]*deploymentTarget:/ { in_deployment_target=1; next }
+  in_deployment_target && /^[[:space:]]*iOS:/ { gsub(/[[:space:]"]/, "", $2); print $2; exit }
+  in_deployment_target && /^[^[:space:]]/ { in_deployment_target=0 }
+' "$ROOT/project.yml")
+
+[[ -n "$EXPECTED_VERSION" ]] || fail "Could not read MARKETING_VERSION from project.yml"
+[[ -n "$EXPECTED_BUILD" ]] || fail "Could not read CURRENT_PROJECT_VERSION from project.yml"
+[[ -n "$EXPECTED_MIN_OS" ]] || fail "Could not read iOS deployment target from project.yml"
+
 {
   test -d "$APP" || fail "FrozenApps.app was not produced at $APP"
   test -x "$APP/FrozenApps" || fail "App executable is missing or not executable"
@@ -31,9 +45,9 @@ fail() {
 
   [[ "$APP_ID" == "com.itzmnyzzz.frozenapps" ]] || fail "Unexpected app bundle identifier: $APP_ID"
   [[ "$APP_DISPLAY_NAME" == "FrozenApps" ]] || fail "Unexpected app display name: $APP_DISPLAY_NAME"
-  [[ "$APP_VERSION" == "1.0.2" ]] || fail "Expected candidate version 1.0.2, got $APP_VERSION"
-  [[ "$APP_BUILD" == "3" ]] || fail "Expected build number 3, got $APP_BUILD"
-  [[ "$MIN_OS" == "17.4" ]] || fail "Expected minimum iOS/iPadOS 17.4, got $MIN_OS"
+  [[ "$APP_VERSION" == "$EXPECTED_VERSION" ]] || fail "Expected version $EXPECTED_VERSION from project.yml, got $APP_VERSION"
+  [[ "$APP_BUILD" == "$EXPECTED_BUILD" ]] || fail "Expected build $EXPECTED_BUILD from project.yml, got $APP_BUILD"
+  [[ "$MIN_OS" == "$EXPECTED_MIN_OS" ]] || fail "Expected minimum OS $EXPECTED_MIN_OS from project.yml, got $MIN_OS"
 
   EXTENSION="$APP/PlugIns/FrozenAppsLiveActivity.appex"
   test -d "$EXTENSION" || fail "Live Activity extension is missing"
@@ -53,8 +67,8 @@ fail() {
   echo "PASS: app bundle exists"
   echo "PASS: bundle identifier: $APP_ID"
   echo "PASS: display name: $APP_DISPLAY_NAME"
-  echo "PASS: candidate version/build: $APP_VERSION ($APP_BUILD)"
-  echo "PASS: minimum OS: $MIN_OS"
+  echo "PASS: version/build match project.yml: $APP_VERSION ($APP_BUILD)"
+  echo "PASS: minimum OS matches project.yml: $MIN_OS"
   echo "PASS: Live Activity extension: $EXTENSION_ID"
   echo "PASS: SideInstaller device library architecture: $LIB_ARCHS"
   echo "PASS: app executable architecture: $APP_ARCHS"
