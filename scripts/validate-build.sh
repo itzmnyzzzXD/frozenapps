@@ -24,11 +24,13 @@ fail() {
   test -x "$APP/FrozenApps" || fail "App executable is missing or not executable"
 
   APP_ID=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist")
+  APP_DISPLAY_NAME=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' "$APP/Info.plist")
   APP_VERSION=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist")
   APP_BUILD=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Info.plist")
   MIN_OS=$(/usr/libexec/PlistBuddy -c 'Print :MinimumOSVersion' "$APP/Info.plist")
 
   [[ "$APP_ID" == "com.itzmnyzzz.frozenapps" ]] || fail "Unexpected app bundle identifier: $APP_ID"
+  [[ "$APP_DISPLAY_NAME" == "FrozenApps" ]] || fail "Unexpected app display name: $APP_DISPLAY_NAME"
   [[ "$APP_VERSION" == "1.0.2" ]] || fail "Expected candidate version 1.0.2, got $APP_VERSION"
   [[ "$APP_BUILD" == "3" ]] || fail "Expected build number 3, got $APP_BUILD"
   [[ "$MIN_OS" == "17.4" ]] || fail "Expected minimum iOS/iPadOS 17.4, got $MIN_OS"
@@ -50,6 +52,7 @@ fail() {
   LIB_SIZE=$(du -sh "$DEVICE_LIB" | awk '{print $1}')
   echo "PASS: app bundle exists"
   echo "PASS: bundle identifier: $APP_ID"
+  echo "PASS: display name: $APP_DISPLAY_NAME"
   echo "PASS: candidate version/build: $APP_VERSION ($APP_BUILD)"
   echo "PASS: minimum OS: $MIN_OS"
   echo "PASS: Live Activity extension: $EXTENSION_ID"
