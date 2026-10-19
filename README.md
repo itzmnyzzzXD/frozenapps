@@ -2,11 +2,13 @@
 
 FrozenApps is an iPhone/iPad-first IPA signing and installation app project built around the pinned [SideInstaller by FrizzleM](https://github.com/FrizzleM/SideInstaller) engine. Its goal is to pair a supported device, authenticate for signing, provision and sign an IPA, install it, and keep a local library of IPA files—all from the device where the required iOS workflow supports it.
 
-## Status
+## Status and release notes
 
-The engine integration and FrozenApps branding are now merged into `main`. GitHub Actions compiles the native Rust pairing/signing engine and the iOS app, then verifies the app bundle, target OS, native arm64 library, and Live Activity extension.
+The engine integration and FrozenApps branding are merged into `main`. GitHub Actions compiled the native Rust pairing/signing engine and iOS app for the `v1.0.2` tag, then passed bundle checks for the app identifier, display name, version/build, minimum OS, Live Activity extension, and arm64 executable/native library.
 
-**This is a source-build milestone, not yet a tested public IPA release.** The currently published `v1.0.1` release predates the engine integration. CI does not publish an IPA because the upstream custom licence does not clearly grant permission to distribute a compiled derivative. Written permission from the upstream copyright holder is required before publishing a compiled FrozenApps build. Physical-iPad pairing, Apple authentication, provisioning, signing, and installation still need device testing. See [release readiness](RELEASE_READINESS.md).
+**Important: the GitHub `v1.0.2` release currently reports zero attached assets.** The tag points to source commit `eac167c4493046405278fa0a14315529e2622a3b`; the successful CI run built and validated the app, but intentionally uploaded build diagnostics only—not an IPA. The older `v1.0.1` release does have an IPA asset, but it predates the engine integration and is not the current engine-enabled build. The repository's `latest_version.txt` therefore remains at `1.0.1` until a legitimate, installable release asset is available.
+
+A public binary release also needs explicit written authorization for distribution of the compiled derivative under the upstream custom licence, plus physical-iPad testing. CI success is a compile/package-structure check, not proof that pairing, Apple authentication, provisioning, signing, or installation works on a real device. See [release readiness](RELEASE_READINESS.md).
 
 ## What is included
 
@@ -44,10 +46,10 @@ bash scripts/build-engine.sh
 bash scripts/validate-build.sh
 ```
 
-GitHub Actions runs the same source build and bundle validation and uploads diagnostic logs only. It does not publish the compiled app.
+GitHub Actions runs the source build and bundle validation and uploads diagnostic logs only. It does not export or publish the compiled app/IPA.
 
 ## Attribution and licence
 
 **SideInstaller by FrizzleM** — https://github.com/FrizzleM/SideInstaller
 
-The upstream source is pinned as a Git submodule and its original custom licence is preserved. FrozenApps changes the UI, branding, local file-library experience, and app integration. Source distribution must retain the upstream notice and comply with its non-commercial conditions. Obtain explicit written authorization before distributing compiled derivatives or using the engine commercially.
+The upstream source is pinned as a Git submodule. The full upstream custom licence is also included at [LICENSES/SideInstaller-LICENSE.md](LICENSES/SideInstaller-LICENSE.md) so it is visible in source archives. FrozenApps changes the app branding, privacy terms, navigation, and local file-library experience. Source distribution must retain the upstream copyright and licence notices and comply with the licence conditions. Obtain explicit written authorization before distributing compiled derivatives or using the engine commercially.
