@@ -126,6 +126,15 @@ replace_once(
         }'''
 )
 
+replace_once(
+    "ios-app/RootView.swift",
+    '''        .onChange(of: page) { _, page in Backdrop.settle(on: page.wash) }''',
+    '''        .onChange(of: page) { _, page in Backdrop.settle(on: page.wash) }
+        .onReceive(NotificationCenter.default.publisher(for: .frozenAppsOpenNetwork)) { _ in
+            withAnimation(.smooth(duration: 0.25)) { page = .network }
+        }'''
+)
+
 replace_once("ios-app/Theme.swift",
     "static let accent = Color(red: 0.13, green: 0.44, blue: 0.96)",
     "static let accent = Color(red: 0.43, green: 0.29, blue: 1.0)")
