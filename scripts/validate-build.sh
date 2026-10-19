@@ -21,11 +21,11 @@ fail() {
 
 # Read version/build expectations from the project manifest so a future release
 # doesn't require a second, easy-to-forget version edit in this validator.
-EXPECTED_VERSION=$(awk -F: '/^[[:space:]]*MARKETING_VERSION:/ { gsub(/[[:space:]"]/, "", $2); print $2; exit }' "$ROOT/project.yml")
-EXPECTED_BUILD=$(awk -F: '/^[[:space:]]*CURRENT_PROJECT_VERSION:/ { gsub(/[[:space:]"]/, "", $2); print $2; exit }' "$ROOT/project.yml")
+EXPECTED_VERSION=$(awk -F: '/^[[:space:]]*MARKETING_VERSION:/ { gsub(/[" ]/, "", $2); print $2; exit }' "$ROOT/project.yml")
+EXPECTED_BUILD=$(awk -F: '/^[[:space:]]*CURRENT_PROJECT_VERSION:/ { gsub(/[" ]/, "", $2); print $2; exit }' "$ROOT/project.yml")
 EXPECTED_MIN_OS=$(awk -F: '
   /^[[:space:]]*deploymentTarget:/ { in_deployment_target=1; next }
-  in_deployment_target && /^[[:space:]]*iOS:/ { gsub(/[[:space:]"]/, "", $2); print $2; exit }
+  in_deployment_target && /^[[:space:]]*iOS:/ { gsub(/[" ]/, "", $2); print $2; exit }
   in_deployment_target && /^[^[:space:]]/ { in_deployment_target=0 }
 ' "$ROOT/project.yml")
 
