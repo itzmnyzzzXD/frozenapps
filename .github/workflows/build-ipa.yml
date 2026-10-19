@@ -10,6 +10,11 @@ on:
 permissions:
   contents: read
 
+# Keep only the latest build for a branch; Xcode/Rust builds are expensive.
+concurrency:
+  group: frozenapps-build-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: xcode-27
