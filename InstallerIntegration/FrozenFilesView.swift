@@ -549,11 +549,12 @@ struct FrozenFilesView: View {
         message = nil
         Task {
             await engine.importCustomIPA(from: url)
-            if engine.customIPAName == name {
+            if engine.customIPAName == name && engine.lastError == nil {
                 engine.installSource = .custom
                 message = "Loaded \(name) into Signer. Switch to the Signer tab to review and install it."
             } else {
-                message = "Could not load \(name) into Signer. Switch to Signer to see the import error."
+                let detail = engine.lastError.map { ": \($0)" } ?? ""
+                message = "Could not load \(name) into Signer\(detail). Review the import status on the Signer tab."
             }
             loadingID = nil
         }
