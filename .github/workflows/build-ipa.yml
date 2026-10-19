@@ -1,68 +1,75 @@
-name: Build FrozenApps IPA
+name: Validate FrozenApps installer engine
 
 on:
-  workflow_dispatch:
+  # A push build covers the feature branch and the PR head. Avoid duplicate
+  # seven-minute Xcode builds from separate push and pull_request events.
   push:
-    branches: [main, master]
-    tags:
-      - "v*"
+    branches: ["**"]
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
-    runs-on: macos-15
+    runs-on: xcode-27
     steps:
-      - name: Checkout
+      - name: Checkout FrozenApps source
         uses: actions/checkout@v4
 
-      - name: Select Xcode
+      - name: Prepare pinned installer engine (sparse checkout)
+        shell: bash
+        run: bash scripts/prepare-engine-source.sh
+
+      - name: Select Xcode and install Rust toolchain
+        shell: bash
         run: |
-          XCODE_PATH="$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -n 1)"
-          if [ -n "$XCODE_PATH" ]; then sudo xcode-select -s "$XCODE_PATH/Contents/Developer"; fi
+          set -euo pipefail
+          xcode-select -p
           xcodebuild -version
+          swift --version
+          python3 --version
+          if ! command -v cargo >/dev/null 2>&1; then
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
+          fi
+          source "$HOME/.cargo/env"
+          rustup target add aarch64-apple-ios aarch64-apple-ios-sim
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          if ! command -v xcodegen >/dev/null 2>&1; then
+            brew install xcodegen
+          fi
 
-      - name: Install XcodeGen
-        run: brew install xcodegen
+      - name: Apply FrozenApps branding and privacy terms
+        run: python3 scripts/apply-frozenapps-branding.py
 
-      - name: Generate project
-        run: xcodegen generate
-
-      - name: Build unsigned iOS app
+      - name: Build Rust pairing and signing engine plus iOS app
+        shell: bash
         run: |
+          set -euo pipefail
+          export DEVELOPER_DIR="$(xcode-select -p)"
+          export IPHONEOS_DEPLOYMENT_TARGET=17.4
+          bash Vendor/SideInstaller/build-rust.sh
+          xcodegen generate
           set -o pipefail
           xcodebuild -project FrozenApps.xcodeproj -scheme FrozenApps \
             -configuration Release -sdk iphoneos \
-            -derivedDataPath build/DerivedData \
+            -derivedDataPath "$GITHUB_WORKSPACE/build/DerivedData" \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
-            build | tee build.log
+            build | tee "$GITHUB_WORKSPACE/build.log"
 
-      - name: Package IPA
-        run: |
-          APP_PATH="build/DerivedData/Build/Products/Release-iphoneos/FrozenApps.app"
-          test -d "$APP_PATH"
-          mkdir -p package/Payload
-          cp -R "$APP_PATH" package/Payload/FrozenApps.app
-          cd package
-          zip -qr ../FrozenApps-unsigned.ipa Payload
-          cd ..
-          shasum -a 256 FrozenApps-unsigned.ipa
+      - name: Validate native engine and app bundle
+        shell: bash
+        run: bash scripts/validate-build.sh
 
-      - name: Upload IPA and build log
+      # The upstream custom licence does not grant clear permission to publish
+      # a compiled derivative. Keep public CI limited to source and diagnostics.
+      - name: Upload build diagnostics only
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: FrozenApps-iOS-build
+          name: FrozenApps-engine-build-diagnostics
           path: |
-            FrozenApps-unsigned.ipa
             build.log
+            build-validation.txt
           if-no-files-found: warn
           retention-days: 14
-
-      - name: Publish IPA to GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v3
-        with:
-          files: FrozenApps-unsigned.ipa
-          generate_release_notes: true

@@ -1,0 +1,12 @@
+# Xcode / Swift
+DerivedData/
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.swiftpm/
+.build/
+
+# Generated Rust and framework build products
+Vendor/SideInstaller/SideInstallerFFI.xcframework/
+Vendor/SideInstaller/rust-core/target/
+build/
+build.log

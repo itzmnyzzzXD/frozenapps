@@ -1,47 +1,43 @@
 # FrozenApps
 
-FrozenApps is an iPhone and iPad-first sideloading project with a green, white, and blue interface, subtle animated particles, and three main areas: **Signer**, **Settings**, and **Files**.
+FrozenApps is an iPhone/iPad-first app installer project. The intended workflow pairs a device, authenticates for signing, provisions and signs an IPA, installs it, and provides a local files library—only on supported iOS versions and after the necessary device setup.
 
-## Current app features
+## Release status
 
-- First-launch terms screen; acceptance is saved locally.
-- Native Sign in with Apple UI. This signs the user into an app identity flow; it is **not** the Apple Account developer sign-in used by an IPA signing engine.
-- Local IPA import from Files, local file listing, and deletion.
-- Developer Mode guidance that explains the steps the user must take on the device.
-- Optional local notifications and a test alert.
-- No FrozenApps database or server upload is implemented in this version.
+**The published `v1.0.1` release predates the SideInstaller engine integration.** The engine is currently developed on the `feature/on-device-installer-engine` branch and has passed a GitHub Actions source build. This is not yet a verified, installable release.
 
-## Important: the sideloading engine is not complete yet
+The integrated build intentionally does not publish an IPA from CI. The upstream custom licence does not clearly grant binary distribution of a compiled derivative; written permission from the upstream copyright holder is required before publishing a compiled FrozenApps build. See [release readiness](RELEASE_READINESS.md) for the remaining validation gates.
 
-The current source is an app interface and local file library; it does **not** yet do the complete SideInstaller-style workflow. In particular, it does not perform on-device Apple developer authentication, Anisette, device pairing, provisioning-profile/certificate creation, IPA signing, device installation, or pairing-file handoff to SideStore.
+## Installer engine
 
-Those steps require a real on-device engine—not just an Apple sign-in button or a Developer Mode help screen. We must not show a successful signing/installation status until the underlying operation actually succeeds.
+FrozenApps integrates the source of [SideInstaller by FrizzleM](https://github.com/FrizzleM/SideInstaller) as a pinned Git submodule at `Vendor/SideInstaller`. The upstream engine implements device pairing, LocalDevVPN/tunnel communication, Apple developer-session authentication with a two-factor callback, certificate/App ID/provisioning setup, IPA signing, and installation.
 
-## SideInstaller research
+FrozenApps adds green/white/blue branding, subtle animated white particles, an in-app privacy and terms notice, and three tabs: Signer, Settings, Files.
 
-The upstream [SideInstaller repository](https://github.com/FrizzleM/SideInstaller) documents an on-device pipeline that combines remote pairing, a LocalDevVPN-style network tunnel, Apple developer-account authentication, IPA signing, and installation. Its documented compatibility is version-sensitive: iOS 27+ can pair on-device, iOS 17.4–26.7 requires an existing pairing file, and versions below iOS 17.4 are listed as unsupported. These are SideInstaller's stated compatibility notes, not a claim that FrozenApps supports those workflows today.
+## Compatibility and requirements
 
-SideInstaller's source licence is custom and non-commercial. It requires attribution for incorporated code and restricts commercial use and distribution of its compiled releases/derivatives. FrozenApps should not copy the upstream engine into a public IPA build without confirming that the planned use and distribution are permitted. See the upstream [licence](https://github.com/FrizzleM/SideInstaller/blob/main/LICENSE.md) before reusing code.
+The upstream engine's requirements are version-dependent. Its documented self-pair workflow targets iOS/iPadOS 27; iOS 17.4–26.7 requires an existing pairing file, and versions below 17.4 are listed as unsupported. Working Wi-Fi/local-network access, the required LocalDevVPN setup, account eligibility, and physical-device testing are still necessary. Developer Mode, when required, must be enabled by the device owner in Settings.
 
-## Build an unsigned IPA
+## Build validation
 
-The GitHub Actions workflow builds an **unsigned** iOS app and packages it as `FrozenApps-unsigned.ipa`.
+Build prerequisites on a Mac: Xcode 27, Rust (rustup), XcodeGen, Python 3, and Git.
 
-1. Open this repository's **Actions** tab.
-2. Select **Build FrozenApps IPA**.
-3. Open the latest completed successful run.
-4. Download the **FrozenApps-iOS-build** artifact and extract the ZIP.
+```bash
+git clone https://github.com/itzmnyzzzXD/frozenapps.git
+cd frozenapps
+git checkout feature/on-device-installer-engine
+bash scripts/build-engine.sh
+bash scripts/validate-build.sh
+```
 
-The output is a build artifact, not a ready-to-install signed app. It needs a supported signing method before ordinary installation on iOS. This repository does not contain signing certificates or provisioning profiles.
+The local validation script expects a successful build at `build/DerivedData/Build/Products/Release-iphoneos/FrozenApps.app`. GitHub Actions performs the same bundle checks and uploads build diagnostics only, not the compiled application.
 
 ## Privacy
 
-Preferences, terms acceptance, Apple sign-in profile fields, and imported IPA files are kept in app-local storage in the current version. This version does not send those fields or files to a FrozenApps database. The native Sign in with Apple flow does not expose the Apple Account password to FrozenApps. No two-factor verification codes are requested by the current implementation.
+FrozenApps does not operate a FrozenApps-owned credential database. Apple Account credentials entered into the installer are handled by the upstream authentication flow and stored using iOS Keychain. Authentication is still networked: Apple receives authentication requests, and the selected Anisette provider may receive protocol data required to complete authentication. Local storage does not mean all network traffic stays on-device. Review the source and terms before entering credentials; never send passwords or verification codes to anyone.
 
-Local-only storage is a technical design choice, not a guarantee of legal immunity. The app's terms should describe actual behavior accurately and should not claim that a privacy policy prevents every possible legal claim.
+## Attribution
 
-## Project
+**SideInstaller by FrizzleM** — https://github.com/FrizzleM/SideInstaller
 
-- Bundle identifier: `com.itzmnyzzz.frozenapps`
-- Minimum iOS version: `16.0`
-- UI: SwiftUI
+FrozenApps is a separate project with its own branding and UI modifications. The pinned upstream source and licence are preserved as a Git submodule.
