@@ -134,7 +134,8 @@ func makeIcon(size: Int, variant: String) -> CGImage {
 
     // A few restrained glints reinforce the ice motif without cluttering the mark.
     if !tinted {
-        for (x, y, radius) in [(0.76, 0.82, 0.012), (0.19, 0.56, 0.009), (0.79, 0.22, 0.008)] {
+        let glints: [(CGFloat, CGFloat, CGFloat)] = [(0.76, 0.82, 0.012), (0.19, 0.56, 0.009), (0.79, 0.22, 0.008)]
+        for (x, y, radius) in glints {
             let dot = CGRect(x: dimension * x - dimension * radius,
                              y: dimension * y - dimension * radius,
                              width: dimension * radius * 2,
@@ -177,9 +178,8 @@ func main() throws {
         guard parts.count == 2, let pointSize = Double(parts[0]) else {
             throw NSError(domain: "FrozenAppsIcon", code: 4, userInfo: [NSLocalizedDescriptionKey: "Invalid icon size: \(sizeText)"])
         }
-        let scale = Double(entry["scale"] as? String ?? "1x").flatMap { _ in
-            Double((entry["scale"] as? String ?? "1x").replacingOccurrences(of: "x", with: ""))
-        } ?? 1
+        let scaleText = (entry["scale"] as? String ?? "1x").replacingOccurrences(of: "x", with: "")
+        let scale = Double(scaleText) ?? 1
         let pixels = max(1, Int((pointSize * scale).rounded()))
         let variant = filename.localizedCaseInsensitiveContains("tinted") ? "tinted"
             : filename.localizedCaseInsensitiveContains("dark") ? "dark" : "standard"
