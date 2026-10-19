@@ -1182,10 +1182,12 @@ replace_once(
             }
             Spacer(minLength: 8)
             if isActive {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
+                Image(systemName: "checkmark")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(Theme.accent2)
             }
         }
+        .foregroundStyle(.primary)
         .contentShape(Rectangle())
     }''',
     '''    /// One saved Apple Account, with a distinct active state.
