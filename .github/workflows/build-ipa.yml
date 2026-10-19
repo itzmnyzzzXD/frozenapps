@@ -9,6 +9,7 @@ on:
       - "**/*.md"
       - "LICENSES/**"
       - "latest_version.txt"
+      - ".github/workflows/build-ipa.yml"
   release:
     types: [published, edited]
   workflow_dispatch:
@@ -26,12 +27,21 @@ jobs:
     steps:
       - name: Checkout FrozenApps source
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
       - name: Prepare pinned installer engine (sparse checkout)
         shell: bash
         run: bash scripts/prepare-engine-source.sh
+
+      - name: Cache Rust dependencies and release builds
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            Vendor/SideInstaller/rust-core/target
+          key: ${{ runner.os }}-${{ runner.arch }}-sideinstaller-rust-${{ hashFiles('Vendor/SideInstaller/rust-core/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-sideinstaller-rust-
 
       - name: Select Xcode and install Rust toolchain
         shell: bash
