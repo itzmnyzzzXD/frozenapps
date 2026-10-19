@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Apply FrozenApps branding and navigation to the pinned SideInstaller source."""
 from pathlib import Path
+import re
 import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -1205,6 +1206,22 @@ replace_once(
     'req.setValue("SideInstaller", forHTTPHeaderField: "User-Agent")',
     'req.setValue("FrozenApps", forHTTPHeaderField: "User-Agent")'
 )
+
+# Replace upstream product-name mentions inside ordinary Swift string literals only.
+# Preserve explicit licence attribution and source URLs; never rename module/type symbols.
+def frozenapps_ui_literal(match):
+    literal = match.group(0)
+    if "https://github.com/FrizzleM/SideInstaller" in literal:
+        return literal
+    if "SideInstaller by FrizzleM" in literal:
+        return literal
+    return literal.replace("SideInstaller", "FrozenApps")
+
+for swift_path in APP.glob("*.swift"):
+    source = swift_path.read_text(encoding="utf-8")
+    branded = re.sub(r'"(?:\\.|[^"\\])*"', frozenapps_ui_literal, source)
+    if branded != source:
+        swift_path.write_text(branded, encoding="utf-8")
 
 # Generate all declared app-icon sizes from the FrozenApps vector design.
 subprocess.run(["swift", str(ROOT / "scripts" / "generate-app-icon.swift")], cwd=ROOT, check=True)
