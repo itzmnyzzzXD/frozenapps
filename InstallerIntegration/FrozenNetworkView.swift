@@ -449,7 +449,7 @@ private final class FrozenNetworkDiagnostics: ObservableObject {
     private static func ipv4Addresses() -> [String] {
         var first: UnsafeMutablePointer<ifaddrs>?
         guard getifaddrs(&first) == 0, let head = first else { return [] }
-        defer { freeifaddrs(first) }
+        defer { freeifaddrs(head) }
 
         var cursor: UnsafeMutablePointer<ifaddrs>? = head
         var results: [String] = []
