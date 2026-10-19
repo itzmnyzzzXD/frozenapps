@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: frozenapps-build-${{ github.ref }}
+  group: frozenapps-v1.0.2-release-backfill-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
