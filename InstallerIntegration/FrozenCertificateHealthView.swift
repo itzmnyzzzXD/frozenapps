@@ -315,26 +315,25 @@ struct FrozenCertificateHealthView: View {
         let result = SecPKCS12Import(data as CFData, options, &items)
         guard result == errSecSuccess,
               let rows = items as? [[String: Any]],
-              let identity = rows.first?[kSecImportItemIdentity as String] as? SecIdentity else {
+              let rawIdentity = rows.first?[kSecImportItemIdentity as String] else {
             error = SecCopyErrorMessageString(result, nil) as String? ?? "Could not open the certificate bundle with that password."
             status = nil
             return
         }
+        // SecPKCS12Import returns a SecIdentity under this documented dictionary key.
+        let identity = unsafeBitCast(rawIdentity as AnyObject, to: SecIdentity.self)
         var found: SecCertificate?
         guard SecIdentityCopyCertificate(identity, &found) == errSecSuccess, let certificate = found else {
             error = "Could not read the public certificate from this bundle."
             status = nil
             return
         }
-        var copyError: Unmanaged<CFError>?
-        guard let values = SecCertificateCopyValues(certificate, [kSecOIDX509V1ValidityNotAfter] as CFArray, &copyError) as? [String: Any],
-              let expiryValue = values[kSecOIDX509V1ValidityNotAfter as String] as? [String: Any],
-              let expiry = expiryValue[kSecPropertyKeyValue as String] as? Date else {
+        let der = SecCertificateCopyData(certificate) as Data
+        guard let expiry = FrozenX509Expiry.notAfter(der) else {
             error = "The certificate was opened, but its expiry date could not be read."
             status = nil
             return
         }
-        let der = SecCertificateCopyData(certificate) as Data
         certFingerprint = SHA256.hash(data: der).map { String(format: "%02x", $0) }.joined()
         certSubject = SecCertificateCopySubjectSummary(certificate) as String? ?? "Unknown subject"
         certName = p12Name
@@ -343,5 +342,77 @@ struct FrozenCertificateHealthView: View {
         p12Password = ""
         status = "Certificate inspected locally. Only public metadata was saved."
         error = nil
+    }
+}
+
+
+/// Minimal bounded DER reader for the X.509 validity.notAfter field.
+/// This reads the certificate's encoded date; it does not validate trust or revocation.
+private enum FrozenX509Expiry {
+    private struct Node {
+        let tag: UInt8
+        let start: Int
+        let end: Int
+        let next: Int
+    }
+
+    static func notAfter(_ data: Data) -> Date? {
+        guard let outer = node(data, at: 0), outer.tag == 0x30,
+              let tbs = node(data, at: outer.start), tbs.tag == 0x30 else { return nil }
+        let fields = children(data, of: tbs)
+        var index = 0
+        if fields.first?.tag == 0xA0 { index = 1 } // optional explicit version
+        index += 4 // serial, signature algorithm, issuer, validity
+        guard fields.indices.contains(index - 1), fields[index - 1].tag == 0x30 else { return nil }
+        let validity = children(data, of: fields[index - 1])
+        guard validity.count >= 2 else { return nil }
+        let time = validity[1]
+        guard time.tag == 0x17 || time.tag == 0x18 else { return nil }
+        let value = String(decoding: data[time.start..<time.end], as: UTF8.self)
+        let formats = time.tag == 0x17
+            ? ["yyMMddHHmmss'Z'", "yyMMddHHmmssZ"]
+            : ["yyyyMMddHHmmss'Z'", "yyyyMMddHHmmssZ"]
+        for format in formats {
+            let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: "en_US_POSIX")
+            formatter.timeZone = TimeZone(secondsFromGMT: 0)
+            formatter.dateFormat = format
+            if let date = formatter.date(from: value) { return date }
+        }
+        return nil
+    }
+
+    private static func children(_ data: Data, of parent: Node) -> [Node] {
+        var result: [Node] = []
+        var offset = parent.start
+        while offset < parent.end, let item = node(data, at: offset), item.next > offset {
+            result.append(item)
+            offset = item.next
+        }
+        return result
+    }
+
+    private static func node(_ data: Data, at offset: Int) -> Node? {
+        guard offset >= 0, offset + 2 <= data.count else { return nil }
+        let bytes = [UInt8](data)
+        let tag = bytes[offset]
+        var cursor = offset + 1
+        let first = bytes[cursor]
+        cursor += 1
+        let length: Int
+        if first & 0x80 == 0 {
+            length = Int(first)
+        } else {
+            let count = Int(first & 0x7F)
+            guard count > 0, count <= 4, cursor + count <= bytes.count else { return nil }
+            var value = 0
+            for _ in 0..<count {
+                value = (value << 8) | Int(bytes[cursor])
+                cursor += 1
+            }
+            length = value
+        }
+        guard length >= 0, cursor <= bytes.count, length <= bytes.count - cursor else { return nil }
+        return Node(tag: tag, start: cursor, end: cursor + length, next: cursor + length)
     }
 }
