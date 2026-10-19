@@ -21,7 +21,7 @@ def replace_once(relative_path: str, old: str, new: str) -> None:
     else:
         raise SystemExit(f"Expected one patch target in {relative_path}; found {count}: {old[:80]!r}")
 
-def replace_section(relative_path: str, start_marker: str, end_marker: str | None, replacement: str) -> None:
+def replace_section(relative_path: str, start_marker: str, end_marker, replacement: str) -> None:
     """Replace one complete Swift declaration in the pinned source, idempotently."""
     path = VENDOR / relative_path
     source = path.read_text(encoding="utf-8")
