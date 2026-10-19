@@ -3,28 +3,31 @@
 ## Current state
 
 - The SideInstaller source integration and FrozenApps app integration are merged into `main`.
-- CI **passed** for tag commit `eac167c4493046405278fa0a14315529e2622a3b` in [run 39234854061](https://github.com/itzmnyzzzXD/frozenapps/actions/runs/39234854061). It compiled the Rust pairing/signing engine and iOS app, then verified the bundle ID, app display name, version/build, minimum OS, Live Activity extension, and arm64 app/library architecture.
-- The validated app reports version/build `1.0.2 (3)` and minimum iOS/iPadOS 17.4. The CI build was **unsigned** and its workflow uploads diagnostics only; it does not produce a distributable IPA.
-- The `v1.0.2` GitHub Release entry exists, but the release API currently reports **zero attached assets**. The tag points at the successful CI commit above.
-- The older `v1.0.1` release does have an IPA asset, but it predates the engine integration and must not be presented as the current engine-enabled app.
-- `latest_version.txt` remains `1.0.1` until there is a legitimate downloadable release asset.
-- The Files tab supports multiple stored IPA packages, archive and app-metadata validation, search and sorting, metadata inspection, a SHA-256 checksum, and loading a package into the engine's custom-IPA signing workflow.
+- CI **passed** for the earlier `v1.0.2` tag commit `eac167c4493046405278fa0a14315529e2622a3b` in [run 39234854061](https://github.com/itzmnyzzzXD/frozenapps/actions/runs/39234854061). It compiled the Rust pairing/signing engine and iOS app, then verified bundle metadata and arm64 architecture.
+- The latest workflow change adds unsigned IPA packaging, archive-structure checks, a SHA-256 checksum, release-event triggers for `published` and `edited`, and an opt-in release upload.
+- The current `v1.0.2` release has no attached assets. The older `v1.0.1` IPA predates engine integration and is not the current build.
+- The build output is unsigned. It is not a ready-to-install signed app.
+- Public release upload requires the repository variable `FROZENAPPS_BINARY_RELEASE_ALLOWED=true`, which must only be set after written permission for binary distribution has been obtained. Once the permission and variable are in place, edit/save the existing release to trigger the release workflow again.
 - No physical iPad has yet been verified. Pairing, Apple authentication, provisioning, signing, and app installation still need hardware tests.
-- The full upstream custom licence is also kept at [LICENSES/SideInstaller-LICENSE.md](LICENSES/SideInstaller-LICENSE.md), in addition to its source repository/submodule.
+- The full upstream custom licence is kept at [LICENSES/SideInstaller-LICENSE.md](LICENSES/SideInstaller-LICENSE.md), as well as in the upstream source repository/submodule.
 
 ## Release gates
 
-- [ ] Confirm written permission for the intended binary distribution and use from the upstream copyright holder. Keep a record of the exact scope granted.
-- [x] Preserve the upstream license and copyright text in this source repository and retain the attribution.
-- [x] Verify that the tag commit's CI build and bundle validation pass. Repeat after any source-code change.
+- [ ] Obtain and retain written permission for the intended binary distribution from the upstream copyright holder; set `FROZENAPPS_BINARY_RELEASE_ALLOWED=true` only after that.
+- [x] Preserve the upstream licence and copyright text in this source repository and retain attribution.
+- [x] Confirm that the tagged source commit compiles and passes bundle validation.
+- [x] Add workflow logic to package the app into an unsigned IPA, verify the ZIP structure, and calculate its SHA-256 checksum.
+- [x] Add release-published and release-edited triggers, and configure the release upload to use the existing tag.
+- [ ] Confirm the updated workflow succeeds and inspect the generated IPA artifact.
+- [ ] After authorization, edit/save the `v1.0.2` release to trigger the workflow and verify that both the IPA and checksum appear in its asset list.
 - [ ] Test on a physical iPad running iPadOS 27 using the documented self-pair workflow.
 - [ ] If supporting iPadOS 17.4–26.7, verify the existing pairing-file flow; do not claim computer-free pairing for these versions without the required pairing file.
 - [ ] Verify LocalDevVPN/local-network setup and permissions using a test Apple Account.
 - [ ] Exercise two-factor callbacks, certificate and provisioning setup, custom IPA signing, installation, failure recovery, and retry flows on hardware.
 - [ ] Re-test after reboot and clean install. Confirm the app doesn't imply that Sign in with Apple alone enables developer signing.
 - [ ] Confirm the privacy notice accurately discloses Keychain storage and all authentication-provider/network traffic.
-- [ ] Only after the gates above pass, create or update the release with an asset built from a documented source commit; verify installation from that exact build and publish its SHA-256 checksum.
+- [ ] Publish the binary only after authorization and device checks; include the SHA-256 checksum and document the source commit.
 
 ## What CI can and cannot prove
 
-CI can prove that the source compiles and the resulting app bundle contains expected metadata and architecture. It cannot prove Apple will accept an account, pairing succeeds on a given iPadOS version, provisioning succeeds, or the signed app installs and launches. Those checks require a physical device and valid credentials that must never be included in CI logs.
+CI can prove that the source compiles, the app bundle contains expected metadata and architecture, and the unsigned IPA archive has the expected app path. It cannot prove Apple will accept an account, pairing succeeds on a given iPadOS version, provisioning succeeds, or the signed app installs and launches. Those checks require a physical device and valid credentials that must never be included in CI logs.
