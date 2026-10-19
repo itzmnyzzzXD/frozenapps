@@ -28,6 +28,45 @@ txt = info.read_text(encoding="utf-8")
 txt = txt.replace("SideInstaller", "FrozenApps")
 txt = txt.replace("com.frizzlem.sideinstaller", "com.itzmnyzzz.frozenapps")
 txt = txt.replace("com.frizzle.sideinstaller", "com.itzmnyzzz.frozenapps")
+# Explain the existing pairing traffic as well as the new, user-triggered diagnostics.
+txt = txt.replace(
+    "FrozenApps advertises an on-device pairing service so this iPhone can pair with it, and connects to the local lockdown daemon to install apps.",
+    "FrozenApps uses the local network for device pairing, app installation, and optional discovery of nearby HTTP services. Scan results stay on this device."
+)
+
+# Preserve the engine's existing Bonjour services and add only the service type
+# used by FrozenNetworkView. This is required for iOS Local Network discovery.
+if "<key>NSBonjourServices</key>" not in txt:
+    root_end = txt.rfind("</dict>")
+    if root_end < 0:
+        raise SystemExit("Could not find the top-level Info.plist dictionary end.")
+    services = (
+        "\t<key>NSBonjourServices</key>\n"
+        "\t<array>\n"
+        "\t\t<string>_http._tcp</string>\n"
+        "\t</array>\n"
+    )
+    txt = txt[:root_end] + services + txt[root_end:]
+elif "<string>_http._tcp</string>" not in txt:
+    services_key = txt.find("<key>NSBonjourServices</key>")
+    services_array = txt.find("<array>", services_key)
+    if services_array < 0:
+        raise SystemExit("NSBonjourServices exists but its array is missing.")
+    insert_at = txt.find("\n", services_array) + 1
+    if insert_at == 0:
+        raise SystemExit("Could not locate the NSBonjourServices array.")
+    txt = txt[:insert_at] + "\t\t<string>_http._tcp</string>\n" + txt[insert_at:]
+
+# Keep a purpose string even if a future upstream version removes its own key.
+if "<key>NSLocalNetworkUsageDescription</key>" not in txt:
+    root_end = txt.rfind("</dict>")
+    if root_end < 0:
+        raise SystemExit("Could not find the top-level Info.plist dictionary end.")
+    purpose = (
+        "\t<key>NSLocalNetworkUsageDescription</key>\n"
+        "\t<string>FrozenApps uses the local network for device pairing, app installation, and optional discovery of nearby HTTP services.</string>\n"
+    )
+    txt = txt[:root_end] + purpose + txt[root_end:]
 info.write_text(txt, encoding="utf-8")
 
 # The Live Activity extension shares the visible product name.
@@ -49,6 +88,210 @@ for path in APP.glob("*.swift"):
 
 replace_once(
     "ios-app/RootView.swift",
+    '''    private enum Page: Hashable {
+        case install, tools, about
+
+        var wash: Backdrop.Level {
+            switch self {
+            case .install: .bright
+            case .tools:   .dark
+            // Same as Install, so switching between them doesn't change the backdrop.
+            case .about:   .bright
+            }
+        }
+    }''',
+    '''    private enum Page: Hashable {
+        case install, network, tools, settings, files
+
+        var wash: Backdrop.Level {
+            switch self {
+            case .install, .network, .files: .bright
+            case .tools, .settings: .dark
+            }
+        }
+    }'''
+)
+
+# Make the engine Tools page read as FrozenApps while retaining its original utility routes.
+replace_once(
+    "ios-app/RootView.swift",
+    '''    private var header: some View {
+        Text(L("Tools"))
+            .font(.largeTitle.weight(.bold))
+            .frame(maxWidth: .infinity)
+            .padding(.top, 8)
+    }''',
+    '''    private var header: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("FROZEN UTILITIES")
+                        .font(.system(size: 9, weight: .heavy, design: .rounded))
+                        .tracking(1.6)
+                        .foregroundStyle(Theme.accent2)
+                    Text("Tools that do more.")
+                        .font(.system(size: 25, weight: .bold, design: .rounded))
+                        .tracking(-0.55)
+                        .foregroundStyle(.white)
+                    Text("Pairing, signing resources and app management.")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.58))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 0)
+                ZStack {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(Theme.brand)
+                    Image(systemName: "slider.horizontal.3")
+                        .font(.system(size: 24, weight: .semibold))
+                        .foregroundStyle(.white)
+                }
+                .frame(width: 58, height: 58)
+                .shadow(color: Theme.accent.opacity(0.3), radius: 14, x: 0, y: 6)
+            }
+            HStack(spacing: 8) {
+                Label(Engine.deviceCanSelfPair ? "6 UTILITIES" : "5 UTILITIES",
+                      systemImage: "square.grid.2x2.fill")
+                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                    .tracking(0.8)
+                    .foregroundStyle(.white.opacity(0.72))
+                Spacer()
+                Text("FROZENAPPS")
+                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                    .tracking(1.2)
+                    .foregroundStyle(.white.opacity(0.35))
+            }
+        }
+        .padding(19)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            ZStack(alignment: .topTrailing) {
+                LinearGradient(
+                    colors: [
+                        Color(red: 0.12, green: 0.09, blue: 0.24),
+                        Color(red: 0.035, green: 0.11, blue: 0.19)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                Circle()
+                    .fill(Theme.accent.opacity(0.18))
+                    .frame(width: 150, height: 150)
+                    .blur(radius: 30)
+                    .offset(x: 40, y: -60)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 25, style: .continuous))
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 25, style: .continuous)
+                .strokeBorder(
+                    LinearGradient(
+                        colors: [.white.opacity(0.22), Theme.accent.opacity(0.38), .white.opacity(0.05)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
+        }
+    }'''
+)
+
+replace_once(
+    "ios-app/RootView.swift",
+    '''    var body: some View {
+        PanelCard {
+            HStack(spacing: 14) {
+                glyph
+                    .frame(width: 46, height: 46)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                Text(title)
+                    .font(.headline)
+                if beta { BetaBadge() }
+                Spacer(minLength: 8)
+                Image(systemName: "chevron.right")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
+        }
+    }''',
+    '''    private var subtitle: String {
+        switch image ?? icon ?? "" {
+        case "SideBySideLogo": "Run a separate app workspace"
+        case "PairingLogo": "Review or create a device pairing file"
+        case "CertsLogo": "Inspect certificates used for signing"
+        case "EntitlementsLogo": "Review app capability declarations"
+        case "LocationLogo": "Manage location-related options"
+        case "AppsLogo": "Review apps managed by this device"
+        default: "Open a FrozenApps utility"
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 14) {
+            glyph
+                .frame(width: 50, height: 50)
+                .clipShape(RoundedRectangle(cornerRadius: 15, style: .continuous))
+            VStack(alignment: .leading, spacing: 5) {
+                HStack(spacing: 8) {
+                    Text(title)
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white)
+                    if beta { BetaBadge() }
+                }
+                Text(subtitle)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.52))
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+            }
+            Spacer(minLength: 4)
+            ZStack {
+                Circle()
+                    .fill(Theme.accent2.opacity(0.12))
+                    .frame(width: 31, height: 31)
+                Image(systemName: "arrow.up.right")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(Theme.accent2)
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(LinearGradient(
+                    colors: [.white.opacity(0.065), .white.opacity(0.022)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ))
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .strokeBorder(
+                    LinearGradient(
+                        colors: [.white.opacity(0.17), Theme.accent.opacity(0.17), .white.opacity(0.04)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
+        }
+    }'''
+)
+
+replace_once(
+    "ios-app/RootView.swift",
+    "    @State private var showSettings = false\n",
+    ""
+)
+replace_once(
+    "ios-app/RootView.swift",
+    '''            .toolbar { settingsToolbarItem(isPresented: $showSettings) }
+            .sheet(isPresented: $showSettings) { SettingsView() }''',
+    '''            // Settings has its own FrozenApps tab.'''
+)
+
+replace_once(
+    "ios-app/RootView.swift",
     '''        TabView(selection: $page) {
             ContentView()
                 .tabItem { Label(L("Install"), systemImage: "square.and.arrow.down") }
@@ -67,23 +310,46 @@ replace_once(
         }''',
     '''        TabView(selection: $page) {
             ContentView()
-                .tabItem { Label(L("Signer"), systemImage: "signature") }
+                .tabItem { Label("Signer", systemImage: "signature") }
                 .tag(Page.install)
-            SettingsView()
-                .tabItem { Label(L("Settings"), systemImage: "slider.horizontal.3") }
+            FrozenNetworkView()
+                .tabItem { Label("Network", systemImage: "point.3.connected.trianglepath.dotted") }
+                .tag(Page.network)
+            ToolsView(pairingManager: pairingManager,
+                      certManager: certManager,
+                      locationManager: locationManager,
+                      entitlementsManager: entitlementsManager,
+                      appsManager: appsManager,
+                      sideBySideManager: sideBySideManager)
+                .tabItem { Label("Tools", systemImage: "wrench.and.screwdriver") }
                 .tag(Page.tools)
             FrozenFilesView()
-                .tabItem { Label(L("Files"), systemImage: "folder") }
-                .tag(Page.about)
+                .tabItem { Label("Files", systemImage: "folder") }
+                .tag(Page.files)
+            SettingsView()
+                .tabItem { Label("Settings", systemImage: "slider.horizontal.3") }
+                .tag(Page.settings)
+        }'''
+)
+
+replace_once(
+    "ios-app/RootView.swift",
+    '''        .onChange(of: page) { _, page in Backdrop.settle(on: page.wash) }''',
+    '''        .onChange(of: page) { _, page in Backdrop.settle(on: page.wash) }
+        .onReceive(NotificationCenter.default.publisher(for: .frozenAppsOpenNetwork)) { _ in
+            withAnimation(.smooth(duration: 0.25)) { page = .network }
         }'''
 )
 
 replace_once("ios-app/Theme.swift",
     "static let accent = Color(red: 0.13, green: 0.44, blue: 0.96)",
-    "static let accent = Color(red: 0.16, green: 0.86, blue: 0.55)")
+    "static let accent = Color(red: 0.43, green: 0.29, blue: 1.0)")
+replace_once("ios-app/Theme.swift",
+    "static let glow = Color(red: 1 / 255, green: 26 / 255, blue: 92 / 255)",
+    "static let glow = Color(red: 0.035, green: 0.018, blue: 0.09)")
 replace_once("ios-app/Theme.swift",
     "static let accent2 = Color(red: 0.30, green: 0.68, blue: 1.0)",
-    "static let accent2 = Color(red: 0.28, green: 0.65, blue: 1.0)")
+    "static let accent2 = Color(red: 0.20, green: 0.88, blue: 0.98)")
 replace_once(
     "ios-app/Theme.swift",
     '''                Color.black.opacity(Backdrop.wash(at: t))
@@ -214,12 +480,134 @@ replace_once(
     '"https://github.com/itzmnyzzzXD/frozenapps"'
 )
 
-# Use FrozenApps identity in the actual signer header and user-facing messaging.
+# Add a branded control-center card without changing the existing signer engine flow.
 replace_once(
     "ios-app/ContentView.swift",
-    'BrandHeader(icon: "arrow.down.app.fill", image: "AppLogo", title: "SideInstaller",',
-    'BrandHeader(icon: "signature", title: "FrozenApps",'
+    '''                    header.cascadeItem(0)
+                    if updateChecker.showBanner {''',
+    '''                    header.cascadeItem(0)
+                    FrozenHomePanel(
+                        wifiConnected: engine.wifiConnected,
+                        tunnelConnected: engine.vpnConnected,
+                        deviceSummary: engine.deviceSummary
+                    ) {
+                        NotificationCenter.default.post(name: .frozenAppsOpenNetwork, object: nil)
+                    }
+                    .cascadeItem(1)
+                    if updateChecker.showBanner {'''
 )
+replace_once(
+    "ios-app/ContentView.swift",
+    '''                    appCard.cascadeItem(1)''',
+    '''                    appCard.cascadeItem(2)'''
+)
+
+# Use a dedicated FrozenApps visual identity on the Signer screen.
+replace_once(
+    "ios-app/ContentView.swift",
+    '''    private var header: some View {
+        BrandHeader(icon: "arrow.down.app.fill", image: "AppLogo", title: "SideInstaller",
+                    animateIcon: engine.isRunning) {
+            statusPill
+                .transition(.opacity.combined(with: .scale(scale: 0.85, anchor: .top)))
+                .id(statusPillID)
+        }
+    }''',
+    '''    private var header: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 13) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 17, style: .continuous)
+                        .fill(Theme.brand)
+                        .shadow(color: Theme.accent.opacity(0.38), radius: 16, x: 0, y: 6)
+                    Image(systemName: engine.isRunning ? "arrow.clockwise" : "snowflake")
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundStyle(.white)
+                }
+                .frame(width: 52, height: 52)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("FROZENAPPS · ON-DEVICE")
+                        .font(.system(size: 9, weight: .heavy, design: .rounded))
+                        .tracking(1.7)
+                        .foregroundStyle(Theme.accent2)
+                    Text("Your install studio")
+                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                }
+                Spacer(minLength: 0)
+            }
+            HStack(spacing: 10) {
+                statusPill
+                    .transition(.opacity.combined(with: .scale(scale: 0.85, anchor: .top)))
+                    .id(statusPillID)
+                Spacer(minLength: 0)
+                Text("PRIVATE WORKSPACE")
+                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                    .tracking(1.2)
+                    .foregroundStyle(.white.opacity(0.42))
+            }
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .fill(LinearGradient(
+                    colors: [
+                        Color(red: 0.12, green: 0.10, blue: 0.24),
+                        Color(red: 0.04, green: 0.13, blue: 0.20)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ))
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .strokeBorder(
+                    LinearGradient(
+                        colors: [.white.opacity(0.24), Theme.accent.opacity(0.42), .white.opacity(0.05)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
+        }
+        .shadow(color: Theme.accent.opacity(0.12), radius: 20, x: 0, y: 8)
+    }'''
+)
+replace_once(
+    "ios-app/ContentView.swift",
+    '''    private var footer: some View {
+        Text(L("an app by Frizzle"))
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity)
+            .padding(.top, 10)
+    }''',
+    '''    private var footer: some View {
+        Text("FROZENAPPS  ·  YOUR DEVICE, YOUR WORKFLOW")
+            .font(.system(size: 9, weight: .semibold, design: .rounded))
+            .tracking(1.2)
+            .foregroundStyle(.white.opacity(0.34))
+            .frame(maxWidth: .infinity)
+            .padding(.top, 10)
+    }'''
+)
+replace_once(
+    "ios-app/SettingsView.swift",
+    '''            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(L("Done")) { dismiss() }
+                }
+            }''',
+    '''            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Text("1.0.3")
+                        .font(.system(size: 10, weight: .bold, design: .rounded).monospacedDigit())
+                        .foregroundStyle(Theme.accent2)
+                }
+            }'''
+)
+
 replace_once(
     "ios-app/ContentView.swift",
     '''Text(L("SideInstaller %@ is available — you're on %@.",''',
