@@ -33,12 +33,12 @@ struct FrozenHomePanel: View {
 
             HStack(alignment: .center, spacing: 10) {
                 VStack(alignment: .leading, spacing: 7) {
-                    Text("Your apps,\nyour way.")
+                    Text("Pair with\nFrozenApps.")
                         .font(.system(size: 27, weight: .bold, design: .rounded))
                         .tracking(-0.65)
                         .foregroundStyle(.white)
                         .fixedSize(horizontal: false, vertical: true)
-                    Text("A cleaner home for signing, files and device connectivity.")
+                    Text("Connect your device, sign apps and manage installs from one focused workspace.")
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(.white.opacity(0.62))
                         .fixedSize(horizontal: false, vertical: true)
@@ -76,7 +76,7 @@ struct FrozenHomePanel: View {
                 HStack(spacing: 9) {
                     Image(systemName: "point.3.connected.trianglepath.dotted")
                         .font(.system(size: 14, weight: .semibold))
-                    Text("Open Local Network tools")
+                    Text("Prepare for pairing")
                         .font(.system(size: 13, weight: .semibold))
                     Spacer()
                     Image(systemName: "arrow.up.right")
