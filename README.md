@@ -6,7 +6,7 @@ FrozenApps is an iPhone/iPad-first signing and installation workspace. It brings
 
 The v1.0.3 redesign uses a custom violet-and-ice-cyan identity, five purpose-built tabs, redesigned Apple Account setup/edit screens, refreshed utility icons, a pairing-first onboarding path, and a more visible live install-progress ring with percentages. Downloading a custom IPA from a link also shows a numeric percentage when the server reports transfer progress.
 
-The UI changes are applied by \`scripts/apply-frozenapps-branding.py\` to the pinned engine checkout during every build. That keeps the customised screens reproducible rather than leaving edits in a generated directory that disappears on the next build. The existing pairing, Apple authentication, two-factor, provisioning, signing, and installation callbacks are retained.
+The UI changes are applied by `scripts/apply-frozenapps-branding.py` to the pinned engine checkout during every build. That keeps the customised screens reproducible rather than leaving edits in a generated directory that disappears on the next build. The existing pairing, Apple authentication, two-factor, provisioning, signing, and installation callbacks are retained.
 
 ## What is included
 
@@ -25,7 +25,7 @@ The app targets iOS/iPadOS 17.4 and later, but the supported pairing method depe
 
 ## Import a custom IPA
 
-1. Open **Files** and import one or more \`.ipa\` files. FrozenApps checks the archive and main app metadata before saving the package.
+1. Open **Files** and import one or more `.ipa` files. FrozenApps checks the archive and main app metadata before saving the package.
 2. Open the package details to check its app name, bundle ID, version, size, modified date, and SHA-256 checksum.
 3. Tap **Load into Signer**. This creates a separate working copy; the library copy remains intact.
 4. Open **Signer**, choose the imported IPA, and follow the pairing, authentication, two-factor, provisioning, signing, and installation steps.
@@ -37,15 +37,15 @@ Only install apps and files you are authorised to use. Never send your Apple Acc
 
 Build prerequisites on a Mac: Xcode 27, Rust (rustup), XcodeGen, Python 3, and Git.
 
-\`\`\`bash
+```bash
 git clone https://github.com/itzmnyzzzXD/frozenapps.git
 cd frozenapps
 git submodule update --init --recursive
 bash scripts/build-engine.sh
 bash scripts/validate-build.sh
-\`\`\`
+```
 
-GitHub Actions compiles the app and native engine, validates the app bundle and architecture, packages \`FrozenApps-unsigned.ipa\`, and calculates a SHA-256 checksum. The generated IPA is **unsigned**; it is not ready to install as-is. CI compilation also cannot prove that Apple authentication, device pairing, provisioning, signing, or installation works on a physical iPad. Physical-device testing remains necessary.
+GitHub Actions compiles the app and native engine, validates the app bundle and architecture, packages `FrozenApps-unsigned.ipa`, and calculates a SHA-256 checksum. The generated IPA is **unsigned**; it is not ready to install as-is. CI compilation also cannot prove that Apple authentication, device pairing, provisioning, signing, or installation works on a physical iPad. Physical-device testing remains necessary.
 
 ## Attribution and licence
 
