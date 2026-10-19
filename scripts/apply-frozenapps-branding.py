@@ -183,4 +183,47 @@ replace_once(
             }'''
 )
 
+
+# Use FrozenApps identity in the actual signer header and user-facing messaging.
+replace_once(
+    "ios-app/ContentView.swift",
+    'BrandHeader(icon: "arrow.down.app.fill", image: "AppLogo", title: "SideInstaller",',
+    'BrandHeader(icon: "signature", title: "FrozenApps",'
+)
+replace_once(
+    "ios-app/ContentView.swift",
+    '''Text(L("SideInstaller %@ is available — you're on %@.",''',
+    '''Text(L("FrozenApps %@ is available — you're on %@.",'''
+)
+replace_once(
+    "ios-app/ContentView.swift",
+    '''Text(L("This iPhone runs iOS %@, which SideInstaller can't install on. Update to iOS %@ or later in Settings › General › Software Update.",''',
+    '''Text(L("This iPhone runs iOS %@, which FrozenApps can't run on. Update to iOS %@ or later in Settings › General › Software Update.",'''
+)
+replace_once(
+    "ios-app/ContentView.swift",
+    '''Text(L("Connect to a Wi-Fi network. Pairing this iPhone needs it — SideInstaller has to be findable on the local network."))''',
+    '''Text(L("Connect to a Wi-Fi network. Pairing this device needs it — FrozenApps has to be findable on the local network."))'''
+)
+replace_once(
+    "ios-app/SettingsView.swift",
+    '''Text(L("No Apple ID saved yet. Add one and SideInstaller will use it for every sign-in."))''',
+    '''Text(L("No Apple ID saved yet. Add one and FrozenApps will use it for every sign-in."))'''
+)
+replace_once(
+    "ios-app/UpdateChecker.swift",
+    '"https://raw.githubusercontent.com/FrizzleM/SideInstaller/main/latest_version.txt"',
+    '"https://raw.githubusercontent.com/itzmnyzzzXD/frozenapps/main/latest_version.txt"'
+)
+replace_once(
+    "ios-app/UpdateChecker.swift",
+    'static let installPageURL = "https://frizzlem.github.io/SideInstaller/"',
+    'static let installPageURL = "https://github.com/itzmnyzzzXD/frozenapps/releases"'
+)
+replace_once(
+    "ios-app/UpdateChecker.swift",
+    'req.setValue("SideInstaller", forHTTPHeaderField: "User-Agent")',
+    'req.setValue("FrozenApps", forHTTPHeaderField: "User-Agent")'
+)
+
 print("Applied FrozenApps branding to pinned engine source.")
