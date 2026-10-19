@@ -9,13 +9,12 @@ on:
       - "**/*.md"
       - "LICENSES/**"
       - "latest_version.txt"
-      - ".github/workflows/build-ipa.yml"
-  release:
-    types: [published, edited]
+  pull_request:
+    branches: ["main"]
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: frozenapps-build-${{ github.ref }}
@@ -100,13 +99,17 @@ jobs:
           shasum -a 256 "$IPA" | tee "$GITHUB_WORKSPACE/FrozenApps-unsigned.ipa.sha256"
           ls -lh "$IPA"
 
-      # Upload on release publication/edit and when a version tag is pushed.
-      # No repository variable is required for this workflow.
-      - name: Attach unsigned IPA to the GitHub Release
-        if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main'
+      # Publish only version tags. Branch pushes and pull requests must never
+      # overwrite a previously published release.
+      - name: Attach validated IPA to version release
+        if: startsWith(github.ref, 'refs/tags/v') && github.event_name == 'push'
+        permissions:
+          contents: write
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event_name == 'release' && github.event.release.tag_name || (github.ref == 'refs/heads/main' && '1.0.3') || github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          name: FrozenApps ${{ github.ref_name }}
+          generate_release_notes: true
           files: |
             FrozenApps-unsigned.ipa
             FrozenApps-unsigned.ipa.sha256
