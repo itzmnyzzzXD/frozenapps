@@ -280,7 +280,7 @@ replace_once(
 
 replace_once(
     "ios-app/RootView.swift",
-    "    @State private var showSettings = false\\n",
+    "    @State private var showSettings = false\n",
     ""
 )
 replace_once(
