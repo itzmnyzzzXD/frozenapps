@@ -9,7 +9,6 @@ on:
       - "**/*.md"
       - "LICENSES/**"
       - "latest_version.txt"
-      - ".github/workflows/build-ipa.yml"
   release:
     types: [published, edited]
   workflow_dispatch:
