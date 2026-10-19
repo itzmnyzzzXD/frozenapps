@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import UniformTypeIdentifiers
+import UIKit
 
 private struct FrozenLibraryItem: Identifiable, Equatable {
     let url: URL
@@ -18,11 +19,14 @@ private enum FrozenLibraryStore {
     enum ImportError: LocalizedError {
         case notIPA
         case invalidArchive
+        case unreadableAppMetadata
 
         var errorDescription: String? {
             switch self {
             case .notIPA: return "Choose a file with the .ipa extension."
             case .invalidArchive: return "This file does not look like a complete IPA package."
+            case .unreadableAppMetadata:
+                return "The archive has no readable Payload/App.app/Info.plist. ZIP64 archives are not supported by this inspector."
             }
         }
     }
@@ -82,6 +86,7 @@ private enum FrozenLibraryStore {
         if let copyError { throw copyError }
         if let coordinationError { throw coordinationError }
         guard IPALibrary.looksLikeIPA(staged) else { throw ImportError.invalidArchive }
+        guard IPALibrary.appInfo(at: staged) != nil else { throw ImportError.unreadableAppMetadata }
 
         let destination = uniqueDestination(named: source.deletingPathExtension().lastPathComponent,
                                            in: directory,
@@ -121,6 +126,8 @@ struct FrozenFilesView: View {
     @State private var message: String?
     @State private var importError: String?
     @State private var pendingDelete: DeleteTarget?
+    @State private var inspectorItem: FrozenLibraryItem?
+    @State private var searchText = ""
 
     private enum DeleteTarget: Identifiable {
         case library(FrozenLibraryItem)
@@ -138,6 +145,23 @@ struct FrozenFilesView: View {
             case .library(let item): return item.fileName
             case .download(let item): return item.fileName
             }
+        }
+    }
+
+    private var normalizedSearch: String {
+        searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var visibleLibraryItems: [FrozenLibraryItem] {
+        guard !normalizedSearch.isEmpty else { return libraryItems }
+        return libraryItems.filter { $0.fileName.localizedCaseInsensitiveContains(normalizedSearch) }
+    }
+
+    private var visibleDownloads: [DownloadedIPA] {
+        guard !normalizedSearch.isEmpty else { return downloads.downloads }
+        return downloads.downloads.filter {
+            $0.fileName.localizedCaseInsensitiveContains(normalizedSearch)
+            || $0.displayName.localizedCaseInsensitiveContains(normalizedSearch)
         }
     }
 
@@ -190,10 +214,12 @@ struct FrozenFilesView: View {
                             .background(.white.opacity(0.045), in: RoundedRectangle(cornerRadius: 14))
                     }
 
-                    if downloads.downloads.isEmpty && libraryItems.isEmpty {
+                    if totalFiles == 0 {
                         emptyState
+                    } else if visibleLibraryItems.isEmpty && visibleDownloads.isEmpty {
+                        noResultsState
                     } else {
-                        if !libraryItems.isEmpty {
+                        if !visibleLibraryItems.isEmpty {
                             VStack(alignment: .leading, spacing: 10) {
                                 Text("MY IPA LIBRARY")
                                     .font(.system(size: 10, weight: .bold))
@@ -201,19 +227,20 @@ struct FrozenFilesView: View {
                                     .foregroundStyle(.secondary)
                                     .padding(.horizontal, 3)
 
-                                ForEach(libraryItems) { item in
+                                ForEach(visibleLibraryItems) { item in
                                     fileRow(name: item.fileName,
                                             detail: "\(item.sizeText) · Saved locally",
                                             icon: "doc.badge.plus",
                                             identity: item.id,
                                             isLoading: loadingID == item.id,
+                                            inspectAction: { inspectorItem = item },
                                             useAction: { loadForSigning(url: item.url, name: item.fileName, id: item.id) },
                                             deleteAction: { pendingDelete = .library(item) })
                                 }
                             }
                         }
 
-                        if !downloads.downloads.isEmpty {
+                        if !visibleDownloads.isEmpty {
                             VStack(alignment: .leading, spacing: 10) {
                                 Text("SIGNER DOWNLOADS")
                                     .font(.system(size: 10, weight: .bold))
@@ -221,12 +248,15 @@ struct FrozenFilesView: View {
                                     .foregroundStyle(.secondary)
                                     .padding(.horizontal, 3)
 
-                                ForEach(downloads.downloads) { item in
+                                ForEach(visibleDownloads) { item in
                                     fileRow(name: item.displayName,
                                             detail: "\(item.sizeText) · \(item.fileName)",
                                             icon: item.isImported ? "doc.badge.plus" : "doc.zipper",
                                             identity: item.id,
                                             isLoading: loadingID == item.id,
+                                            inspectAction: {
+                                                inspectorItem = FrozenLibraryItem(url: item.url, size: item.size, modified: item.modified)
+                                            },
                                             useAction: { loadForSigning(url: item.url, name: item.fileName, id: item.id) },
                                             deleteAction: { pendingDelete = .download(item) })
                                 }
@@ -247,6 +277,14 @@ struct FrozenFilesView: View {
             .navigationTitle("Files")
             .navigationBarTitleDisplayMode(.inline)
             .refreshable { refresh() }
+            .searchable(text: $searchText,
+                        placement: .navigationBarDrawer(displayMode: .always),
+                        prompt: "Search IPA files")
+        }
+        .sheet(item: $inspectorItem) { item in
+            FrozenIPAInspectorView(item: item)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
         }
         .fileImporter(
             isPresented: $showImporter,
@@ -304,6 +342,23 @@ struct FrozenFilesView: View {
         .task { refresh() }
     }
 
+    private var noResultsState: some View {
+        VStack(spacing: 10) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 26, weight: .medium))
+                .foregroundStyle(.secondary)
+            Text("No matching IPA files").font(.headline)
+            Text("Try another filename or clear the search field.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(24)
+        .background(.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(.white.opacity(0.08), lineWidth: 1))
+    }
+
     private var emptyState: some View {
         VStack(spacing: 13) {
             Image(systemName: "folder.badge.plus")
@@ -324,7 +379,8 @@ struct FrozenFilesView: View {
     }
 
     private func fileRow(name: String, detail: String, icon: String, identity: String,
-                         isLoading: Bool, useAction: @escaping () -> Void,
+                         isLoading: Bool, inspectAction: @escaping () -> Void,
+                         useAction: @escaping () -> Void,
                          deleteAction: @escaping () -> Void) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 12) {
@@ -343,6 +399,15 @@ struct FrozenFilesView: View {
                         .lineLimit(2)
                 }
                 Spacer(minLength: 4)
+                Button(action: inspectAction) {
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(Theme.accent2)
+                        .padding(8)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Inspect \(name)")
+
                 Button(role: .destructive, action: deleteAction) {
                     Image(systemName: "trash")
                         .font(.system(size: 14, weight: .medium))
@@ -429,5 +494,121 @@ struct FrozenFilesView: View {
         }
         pendingDelete = nil
         refresh()
+    }
+}
+
+
+private struct FrozenIPAInspectorView: View {
+    let item: FrozenLibraryItem
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var appInfo: IPALibrary.AppInfo?
+    @State private var checksum: String?
+    @State private var isLoading = true
+    @State private var copied = false
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    HStack(spacing: 14) {
+                        Image(systemName: "doc.zipper")
+                            .font(.system(size: 24, weight: .medium))
+                            .foregroundStyle(Theme.accent)
+                            .frame(width: 58, height: 58)
+                            .background(Theme.accent.opacity(0.13), in: RoundedRectangle(cornerRadius: 18))
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text(appInfo?.name ?? item.fileName)
+                                .font(.system(size: 21, weight: .bold, design: .rounded))
+                                .lineLimit(3)
+                            Text(isLoading ? "Inspecting package…" : (appInfo == nil ? "App metadata could not be read" : "Package metadata loaded"))
+                                .font(.subheadline)
+                                .foregroundStyle(appInfo == nil && !isLoading ? .orange : .secondary)
+                        }
+                    }
+
+                    VStack(spacing: 0) {
+                        metadataRow("File", item.fileName)
+                        Divider().overlay(.white.opacity(0.06))
+                        metadataRow("Size", item.sizeText)
+                        Divider().overlay(.white.opacity(0.06))
+                        metadataRow("Modified", item.modified?.formatted(date: .abbreviated, time: .shortened) ?? "Unknown")
+                        Divider().overlay(.white.opacity(0.06))
+                        metadataRow("Bundle ID", appInfo?.bundleID ?? (isLoading ? "Reading…" : "Unavailable"))
+                        Divider().overlay(.white.opacity(0.06))
+                        metadataRow("Version", appInfo?.version ?? (isLoading ? "Reading…" : "Not specified"))
+                    }
+                    .padding(.horizontal, 14)
+                    .background(.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 17))
+                    .overlay(RoundedRectangle(cornerRadius: 17).stroke(.white.opacity(0.07), lineWidth: 1))
+
+                    VStack(alignment: .leading, spacing: 9) {
+                        HStack {
+                            Text("SHA-256")
+                                .font(.system(size: 13, weight: .semibold))
+                            Spacer()
+                            if checksum != nil {
+                                Button(copied ? "Copied" : "Copy checksum") {
+                                    guard let checksum else { return }
+                                    UIPasteboard.general.string = checksum
+                                    copied = true
+                                }
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(Theme.accent2)
+                            }
+                        }
+                        Text(isLoading ? "Calculating checksum…" : (checksum ?? "Checksum unavailable"))
+                            .font(.system(size: 11, design: .monospaced))
+                            .textSelection(.enabled)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(15)
+                    .background(.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 16))
+                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.07), lineWidth: 1))
+
+                    Text("Inspection reads the app's metadata from inside the archive and calculates a local SHA-256 checksum. This does not guarantee Apple will accept the app or that signing will succeed.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(20)
+            }
+            .background(AppBackground())
+            .navigationTitle("IPA details")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+        .task { await inspect() }
+    }
+
+    private func metadataRow(_ title: String, _ value: String) -> some View {
+        HStack(alignment: .top, spacing: 16) {
+            Text(title)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.secondary)
+                .frame(width: 76, alignment: .leading)
+            Spacer(minLength: 0)
+            Text(value)
+                .font(.system(size: 12, weight: .medium))
+                .multilineTextAlignment(.trailing)
+                .textSelection(.enabled)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+        }
+        .padding(.vertical, 12)
+    }
+
+    @MainActor
+    private func inspect() async {
+        let url = item.url
+        let result = await Task.detached(priority: .utility) {
+            (IPALibrary.appInfo(at: url), IPALibrary.sha256(of: url))
+        }.value
+        appInfo = result.0
+        checksum = result.1
+        isLoading = false
     }
 }
