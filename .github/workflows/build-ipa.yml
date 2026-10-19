@@ -1,16 +1,22 @@
-name: Validate FrozenApps installer engine
+name: Build and validate FrozenApps
 
 on:
-  # A push build covers the feature branch and the PR head. Avoid duplicate
-  # seven-minute Xcode builds from separate push and pull_request events.
   push:
     branches: ["**"]
+    tags: ["v*"]
+    paths-ignore:
+      - "*.md"
+      - "**/*.md"
+      - "LICENSES/**"
+      - "latest_version.txt"
+      - ".github/workflows/build-ipa.yml"
+  release:
+    types: [published, edited]
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
-# Keep only the latest build for a branch; Xcode/Rust builds are expensive.
 concurrency:
   group: frozenapps-build-${{ github.ref }}
   cancel-in-progress: true
@@ -25,6 +31,17 @@ jobs:
       - name: Prepare pinned installer engine (sparse checkout)
         shell: bash
         run: bash scripts/prepare-engine-source.sh
+
+      - name: Cache Rust dependencies and release builds
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            Vendor/SideInstaller/rust-core/target
+          key: ${{ runner.os }}-${{ runner.arch }}-sideinstaller-rust-${{ hashFiles('Vendor/SideInstaller/rust-core/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-sideinstaller-rust-
 
       - name: Select Xcode and install Rust toolchain
         shell: bash
@@ -66,15 +83,44 @@ jobs:
         shell: bash
         run: bash scripts/validate-build.sh
 
-      # The upstream custom licence does not grant clear permission to publish
-      # a compiled derivative. Keep public CI limited to source and diagnostics.
-      - name: Upload build diagnostics only
+      - name: Package unsigned IPA
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP="$GITHUB_WORKSPACE/build/DerivedData/Build/Products/Release-iphoneos/FrozenApps.app"
+          IPA_ROOT="$GITHUB_WORKSPACE/ipa-root"
+          IPA="$GITHUB_WORKSPACE/FrozenApps-unsigned.ipa"
+          test -d "$APP"
+          rm -rf "$IPA_ROOT" "$IPA"
+          mkdir -p "$IPA_ROOT/Payload"
+          ditto "$APP" "$IPA_ROOT/Payload/FrozenApps.app"
+          (cd "$IPA_ROOT" && /usr/bin/zip -qry "$IPA" Payload)
+          /usr/bin/unzip -t "$IPA"
+          /usr/bin/unzip -Z1 "$IPA" | grep -q '^Payload/FrozenApps.app/Info.plist$'
+          shasum -a 256 "$IPA" | tee "$GITHUB_WORKSPACE/FrozenApps-unsigned.ipa.sha256"
+          ls -lh "$IPA"
+
+      # Upload on release publication/edit and when a version tag is pushed.
+      # No repository variable is required for this workflow.
+      - name: Attach unsigned IPA to the GitHub Release
+        if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event_name == 'release' && github.event.release.tag_name || github.ref_name }}
+          files: |
+            FrozenApps-unsigned.ipa
+            FrozenApps-unsigned.ipa.sha256
+          fail_on_unmatched_files: true
+
+      - name: Upload build output for repository owner
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: FrozenApps-engine-build-diagnostics
+          name: FrozenApps-build-output
           path: |
             build.log
             build-validation.txt
+            FrozenApps-unsigned.ipa
+            FrozenApps-unsigned.ipa.sha256
           if-no-files-found: warn
           retention-days: 14
