@@ -78,11 +78,69 @@ struct FrozenAppCatalogView: View {
     @State private var downloading = Set<String>()
     @State private var messages: [String: String] = [:]
     @State private var showAddSource = false
+    @State private var sourceSort = "Name"
+    @State private var sourceFilter = "All sources"
+    @State private var sourceFeedback: String?
+    @State private var isRefreshingAll = false
+    @State private var sourcePendingRemoval: FrozenCatalogSource?
+    @State private var showRemoveSourceConfirmation = false
+    @AppStorage("frozenApps.catalog.favorites.v1") private var favoriteSourceIDsRaw = ""
+
+    private var favoriteSourceIDs: Set<String> {
+        Set(favoriteSourceIDsRaw.split(separator: "\n").map { String($0) })
+    }
 
     private var visibleSources: [FrozenCatalogSource] {
         let query = search.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !query.isEmpty else { return sources }
-        return sources.filter { $0.repository.localizedCaseInsensitiveContains(query) }
+        var result = sources.filter {
+            query.isEmpty || $0.repository.localizedCaseInsensitiveContains(query)
+        }
+
+        switch sourceFilter {
+        case "Favorites":
+            result = result.filter { favoriteSourceIDs.contains($0.id) }
+        case "Has IPA":
+            result = result.filter { source in
+                guard let release = releases[source.id] else { return false }
+                return release.assets.contains { $0.name.lowercased().hasSuffix(".ipa") }
+            }
+        case "No IPA":
+            result = result.filter { source in
+                guard let release = releases[source.id] else { return false }
+                return !release.assets.contains { $0.name.lowercased().hasSuffix(".ipa") }
+            }
+        case "Needs attention":
+            result = result.filter { source in
+                guard let message = messages[source.id] else { return false }
+                return !message.hasPrefix("Saved ")
+            }
+        case "Not checked":
+            result = result.filter {
+                releases[$0.id] == nil && messages[$0.id] == nil && !loading.contains($0.id)
+            }
+        default:
+            break
+        }
+
+        switch sourceSort {
+        case "IPA count":
+            result.sort {
+                let leftCount = ipaAssetCount(for: $0)
+                let rightCount = ipaAssetCount(for: $1)
+                if leftCount != rightCount { return leftCount > rightCount }
+                return $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending
+            }
+        case "Status":
+            result.sort {
+                let leftRank = sourceStatusRank($0)
+                let rightRank = sourceStatusRank($1)
+                if leftRank != rightRank { return leftRank < rightRank }
+                return $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending
+            }
+        default:
+            result.sort { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+        }
+        return result
     }
 
     var body: some View {
@@ -102,19 +160,92 @@ struct FrozenAppCatalogView: View {
                     .overlay { RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(LinearGradient(colors: [.white.opacity(0.26), Theme.accent.opacity(0.18), .white.opacity(0.045)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1) }
                     .shadow(color: Theme.accent.opacity(0.08), radius: 12, x: 0, y: 5)
 
-                    HStack {
-                        Text("SOURCES").font(.system(size: 9, weight: .heavy, design: .rounded)).tracking(1.5).foregroundStyle(Theme.accent2)
-                        Spacer()
+                    HStack(spacing: 8) {
+                        Text("SOURCES · \(sources.count)").font(.system(size: 9, weight: .heavy, design: .rounded)).tracking(1.2).foregroundStyle(Theme.accent2)
+                        Spacer(minLength: 4)
+                        Button {
+                            Task { await refreshAllSources() }
+                        } label: {
+                            if isRefreshingAll {
+                                ProgressView().tint(Theme.accent2)
+                            } else {
+                                Label("Refresh all", systemImage: "arrow.clockwise")
+                                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(Theme.accent2)
+                        .disabled(isRefreshingAll || sources.isEmpty)
                         Button { showAddSource = true } label: {
                             Label("Add source", systemImage: "plus")
-                                .font(.system(size: 11, weight: .bold, design: .rounded))
+                                .font(.system(size: 10, weight: .bold, design: .rounded))
                         }
                         .buttonStyle(.plain)
                         .foregroundStyle(.white)
                     }
 
-                    ForEach(visibleSources) { source in
-                        sourceCard(source)
+                    Menu {
+                        Section("Sort sources") {
+                            Picker("Sort by", selection: $sourceSort) {
+                                Text("Name").tag("Name")
+                                Text("IPA count").tag("IPA count")
+                                Text("Status").tag("Status")
+                            }
+                        }
+                        Section("Filter sources") {
+                            Picker("Show", selection: $sourceFilter) {
+                                Text("All sources").tag("All sources")
+                                Text("Favorites").tag("Favorites")
+                                Text("Has IPA").tag("Has IPA")
+                                Text("No IPA").tag("No IPA")
+                                Text("Needs attention").tag("Needs attention")
+                                Text("Not checked").tag("Not checked")
+                            }
+                        }
+                    } label: {
+                        FrozenGlassMenuLabel(
+                            title: sourceFilter == "All sources" ? "Filter & sort" : sourceFilter,
+                            icon: "slider.horizontal.3",
+                            subtitle: "Sort: \(sourceSort)"
+                        )
+                    }
+                    .buttonStyle(FrozenGlassPressStyle())
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                    if let sourceFeedback {
+                        Label(sourceFeedback,
+                              systemImage: sourceFeedbackIsError ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(sourceFeedbackIsError ? .orange : Theme.accent2)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(10)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(.white.opacity(0.045), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
+
+                    if visibleSources.isEmpty {
+                        PanelCard {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Label("No matching sources", systemImage: "line.3.horizontal.decrease.circle")
+                                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                                    .foregroundStyle(.white)
+                                Text("Try a different search or source filter. You can always return to All sources.")
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundStyle(.white.opacity(0.53))
+                                Button("Reset search and filters") {
+                                    search = ""
+                                    sourceFilter = "All sources"
+                                    sourceSort = "Name"
+                                }
+                                .font(.system(size: 11, weight: .bold, design: .rounded))
+                                .buttonStyle(.plain)
+                                .foregroundStyle(Theme.accent2)
+                            }
+                        }
+                    } else {
+                        ForEach(visibleSources) { source in
+                            sourceCard(source)
+                        }
                     }
 
                     HStack {
@@ -192,6 +323,15 @@ struct FrozenAppCatalogView: View {
         } message: {
             Text("Enter a public GitHub repository as owner/repository. FrozenApps checks its latest public release for IPA assets.")
         }
+        .confirmationDialog("Remove custom source?", isPresented: $showRemoveSourceConfirmation, titleVisibility: .visible) {
+            Button("Remove source", role: .destructive) {
+                if let source = sourcePendingRemoval { removeSource(source) }
+                sourcePendingRemoval = nil
+            }
+            Button("Cancel", role: .cancel) { sourcePendingRemoval = nil }
+        } message: {
+            Text("This removes the repository from your saved source list. IPA files already downloaded to your library will not be deleted.")
+        }
     }
 
     private var header: some View {
@@ -245,6 +385,57 @@ struct FrozenAppCatalogView: View {
                         Button("Check releases") { Task { await loadRelease(for: source) } }
                             .font(.system(size: 10, weight: .bold, design: .rounded))
                             .buttonStyle(.plain)
+                            .foregroundStyle(Theme.accent2)
+                    }
+
+                    Button {
+                        toggleFavorite(source)
+                    } label: {
+                        Image(systemName: favoriteSourceIDs.contains(source.id) ? "star.fill" : "star")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(favoriteSourceIDs.contains(source.id) ? Theme.accent2 : .white.opacity(0.62))
+                            .frame(width: 32, height: 32)
+                            .background(.white.opacity(0.055), in: Circle())
+                    }
+                    .buttonStyle(FrozenGlassPressStyle())
+                    .accessibilityLabel(favoriteSourceIDs.contains(source.id) ? "Unpin \(source.title)" : "Pin \(source.title)")
+
+                    Menu {
+                        if let url = source.url {
+                            Button("Open GitHub", systemImage: "arrow.up.right.square") { openURL(url) }
+                        }
+                        Button("Copy repository", systemImage: "doc.on.doc") {
+                            UIPasteboard.general.string = source.repository
+                            sourceFeedback = "Copied \(source.repository)."
+                        }
+                        if !FrozenCatalogSource.builtIn.contains(source) {
+                            Divider()
+                            Button("Remove source", systemImage: "trash", role: .destructive) {
+                                sourcePendingRemoval = source
+                                showRemoveSourceConfirmation = true
+                            }
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(.white.opacity(0.72))
+                            .frame(width: 32, height: 32)
+                            .background(.white.opacity(0.055), in: Circle())
+                    }
+                    .buttonStyle(FrozenGlassPressStyle())
+                    .accessibilityLabel("More actions for \(source.title)")
+                }
+
+                HStack(spacing: 6) {
+                    Circle().fill(sourceStatusTint(source)).frame(width: 6, height: 6)
+                    Text(sourceStatusTitle(source))
+                        .font(.system(size: 9, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.58))
+                    Spacer()
+                    if favoriteSourceIDs.contains(source.id) {
+                        Text("PINNED")
+                            .font(.system(size: 8, weight: .heavy, design: .rounded))
+                            .tracking(1)
                             .foregroundStyle(Theme.accent2)
                     }
                 }
@@ -318,6 +509,58 @@ struct FrozenAppCatalogView: View {
         }
     }
 
+    private var sourceFeedbackIsError: Bool {
+        guard let sourceFeedback else { return false }
+        return sourceFeedback.localizedCaseInsensitiveContains("already")
+            || sourceFeedback.localizedCaseInsensitiveContains("invalid")
+            || sourceFeedback.localizedCaseInsensitiveContains("must be")
+            || sourceFeedback.localizedCaseInsensitiveContains("could not")
+    }
+
+    private func ipaAssetCount(for source: FrozenCatalogSource) -> Int {
+        releases[source.id]?.assets.filter { $0.name.lowercased().hasSuffix(".ipa") }.count ?? 0
+    }
+
+    private func sourceStatusRank(_ source: FrozenCatalogSource) -> Int {
+        if loading.contains(source.id) { return 0 }
+        if let message = messages[source.id], !message.hasPrefix("Saved ") { return 1 }
+        guard let release = releases[source.id] else { return 4 }
+        return release.assets.contains { $0.name.lowercased().hasSuffix(".ipa") } ? 2 : 3
+    }
+
+    private func sourceStatusTitle(_ source: FrozenCatalogSource) -> String {
+        if loading.contains(source.id) { return "CHECKING RELEASE" }
+        if let message = messages[source.id], !message.hasPrefix("Saved ") { return "NEEDS ATTENTION" }
+        guard let release = releases[source.id] else { return "NOT CHECKED" }
+        let count = ipaAssetCount(for: source)
+        return count > 0 ? "\(count) IPA ASSET\(count == 1 ? "" : "S")" : "NO IPA IN LATEST RELEASE"
+    }
+
+    private func sourceStatusTint(_ source: FrozenCatalogSource) -> Color {
+        if loading.contains(source.id) { return Theme.accent2 }
+        if let message = messages[source.id], !message.hasPrefix("Saved ") { return .orange }
+        guard releases[source.id] != nil else { return .white.opacity(0.45) }
+        return ipaAssetCount(for: source) > 0 ? .green : .white.opacity(0.52)
+    }
+
+    private func toggleFavorite(_ source: FrozenCatalogSource) {
+        var favorites = favoriteSourceIDs
+        if favorites.contains(source.id) {
+            favorites.remove(source.id)
+            sourceFeedback = "Unpinned \(source.title)."
+        } else {
+            favorites.insert(source.id)
+            sourceFeedback = "Pinned \(source.title)."
+        }
+        favoriteSourceIDsRaw = favorites.sorted().joined(separator: "\n")
+    }
+
+    private func persistSources() {
+        let customSources = sources.filter { !FrozenCatalogSource.builtIn.contains($0) }
+        guard let data = try? JSONEncoder().encode(customSources) else { return }
+        savedSources = String(decoding: data, as: UTF8.self)
+    }
+
     private func restoreSources() {
         guard let data = savedSources.data(using: .utf8),
               let stored = try? JSONDecoder().decode([FrozenCatalogSource].self, from: data) else { return }
@@ -326,23 +569,66 @@ struct FrozenAppCatalogView: View {
     }
 
     private func addSource() {
-        let normalized = newRepository.trimmingCharacters(in: .whitespacesAndNewlines)
-            .replacingOccurrences(of: "https://github.com/", with: "")
-            .trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        sourceFeedback = nil
+        let input = newRepository.trimmingCharacters(in: .whitespacesAndNewlines)
+        var normalized = input
+        if normalized.hasPrefix("https://github.com/") {
+            normalized = String(normalized.dropFirst("https://github.com/".count))
+        } else if normalized.contains("://") || normalized.hasPrefix("www.") {
+            sourceFeedback = "Invalid source. Enter owner/repository or a public https://github.com/owner/repository URL."
+            return
+        }
+        normalized = normalized.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         let parts = normalized.split(separator: "/")
+        let allowed = CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_.")
         guard parts.count == 2,
-              parts.allSatisfy({ !$0.isEmpty && !$0.contains(".") && !$0.contains(" ") }) else { return }
+              parts.allSatisfy({ !$0.isEmpty && $0.unicodeScalars.allSatisfy { allowed.contains($0) } }) else {
+            sourceFeedback = "Invalid source. Use only a public GitHub owner/repository path."
+            return
+        }
+
         let source = FrozenCatalogSource(repository: normalized)
-        if !sources.contains(where: { $0.id == source.id }) { sources.append(source) }
-        if let data = try? JSONEncoder().encode(sources) { savedSources = String(decoding: data, as: UTF8.self) }
+        guard !sources.contains(where: { $0.id == source.id }) else {
+            sourceFeedback = "\(source.repository) is already in your sources."
+            return
+        }
+
+        sources.append(source)
+        sources.sort { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+        persistSources()
         newRepository = ""
+        sourceFeedback = "Added \(source.repository). Checking its latest public release…"
         Task { await loadRelease(for: source) }
+    }
+
+    private func removeSource(_ source: FrozenCatalogSource) {
+        guard !FrozenCatalogSource.builtIn.contains(source) else { return }
+        sources.removeAll { $0.id == source.id }
+        releases[source.id] = nil
+        messages[source.id] = nil
+        var favorites = favoriteSourceIDs
+        favorites.remove(source.id)
+        favoriteSourceIDsRaw = favorites.sorted().joined(separator: "\n")
+        persistSources()
+        sourceFeedback = "Removed \(source.repository). Existing downloaded IPA files were kept."
+    }
+
+    @MainActor
+    private func refreshAllSources() async {
+        guard !isRefreshingAll else { return }
+        isRefreshingAll = true
+        defer { isRefreshingAll = false }
+        for source in sources {
+            await loadRelease(for: source)
+        }
+        sourceFeedback = "Finished checking \(sources.count) source(s). Review any source marked Needs attention."
     }
 
     @MainActor
     private func loadRelease(for source: FrozenCatalogSource) async {
         guard !loading.contains(source.id) else { return }
         loading.insert(source.id)
+        messages[source.id] = nil
         defer { loading.remove(source.id) }
         do {
             let url = URL(string: "https://api.github.com/repos/\(source.repository)/releases/latest")!
