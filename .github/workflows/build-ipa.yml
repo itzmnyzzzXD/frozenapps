@@ -3,7 +3,7 @@ name: Build and validate FrozenApps
 on:
   push:
     branches: ["**"]
-    tags: ["v*"]
+    tags: ["v*", "[0-9]*"]
     paths-ignore:
       - "*.md"
       - "**/*.md"
@@ -104,7 +104,7 @@ jobs:
       # Publish only version tags. Branch pushes and pull requests must never
       # overwrite a previously published release.
       - name: Attach validated IPA to version release
-        if: startsWith(github.ref, 'refs/tags/v') && github.event_name == 'push'
+        if: startsWith(github.ref, 'refs/tags/') && github.event_name == 'push'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
