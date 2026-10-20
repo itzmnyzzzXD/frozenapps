@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import UniformTypeIdentifiers
+import UIKit
 
 private struct FrozenCatalogRelease: Decodable {
     let name: String?
