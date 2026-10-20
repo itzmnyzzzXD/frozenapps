@@ -138,7 +138,7 @@ struct FrozenControlCenterView: View {
                                         .font(.system(size: 22, weight: .bold, design: .rounded)).foregroundStyle(.white)
                                 }
                             }
-                            Text("Inspect packages, validate signing material, monitor the install pipeline and diagnose pairing.")
+                            Text("Browse app sources, preflight multiple IPAs, inspect signing material, monitor installs and diagnose pairing.")
                                 .font(.system(size: 12, weight: .medium)).foregroundStyle(.white.opacity(0.55)).fixedSize(horizontal: false, vertical: true)
                         }
                         PanelCard {
@@ -180,6 +180,12 @@ struct FrozenControlCenterView: View {
                             }
                             NavigationLink { FrozenSetupGuideView() } label: {
                                 FrozenCenterToolCard(title: "Setup Guide", subtitle: "Interactive checklist", icon: "list.number", tint: .pink)
+                            }
+                            NavigationLink { FrozenAppCatalogView() } label: {
+                                FrozenCenterToolCard(title: "App Catalog", subtitle: "GitHub sources & IPA releases", icon: "square.grid.2x2.fill", tint: .indigo)
+                            }
+                            NavigationLink { FrozenBatchActionsView() } label: {
+                                FrozenCenterToolCard(title: "Batch Actions", subtitle: "Multi-IPA preflight & queues", icon: "checklist", tint: .teal)
                             }
                         }
                         Text("Signing, JIT and installation depend on iOS restrictions, device pairing, a compatible helper and valid signing material.")
