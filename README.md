@@ -17,7 +17,7 @@ The UI changes are applied by `scripts/apply-frozenapps-branding.py` to the pinn
 - **Tools and settings:** account/session management, pairing tools, certificates, entitlements, location tools, managed apps, language, tunnel settings, logs, privacy and licence information.
 - **App Catalog (1.0.5):** browse curated GitHub projects, add, search, sort, refresh, copy or remove custom public `owner/repository` sources, inspect actual release assets, and save real IPA files into `Documents/FrozenApps Library`. Built-in sources cannot be removed; removing a custom source does not delete downloaded files. Projects without IPA assets remain source links.
 - **Batch Actions (1.0.5):** select multiple IPA files, run file-access and basic preflight checks, copy reports, and prepare a manual queue. Deep archive validation, signing and installation still use the existing library and signer workflows; this screen does not claim queued files were signed or installed.
-- **Branding:** new FrozenApps app mark and utility glyphs, violet/ice-cyan visual system, glass surfaces, custom onboarding and account editor, animated backdrop, and Signer / Network / Tools / Files / Settings tabs.
+- **Branding:** a regenerated ice-cyan FrozenApps app icon (the Swift icon-generation pipeline is the source of truth), a deep-navy/ice-cyan accent system, utility glyphs, glass surfaces, custom onboarding and account editor, animated backdrop, and Signer / Network / Tools / Files / Settings tabs.
 
 ## Compatibility
 
