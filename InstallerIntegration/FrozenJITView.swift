@@ -194,6 +194,9 @@ struct FrozenJITView: View {
                 }
                 .pickerStyle(.menu)
                 .tint(Theme.accent2)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .frozenGlassSurface(cornerRadius: 14, tint: Theme.accent.opacity(0.18))
 
                 Button {
                     Task { await refreshApps() }
@@ -256,8 +259,12 @@ struct FrozenJITView: View {
                                 .foregroundStyle(app.bundle == selectedBundle ? Theme.accent2 : .white.opacity(0.25))
                         }
                         .padding(10)
-                        .background(.white.opacity(app.bundle == selectedBundle ? 0.075 : 0.025),
-                                    in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+                        .frozenGlassSurface(
+                            cornerRadius: 15,
+                            tint: app.bundle == selectedBundle ? Theme.accent2 : Theme.accent.opacity(0.12),
+                            elevated: app.bundle == selectedBundle
+                        )
+                        .animation(.spring(response: 0.25, dampingFraction: 0.80), value: selectedBundle)
                     }
                     .buttonStyle(.plain)
                 }

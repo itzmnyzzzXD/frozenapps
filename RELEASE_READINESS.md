@@ -4,7 +4,7 @@
 
 - The current redesign is maintained in `scripts/apply-frozenapps-branding.py` and `InstallerIntegration/`, so the custom views and labels are reapplied every time the pinned native engine is prepared.
 - The full redesign covers the Signer screen, account setup and editor, five-tab navigation, custom tool glyphs, pairing-first onboarding, Local Network setup and percentage-focused install/download progress.
-- The app version is `1.0.3`; the build number is driven by `project.yml`.
+- The current app version is `1.0.5`; the CI build number is `11` in `project.yml`. The published IPA is unsigned; a successful archive build does not prove on-device signing or installation.
 - GitHub Actions builds the native engine and iOS app, validates app metadata/architecture, packages the unsigned IPA, calculates its SHA-256 checksum, and uploads artifacts. The release asset is updated only after the matching main-branch build and release step succeed.
 - The app has not been physically tested as part of this source change. Pairing, Local Network permission, Apple authentication, two-factor callbacks, provisioning, signing, installation, and error recovery still require testing on an actual iPhone/iPad with a user-controlled account.
 - Required upstream attribution and the full custom licence are retained in source documentation, the Terms screen, and Settings.

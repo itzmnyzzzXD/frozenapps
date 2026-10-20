@@ -206,13 +206,32 @@ struct FrozenFilesView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    VStack(alignment: .leading, spacing: 7) {
-                        Text("Your files")
-                            .font(.system(size: 30, weight: .bold, design: .rounded))
-                        Text("Keep multiple IPA packages here. Choose one to load into Signer when you are ready to install it.")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 9) {
+                        HStack(spacing: 10) {
+                            Image(systemName: "shippingbox.fill")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundStyle(.white)
+                                .frame(width: 42, height: 42)
+                                .background(Theme.brand, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text("YOUR LIBRARY")
+                                    .font(.system(size: 9, weight: .heavy, design: .rounded))
+                                    .tracking(1.4)
+                                    .foregroundStyle(Theme.accent2)
+                                Text("Your files")
+                                    .font(.system(size: 26, weight: .bold, design: .rounded))
+                                    .tracking(-0.45)
+                                    .foregroundStyle(.white)
+                            }
+                            Spacer(minLength: 0)
+                        }
+                        Text("Keep IPA packages in one place. Inspect the metadata, verify the checksum, and load a working copy into Signer when you're ready.")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.57))
+                            .fixedSize(horizontal: false, vertical: true)
                     }
+                    .padding(18)
+                    .frozenGlassSurface(cornerRadius: 25, tint: Theme.accent, elevated: true)
 
                     HStack(spacing: 12) {
                         summaryTile(value: "\(totalFiles)", label: "IPA files", icon: "doc.zipper")
@@ -231,18 +250,10 @@ struct FrozenFilesView: View {
                                 }
                             }
                         } label: {
-                            HStack(spacing: 6) {
-                                Text(sortOrder.rawValue)
-                                Image(systemName: "chevron.down")
-                                    .font(.system(size: 10, weight: .bold))
-                            }
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(Theme.accent2)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 9)
-                            .background(Theme.accent.opacity(0.10), in: Capsule())
+                            FrozenGlassMenuLabel(title: sortOrder.rawValue, icon: "arrow.up.arrow.down")
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(FrozenGlassPressStyle())
+                        .accessibilityLabel("Sort IPA library")
                     }
 
                     Button { showImporter = true } label: {
@@ -257,7 +268,12 @@ struct FrozenFilesView: View {
                         .foregroundStyle(.black)
                         .background(Theme.brand, in: RoundedRectangle(cornerRadius: 17, style: .continuous))
                     }
-                    .buttonStyle(.plain)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 17, style: .continuous)
+                            .strokeBorder(.white.opacity(0.23), lineWidth: 1)
+                    }
+                    .shadow(color: Theme.accent.opacity(0.18), radius: 14, x: 0, y: 6)
+                    .buttonStyle(FrozenGlassPressStyle())
                     .disabled(isImporting)
 
                     if isImporting {
@@ -270,7 +286,7 @@ struct FrozenFilesView: View {
                                 .lineLimit(2)
                         }
                         .padding(13)
-                        .background(.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 14))
+                        .frozenGlassSurface(cornerRadius: 14, tint: Theme.accent.opacity(0.18))
                     }
 
                     if let message {
@@ -279,7 +295,7 @@ struct FrozenFilesView: View {
                             .foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(13)
-                            .background(.white.opacity(0.045), in: RoundedRectangle(cornerRadius: 14))
+                            .frozenGlassSurface(cornerRadius: 14, tint: Theme.accent.opacity(0.18))
                     }
 
                     if totalFiles == 0 {
@@ -435,8 +451,7 @@ struct FrozenFilesView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(24)
-        .background(.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(.white.opacity(0.08), lineWidth: 1))
+        .frozenGlassSurface(cornerRadius: 24, tint: Theme.accent.opacity(0.16))
     }
 
     private var emptyState: some View {
@@ -454,8 +469,7 @@ struct FrozenFilesView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(24)
-        .background(.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(.white.opacity(0.08), lineWidth: 1))
+        .frozenGlassSurface(cornerRadius: 24, tint: Theme.accent.opacity(0.16))
     }
 
     private func fileRow(name: String, detail: String, icon: String, identity: String,
@@ -514,8 +528,19 @@ struct FrozenFilesView: View {
             .disabled(isLoading || isImporting)
         }
         .padding(12)
-        .background(.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(.white.opacity(0.065), lineWidth: 1))
+        .frozenGlassSurface(cornerRadius: 18, tint: Theme.accent.opacity(0.20))
+        .contextMenu {
+            Button(action: inspectAction) {
+                Label("Inspect IPA", systemImage: "info.circle")
+            }
+            Button(action: useAction) {
+                Label("Load into Signer", systemImage: "signature")
+            }
+            .disabled(isLoading || isImporting)
+            Button(role: .destructive, action: deleteAction) {
+                Label("Delete IPA", systemImage: "trash")
+            }
+        }
         .accessibilityIdentifier(identity)
     }
 
@@ -534,7 +559,7 @@ struct FrozenFilesView: View {
         }
         .padding(13)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .frozenGlassSurface(cornerRadius: 18, tint: Theme.accent.opacity(0.17))
     }
 
     private func refresh() {
