@@ -1,709 +1,316 @@
 import SwiftUI
-import AuthenticationServices
-import UniformTypeIdentifiers
-import UserNotifications
 
 @main
 struct FrozenAppsApp: App {
     var body: some Scene {
-        WindowGroup { ContentView().preferredColorScheme(.dark) }
+        WindowGroup {
+            ContentView()
+                .preferredColorScheme(.dark)
+        }
     }
 }
 
 struct ContentView: View {
-    @AppStorage("termsAccepted") private var termsAccepted = false
-    @AppStorage("appleUserID") private var appleUserID = ""
-    @AppStorage("appleEmail") private var appleEmail = ""
-    @AppStorage("appleName") private var appleName = ""
-    @AppStorage("localNotifications") private var localNotifications = false
-    @State private var tab = 0
-    @State private var showGuide = false
-    @State private var showInbox = false
-    @State private var showImporter = false
-    @State private var notice = ""
-    @State private var files: [IPAFile] = []
-    @State private var inbox: [InboxItem] = []
+    @State private var selectedTab = "Home"
+    @State private var isExpanded = true
 
-    private var signedIn: Bool { !appleUserID.isEmpty }
+    let sidebarButtons: [(String, String)] = [
+        ("house.fill", "Home"),
+        ("magnifyingglass", "Search"),
+        ("play.rectangle.fill", "Shorts"),
+        ("folder.fill", "Library"),
+        ("info.circle.fill", "Info"),
+        ("gearshape.fill", "Settings"),
+        ("arrowshape.turn.up.right.fill", "Logout")
+    ]
 
     var body: some View {
-        loginScreen
-    }
-
-    private var loginScreen: some View {
         ZStack {
             LinearGradient(
                 colors: [
-                    Color(red: 0.95, green: 0.92, blue: 0.89),
-                    Color(red: 0.89, green: 0.85, blue: 0.80),
-                    Color(red: 0.80, green: 0.77, blue: 0.72)
+                    Color(red: 0.06, green: 0.06, blue: 0.08),
+                    Color(red: 0.12, green: 0.07, blue: 0.10),
+                    Color(red: 0.25, green: 0.09, blue: 0.12)
                 ],
-                startPoint: .top,
-                endPoint: .bottom
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
             )
             .ignoresSafeArea()
 
-            VStack(spacing: 0) {
-                Spacer(minLength: 30)
+            PinkFlowBackground()
 
-                ZStack {
-                    Circle()
-                        .fill(Color.white.opacity(0.38))
-                        .frame(width: 640, height: 240)
-                        .shadow(color: .black.opacity(0.08), radius: 38, x: 0, y: 18)
-
-                    Circle()
-                        .fill(Color.white.opacity(0.12))
-                        .frame(width: 520, height: 170)
-                        .offset(y: 12)
-                }
-                .padding(.bottom, 18)
-
-                HStack(alignment: .top, spacing: 28) {
-                    loginCard
-                    eventCard
-                }
-                .padding(.horizontal, 30)
-
-                Spacer()
-
-                bottomDecor
+            HStack(alignment: .center, spacing: 28) {
+                SidebarPanel()
+                GlassMenuPanel(selectedTab: $selectedTab, isExpanded: $isExpanded)
             }
+            .padding(.horizontal, 36)
+            .padding(.vertical, 26)
         }
     }
+}
 
-    private var loginCard: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            HStack {
-                Text("Cannabis Lab")
-                    .font(.custom("Georgia", size: 24))
-                    .foregroundStyle(Color.black.opacity(0.7))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                Button(action: {}) {
-                    Text("Sign up")
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundStyle(.black.opacity(0.8))
+private struct SidebarPanel: View {
+    var body: some View {
+        VStack(spacing: 18) {
+            VStack(spacing: 16) {
+                HStack(spacing: 8) {
+                    Circle().fill(Color.green).frame(width: 12, height: 12)
+                    Circle().fill(Color.yellow).frame(width: 12, height: 12)
+                    Circle().fill(Color.red).frame(width: 12, height: 12)
                 }
-                .buttonStyle(.plain)
-            }
-            .padding(.bottom, 4)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.leading, 18)
 
-            Text("Log in")
-                .font(.custom("Georgia", size: 36))
-                .fontWeight(.medium)
-                .foregroundStyle(.black.opacity(0.8))
+                RoundedRectangle(cornerRadius: 28)
+                    .fill(Color.white.opacity(0.08))
+                    .frame(width: 120, height: 74)
+                    .overlay(
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Performance")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(.white.opacity(0.8))
+                            HStack(alignment: .bottom, spacing: 4) {
+                                Text("45")
+                                    .font(.system(size: 28, weight: .bold))
+                                    .foregroundStyle(.white)
+                                Text("%")
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundStyle(.white.opacity(0.7))
+                            }
+                        }
+                        .padding(.horizontal, 14)
+                    )
 
-            VStack(spacing: 14) {
-                authInput(icon: "@", placeholder: "e-mail address")
-                authInput(icon: "◌", placeholder: "password", isPassword: true)
-            }
-
-            HStack(alignment: .center) {
-                Spacer()
-                Button(action: {}) {
-                    Text("Forgot?")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(.black.opacity(0.65))
+                VStack(spacing: 12) {
+                    GlassButton(icon: "house.fill", label: "")
+                    GlassButton(icon: "magnifyingglass", label: "")
+                    GlassButton(icon: "play.rectangle.fill", label: "")
+                    GlassButton(icon: "video.fill", label: "")
+                    GlassButton(icon: "info.circle.fill", label: "")
+                    GlassButton(icon: "gearshape.fill", label: "")
+                    GlassButton(icon: "arrow.right", label: "")
                 }
-                .buttonStyle(.plain)
             }
-
-            Text("For use by adults only (18 years or age and over)")
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(.black.opacity(0.5))
-                .lineSpacing(5)
-                .fixedSize(horizontal: false, vertical: true)
-
-            Button(action: {}) {
-                Image(systemName: "arrow.right")
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundStyle(.white)
-                    .frame(width: 42, height: 42)
-                    .background(Color.black.opacity(0.9), in: Circle())
-            }
-            .offset(x: 230, y: 0)
-            .buttonStyle(.plain)
-
-            Text("Please consume responsibly")
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(.black.opacity(0.45))
-                .padding(.top, 4)
+            .padding(.vertical, 18)
+            .frame(width: 160, height: 610)
+            .background(
+                RoundedRectangle(cornerRadius: 38)
+                    .fill(Color.white.opacity(0.08))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 38)
+                            .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                    )
+                    .blur(radius: 0.2)
+            )
+            .shadow(color: .black.opacity(0.25), radius: 26, x: 0, y: 18)
         }
-        .padding(26)
-        .frame(width: 360, height: 420)
-        .background(Color.white.opacity(0.28))
-        .overlay(
-            RoundedRectangle(cornerRadius: 26)
-                .stroke(Color.black.opacity(0.05), lineWidth: 1)
-        )
-        .cornerRadius(26)
     }
+}
 
-    private var eventCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(alignment: .top) {
-                Text("Thu\n24th")
-                    .font(.system(size: 54, weight: .light))
-                    .foregroundStyle(.black.opacity(0.72))
-                    .lineSpacing(-6)
-                    .multilineTextAlignment(.leading)
+private struct GlassMenuPanel: View {
+    @Binding var selectedTab: String
+    @Binding var isExpanded: Bool
 
-                Spacer()
+    let menuItems = [
+        "Home",
+        "Explore",
+        "Short",
+        "Subscription",
+        "Information",
+        "Settings",
+        "Log out"
+    ]
 
-                Text("Grand opening\nNew store")
-                    .font(.system(size: 16, weight: .regular))
-                    .foregroundStyle(.black.opacity(0.5))
-                    .multilineTextAlignment(.trailing)
-                    .padding(.top, 10)
-            }
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 30)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.10),
+                            Color.white.opacity(0.06),
+                            Color.white.opacity(0.12)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 30)
+                        .stroke(Color.white.opacity(0.22), lineWidth: 1.5)
+                )
+                .shadow(color: .black.opacity(0.2), radius: 28, x: 0, y: 20)
 
             VStack(alignment: .leading, spacing: 18) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("18 PM")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundStyle(.black.opacity(0.7))
-                    Text("Kerkstraat 12B")
-                        .font(.system(size: 14, weight: .regular))
-                        .foregroundStyle(.black.opacity(0.5))
-                    Text("Amsterdam")
-                        .font(.system(size: 14, weight: .regular))
-                        .foregroundStyle(.black.opacity(0.5))
+                HStack {
+                    Text("YouTube")
+                        .font(.system(size: 42, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.92))
+                        .padding(.top, 10)
+
+                    Spacer()
+
+                    HStack(spacing: 10) {
+                        Circle().fill(Color.green).frame(width: 12, height: 12)
+                        Circle().fill(Color.yellow).frame(width: 12, height: 12)
+                        Circle().fill(Color.red).frame(width: 12, height: 12)
+                    }
+                    .padding(.trailing, 8)
+                }
+                .padding(.horizontal, 18)
+
+                Divider().background(Color.white.opacity(0.2))
+
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("MENU")
+                        .font(.system(size: 12, weight: .bold))
+                        .letterSpacing(1.4)
+                        .foregroundStyle(.white.opacity(0.72))
+                        .padding(.horizontal, 18)
+                        .padding(.top, 6)
+
+                    ForEach(menuItems, id: \ .self) { item in
+                        MenuItemRow(title: item, isSelected: selectedTab == item) {
+                            selectedTab = item
+                        }
+                    }
                 }
 
-                ZStack {
-                    Circle()
+                HStack(spacing: 16) {
+                    RoundedRectangle(cornerRadius: 18)
+                        .fill(Color.white.opacity(0.08))
+                        .frame(width: 52, height: 52)
+                        .overlay(
+                            Image(systemName: "person.crop.circle.fill")
+                                .foregroundStyle(.white.opacity(0.95))
+                                .font(.system(size: 26))
+                        )
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Hesala hertz")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.9))
+                        Text("Premium Account")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.62))
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .foregroundStyle(.white.opacity(0.7))
+                        .font(.system(size: 16, weight: .bold))
+                }
+                .padding(.horizontal, 18)
+                .padding(.top, 10)
+                .padding(.bottom, 12)
+            }
+            .padding(.vertical, 12)
+        }
+        .frame(width: 560, height: 690)
+    }
+}
+
+private struct MenuItemRow: View {
+    let title: String
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 14) {
+                Image(systemName: iconFor(title))
+                    .font(.system(size: 20, weight: .medium))
+                    .frame(width: 24)
+                Text(title)
+                    .font(.system(size: 20, weight: .medium))
+                    .foregroundStyle(isSelected ? .white : .white.opacity(0.72))
+                Spacer()
+                if title == "Subscription" {
+                    Circle().fill(Color.white.opacity(0.9)).frame(width: 8, height: 8)
+                } else if title == "Home" || title == "Explore" || title == "Short" {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(.white.opacity(0.75))
+                }
+            }
+            .padding(.horizontal, 18)
+            .padding(.vertical, 14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(isSelected ? Color.white.opacity(0.10) : Color.clear)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func iconFor(_ item: String) -> String {
+        switch item {
+        case "Home": return "house.fill"
+        case "Explore": return "magnifyingglass"
+        case "Short": return "play.rectangle.fill"
+        case "Subscription": return "play.square.stack.fill"
+        case "Information": return "info.circle.fill"
+        case "Settings": return "gearshape.fill"
+        case "Log out": return "rectangle.portrait.and.arrow.right"
+        default: return "house.fill"
+        }
+    }
+}
+
+private struct GlassButton: View {
+    let icon: String
+    let label: String
+
+    var body: some View {
+        Button(action: {}) {
+            VStack(spacing: 10) {
+                Image(systemName: icon)
+                    .font(.system(size: 20, weight: .semibold))
+                    .frame(width: 40, height: 40)
+                    .foregroundStyle(.white.opacity(0.9))
+                    .background(Color.white.opacity(0.08), in: Circle())
+                if label.isEmpty == false {
+                    Text(label)
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.7))
+                }
+            }
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private struct PinkFlowBackground: View {
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack {
+                ForEach(0..<7) { index in
+                    let x = CGFloat(index) * 110 + 120
+                    let y = CGFloat(index % 2 == 0 ? 120 : 400)
+                    let width = 720.0 + Double(index * 16)
+                    let height = 740.0 - Double(index * 18)
+
+                    RoundedRectangle(cornerRadius: 200)
                         .fill(
                             LinearGradient(
-                                colors: [Color(red: 1.0, green: 0.76, blue: 0.38), Color(red: 0.93, green: 0.48, blue: 0.18)],
-                                startPoint: .top,
-                                endPoint: .bottom
+                                colors: [
+                                    Color(red: 0.96, green: 0.68, blue: 0.76).opacity(0.75),
+                                    Color(red: 0.83, green: 0.28, blue: 0.45).opacity(0.45),
+                                    Color.clear
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
                             )
                         )
-                        .frame(width: 210, height: 210)
-                        .shadow(color: .orange.opacity(0.35), radius: 35, x: 0, y: 15)
-                }
-                .frame(maxWidth: .infinity, alignment: .center)
-            }
-            .padding(.top, 8)
-
-            HStack(alignment: .center) {
-                Spacer()
-                HStack(spacing: 8) {
-                    Text("C.Lab")
-                        .font(.system(size: 20, weight: .medium))
-                        .foregroundStyle(.black.opacity(0.7))
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 18))
-                        .foregroundStyle(.black.opacity(0.45))
-                }
-
-                Spacer()
-
-                Button(action: {}) {
-                    HStack(spacing: 8) {
-                        Text("Join in")
-                            .font(.system(size: 15, weight: .medium))
-                        Image(systemName: "arrow.right")
-                            .font(.system(size: 15, weight: .bold))
-                    }
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 18)
-                    .padding(.vertical, 12)
-                    .background(Color.black.opacity(0.88), in: Capsule())
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(.top, 6)
-        }
-        .padding(22)
-        .frame(width: 350, height: 515)
-        .background(Color.white.opacity(0.27))
-        .overlay(
-            RoundedRectangle(cornerRadius: 30)
-                .stroke(Color.black.opacity(0.06), lineWidth: 1)
-        )
-        .cornerRadius(30)
-    }
-
-    private var bottomDecor: some View {
-        ZStack(alignment: .bottom) {
-            RoundedRectangle(cornerRadius: 36)
-                .fill(Color.black.opacity(0.82))
-                .frame(width: 740, height: 120)
-                .offset(y: 10)
-
-            HStack(alignment: .center, spacing: 12) {
-                Text("New in")
-                    .font(.system(size: 40, weight: .bold))
-                    .foregroundStyle(.white)
-                Text("C.Lab Joins")
-                    .font(.system(size: 33, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.85))
-                Spacer()
-                Text("Discover")
-                    .font(.system(size: 22, weight: .medium))
-                    .foregroundStyle(.white)
-            }
-            .frame(width: 700, height: 90)
-            .padding(.horizontal, 24)
-
-            Circle()
-                .fill(Color(red: 0.92, green: 0.72, blue: 0.52))
-                .frame(width: 200, height: 200)
-                .offset(x: -460, y: 90)
-                .opacity(0.95)
-
-            Circle()
-                .fill(Color(white: 0.9))
-                .frame(width: 140, height: 140)
-                .offset(x: 480, y: 90)
-                .opacity(0.95)
-        }
-        .frame(height: 220)
-    }
-
-    private func authInput(icon: String, placeholder: String, isPassword: Bool = false) -> some View {
-        HStack(spacing: 12) {
-            ZStack {
-                Circle()
-                    .fill(Color.black.opacity(0.08))
-                    .frame(width: 26, height: 26)
-                Text(icon)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(.black.opacity(0.7))
-            }
-
-            if isPassword {
-                SecureField(placeholder, text: .constant(""))
-                    .textFieldStyle(.plain)
-                    .placeholder(placeholder, color: .black.opacity(0.35))
-            } else {
-                TextField(placeholder, text: .constant(""))
-                    .textFieldStyle(.plain)
-                    .placeholder(placeholder, color: .black.opacity(0.35))
-            }
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
-        .background(Color.white.opacity(0.22))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.black.opacity(0.05), lineWidth: 1))
-        .cornerRadius(16)
-    }
-
-    private var header: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "snowflake").font(.system(size: 22, weight: .semibold))
-                .frame(width: 44, height: 44).background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 14))
-            VStack(alignment: .leading, spacing: 3) {
-                Text("FrozenApps").font(.system(size: 21, weight: .bold))
-                Text("ON-DEVICE SIGNING WORKSPACE").font(.system(size: 9, weight: .semibold)).tracking(1.5).foregroundStyle(.white.opacity(0.4))
-            }
-            Spacer()
-            if termsAccepted {
-                Button { showInbox = true } label: {
-                    Image(systemName: "bell").frame(width: 42, height: 42).background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 14))
-                }.buttonStyle(.plain)
-            }
-        }.padding(.horizontal, 22).padding(.top, 16).padding(.bottom, 22)
-    }
-
-    private var termsPage: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
-                tile("hand.raised.fill", FrozenPalette.green)
-                Text("Your device. Your data.").font(.system(size: 30, weight: .bold, design: .rounded))
-                Text("Please review and accept these terms before continuing.")
-                    .font(.system(size: 15)).foregroundStyle(.white.opacity(0.55))
-                policy("lock.fill", "Local storage", "This version saves preferences, Apple sign-in profile details, and imported IPA files on this device. It does not upload them to a FrozenApps server.")
-                policy("key.slash", "No passwords or verification codes", "FrozenApps must never ask you to type your Apple Account password or two-factor code into the app.")
-                policy("apple.logo", "Sign-in is not signing", "Signing in with Apple does not provide a developer certificate, sign an IPA, pair a device, or enable Developer Mode.")
-                policy("checkmark.shield", "Use responsibly", "Only use apps and files you are authorized to use. Follow Apple's terms and the requirements of your signing method.")
-                Button {
-                    termsAccepted = true
-                    inbox.insert(InboxItem(title: "Terms accepted", detail: "Acceptance is saved locally.", date: "Just now"), at: 0)
-                } label: {
-                    HStack { Text("Accept terms and continue"); Spacer(); Image(systemName: "arrow.right") }
-                        .font(.system(size: 15, weight: .semibold)).foregroundStyle(.black)
-                        .padding(17).background(.white, in: RoundedRectangle(cornerRadius: 16))
-                }.buttonStyle(.plain)
-                Text("Your acceptance is saved on this device. You can review it again in Settings.")
-                    .font(.system(size: 11)).foregroundStyle(.white.opacity(0.4))
-            }.padding(.horizontal, 22).padding(.bottom, 28)
-        }.scrollIndicators(.hidden)
-    }
-
-    private var signer: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                heading("Signer", "An iPhone and iPad-first signing workspace.")
-                VStack(alignment: .leading, spacing: 14) {
-                    HStack(spacing: 12) {
-                        tile("apple.logo", .white)
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(signedIn ? "Apple account connected" : "Sign in with Apple").font(.system(size: 16, weight: .semibold))
-                            Text(signedIn ? (appleName.isEmpty ? "Signed in on this device" : appleName) : "Apple's official sign-in sheet")
-                                .font(.system(size: 12)).foregroundStyle(.white.opacity(0.48))
-                        }
-                        Spacer()
-                        Circle().fill(signedIn ? .green : .orange).frame(width: 8, height: 8)
-                    }
-                    if signedIn {
-                        if !appleEmail.isEmpty { Text(appleEmail).font(.system(size: 12)).foregroundStyle(.white.opacity(0.5)) }
-                        Text("Your saved profile details remain local. No Apple password or verification code is stored.")
-                            .font(.system(size: 12)).foregroundStyle(.white.opacity(0.5))
-                    } else {
-                        SignInWithAppleButton(.signIn, onRequest: { request in
-                            request.requestedScopes = [.fullName, .email]
-                        }, onCompletion: handleSignIn)
-                        .signInWithAppleButtonStyle(.white).frame(height: 48).clipShape(RoundedRectangle(cornerRadius: 13))
-                        Text("This authenticates your app session only; it does not sign apps.")
-                            .font(.system(size: 12)).foregroundStyle(.white.opacity(0.45))
-                    }
-                }.padding(18).background(.white.opacity(0.045), in: RoundedRectangle(cornerRadius: 22))
-                VStack(alignment: .leading, spacing: 13) {
-                    Text("DEVICE SETUP").font(.system(size: 10, weight: .bold)).tracking(1.5).foregroundStyle(.white.opacity(0.4))
-                    HStack(spacing: 12) {
-                        tile("iphone.gen3", FrozenPalette.green)
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Developer Mode").font(.system(size: 16, weight: .semibold))
-                            Text("Review on-device setup and limitations.")
-                                .font(.system(size: 12)).foregroundStyle(.white.opacity(0.48))
-                        }
-                    }
-                    Button { showGuide = true } label: {
-                        HStack { Text("Open device setup guide"); Spacer(); Image(systemName: "arrow.up.right") }
-                            .font(.system(size: 14, weight: .semibold)).foregroundStyle(.black)
-                            .padding(15).background(.white, in: RoundedRectangle(cornerRadius: 15))
-                    }.buttonStyle(.plain)
-                    Text("FrozenApps cannot enable Developer Mode or pair the device by itself. Some Apple development workflows may require additional provisioning, possibly using a computer.")
-                        .font(.system(size: 12)).foregroundStyle(.white.opacity(0.43))
-                }.padding(18).background(.white.opacity(0.03), in: RoundedRectangle(cornerRadius: 22))
-                Button { showImporter = true } label: {
-                    Label("Choose IPA from Files", systemImage: "square.and.arrow.down")
-                        .font(.system(size: 14, weight: .semibold)).foregroundStyle(.white)
-                        .frame(maxWidth: .infinity).padding(16).background(FrozenPalette.blue.opacity(0.13), in: RoundedRectangle(cornerRadius: 16))
-                }.buttonStyle(.plain)
-                Text("Importing only copies a file into app storage. A compatible on-device signing method is still needed to sign and install it.")
-                    .font(.system(size: 12)).foregroundStyle(.white.opacity(0.42))
-            }.padding(.horizontal, 22).padding(.bottom, 24)
-        }.scrollIndicators(.hidden)
-    }
-
-    private var settings: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                heading("Settings", "Preferences and account details saved locally.")
-                VStack(spacing: 0) {
-                    Toggle(isOn: Binding(get: { localNotifications }, set: { value in
-                        if value { enableNotifications() } else { localNotifications = false }
-                    })) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Local notifications").font(.system(size: 14, weight: .semibold))
-                            Text("Allow FrozenApps to send its own alerts.").font(.system(size: 12)).foregroundStyle(.white.opacity(0.45))
-                        }
-                    }.tint(FrozenPalette.green).padding(17)
-                    Divider().overlay(.white.opacity(0.06))
-                    actionRow("Send test notification", "Check local alerts.", "bell.badge") { sendTest() }
-                    if signedIn {
-                        Divider().overlay(.white.opacity(0.06))
-                        actionRow("Sign out of FrozenApps", "Clear saved Apple profile details.", "rectangle.portrait.and.arrow.right") {
-                            appleUserID = ""; appleEmail = ""; appleName = ""
-                            notice = "Saved sign-in details cleared from this app. This does not revoke FrozenApps in your Apple Account settings."
-                        }
-                    }
-                    Divider().overlay(.white.opacity(0.06))
-                    actionRow("Review terms", "Return to the local-storage terms.", "doc.text") { termsAccepted = false }
-                }.background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 20))
-                Text("LOCAL DATA").font(.system(size: 10, weight: .bold)).tracking(1.5).foregroundStyle(.white.opacity(0.4))
-                Text("Imported IPA files are copied into the app's Documents folder. This version does not upload profile details or files to a FrozenApps database. Deleting the app may remove its local data.")
-                    .font(.system(size: 13)).foregroundStyle(.white.opacity(0.5))
-            }.padding(.horizontal, 22)
-        }.scrollIndicators(.hidden)
-    }
-
-    private var filePage: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            heading("Files", "IPA files saved inside this app.")
-            Button { showImporter = true } label: {
-                Label("Import IPA from Files", systemImage: "plus").font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.black).frame(maxWidth: .infinity).padding(15).background(.white, in: RoundedRectangle(cornerRadius: 15))
-            }.buttonStyle(.plain)
-            if files.isEmpty {
-                VStack(spacing: 12) {
-                    tile("folder", FrozenPalette.green)
-                    Text("No IPA files yet").font(.system(size: 17, weight: .semibold))
-                    Text("Choose an IPA from the Files app. It will be copied into local app storage.")
-                        .font(.system(size: 13)).foregroundStyle(.white.opacity(0.43)).multilineTextAlignment(.center)
-                }.frame(maxWidth: .infinity).padding(25).frame(minHeight: 210)
-                    .background(.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 23))
-            } else {
-                ScrollView {
-                    VStack(spacing: 10) {
-                        ForEach(files) { file in
-                            HStack(spacing: 12) {
-                                Image(systemName: "doc.zipper").foregroundStyle(FrozenPalette.blue).font(.system(size: 20))
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(file.name).font(.system(size: 13, weight: .semibold)).lineLimit(1)
-                                    Text(ByteCountFormatter.string(fromByteCount: file.size, countStyle: .file))
-                                        .font(.system(size: 11)).foregroundStyle(.white.opacity(0.43))
-                                }
-                                Spacer()
-                                Button(role: .destructive) { deleteFile(file) } label: {
-                                    Image(systemName: "trash").foregroundStyle(.white.opacity(0.6)).padding(8)
-                                }.buttonStyle(.plain)
-                            }.padding(13).background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 15))
-                        }
-                    }
-                }
-            }
-            Spacer(minLength: 0)
-        }.padding(.horizontal, 22)
-    }
-
-    private var tabs: some View {
-        HStack(spacing: 5) {
-            tabButton("Signer", "signature", 0)
-            tabButton("Settings", "slider.horizontal.3", 1)
-            tabButton("Files", "folder", 2)
-        }.padding(7).background(.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 22))
-            .padding(.horizontal, 20).padding(.top, 12).padding(.bottom, 12)
-    }
-
-    private var guide: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 19) {
-                    tile("iphone.gen3", FrozenPalette.green)
-                    Text("Developer Mode").font(.system(size: 24, weight: .bold))
-                    step("01", "Open Settings", "On your iPhone or iPad, open Settings, then Privacy & Security.")
-                    step("02", "Look for Developer Mode", "Scroll down to Developer Mode if the option is available on your device.")
-                    step("03", "Enable it yourself", "Switch it on, restart if iOS asks you to, then confirm Enable and enter your device passcode.")
-                    step("04", "If the option is missing", "FrozenApps cannot force it to appear. Depending on iOS and your provisioning method, Apple's supported developer setup may require a computer.")
-                    Text("Apple sign-in is not developer provisioning. An app cannot pair an iPad with itself or programmatically bypass Apple's signing requirements.")
-                        .font(.system(size: 13)).foregroundStyle(.white.opacity(0.55))
-                        .padding(14).background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 15))
-                }.padding(20)
-            }.background(Color(red: 0.035, green: 0.04, blue: 0.06))
-                .navigationTitle("Device setup").navigationBarTitleDisplayMode(.inline)
-                .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { showGuide = false } } }
-        }.preferredColorScheme(.dark)
-    }
-
-    private var inboxPage: some View {
-        NavigationStack {
-            List {
-                ForEach(inbox) { item in
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text(item.title).font(.system(size: 15, weight: .semibold))
-                        Text(item.detail).font(.system(size: 13)).foregroundStyle(.secondary)
-                        Text(item.date).font(.system(size: 11)).foregroundStyle(.tertiary)
-                    }.padding(.vertical, 5).listRowBackground(Color.white.opacity(0.035))
-                }
-            }.scrollContentBackground(.hidden).background(Color(red: 0.035, green: 0.04, blue: 0.06))
-                .navigationTitle("Notifications").navigationBarTitleDisplayMode(.inline)
-                .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { showInbox = false } } }
-        }.preferredColorScheme(.dark)
-    }
-
-    private func handleSignIn(_ result: Result<ASAuthorization, Error>) {
-        switch result {
-        case .success(let auth):
-            guard let credential = auth.credential as? ASAuthorizationAppleIDCredential else {
-                notice = "Apple returned an unsupported credential."; return
-            }
-            appleUserID = credential.user
-            if let email = credential.email { appleEmail = email }
-            if let name = credential.fullName {
-                let value = PersonNameComponentsFormatter().string(from: name).trimmingCharacters(in: .whitespacesAndNewlines)
-                if !value.isEmpty { appleName = value }
-            }
-            inbox.insert(InboxItem(title: "Apple sign-in successful", detail: "Profile details saved locally.", date: "Just now"), at: 0)
-            notice = "Signed in. This does not create signing certificates or enable Developer Mode."
-        case .failure(let error):
-            notice = "Apple sign-in did not complete: \(error.localizedDescription)"
-        }
-    }
-
-    private func enableNotifications() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
-            DispatchQueue.main.async {
-                localNotifications = granted
-                notice = granted ? "Local notifications are enabled. They cannot read Apple's private prompts." : "Notifications were not enabled. You can allow them in iPad Settings."
-            }
-        }
-    }
-
-    private func sendTest() {
-        guard localNotifications else { notice = "Turn on Local notifications first."; return }
-        let content = UNMutableNotificationContent()
-        content.title = "FrozenApps"; content.body = "Test notification — local alerts are working."; content.sound = .default
-        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: UNTimeIntervalNotificationTrigger(timeInterval: 2, repeats: false))
-        UNUserNotificationCenter.current().add(request) { error in
-            DispatchQueue.main.async {
-                if let error { notice = "Could not schedule alert: \(error.localizedDescription)" }
-                else { inbox.insert(InboxItem(title: "Test alert scheduled", detail: "A local notification should arrive shortly.", date: "Just now"), at: 0); notice = "Test notification scheduled. " }
-            }
-        }
-    }
-
-    private func importFiles(_ result: Result<[URL], Error>) {
-        switch result {
-        case .failure(let error): notice = "Import failed: \(error.localizedDescription)"
-        case .success(let urls):
-            let folder = docs().appendingPathComponent("ImportedIPAs", isDirectory: true)
-            do {
-                try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-                var count = 0
-                for source in urls {
-                    let access = source.startAccessingSecurityScopedResource()
-                    defer { if access { source.stopAccessingSecurityScopedResource() } }
-                    guard source.pathExtension.lowercased() == "ipa" else { continue }
-                    var dest = folder.appendingPathComponent(source.lastPathComponent)
-                    if FileManager.default.fileExists(atPath: dest.path) {
-                        dest = folder.appendingPathComponent(UUID().uuidString + "-" + source.lastPathComponent)
-                    }
-                    try FileManager.default.copyItem(at: source, to: dest); count += 1
-                }
-                refreshFiles()
-                notice = count == 0 ? "No IPA files were imported." : "Imported \(count) IPA file(s). Importing does not sign them."
-            } catch { refreshFiles(); notice = "Import failed: \(error.localizedDescription)" }
-        }
-    }
-
-    private func refreshFiles() {
-        let folder = docs().appendingPathComponent("ImportedIPAs", isDirectory: true)
-        guard let urls = try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: [.fileSizeKey], options: [.skipsHiddenFiles]) else { files = []; return }
-        files = urls.filter { $0.pathExtension.lowercased() == "ipa" }.map {
-            IPAFile(name: $0.lastPathComponent, path: $0.path, size: Int64((try? $0.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0))
-        }.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
-    }
-
-    private func deleteFile(_ file: IPAFile) {
-        do { try FileManager.default.removeItem(atPath: file.path); refreshFiles() }
-        catch { notice = "Could not delete file: \(error.localizedDescription)" }
-    }
-
-    private func docs() -> URL { FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0] }
-
-    private func heading(_ title: String, _ subtitle: String) -> some View {
-        VStack(alignment: .leading, spacing: 7) {
-            Text(title).font(.system(size: 32, weight: .bold, design: .rounded))
-            Text(subtitle).font(.system(size: 15)).foregroundStyle(.white.opacity(0.48))
-        }
-    }
-
-    private func tile(_ symbol: String, _ tint: Color) -> some View {
-        Image(systemName: symbol).font(.system(size: 20, weight: .medium)).foregroundStyle(tint)
-            .frame(width: 48, height: 48).background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 15))
-    }
-
-    private func policy(_ icon: String, _ title: String, _ detail: String) -> some View {
-        HStack(alignment: .top, spacing: 11) {
-            Image(systemName: icon).foregroundStyle(FrozenPalette.green).frame(width: 27)
-            VStack(alignment: .leading, spacing: 5) {
-                Text(title).font(.system(size: 14, weight: .semibold))
-                Text(detail).font(.system(size: 12)).foregroundStyle(.white.opacity(0.5)).fixedSize(horizontal: false, vertical: true)
-            }
-        }.padding(14).background(.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 16))
-    }
-
-    private func step(_ number: String, _ title: String, _ detail: String) -> some View {
-        HStack(alignment: .top, spacing: 13) {
-            Text(number).font(.system(size: 12, weight: .bold, design: .monospaced)).foregroundStyle(FrozenPalette.green)
-                .frame(width: 36, height: 36).background(FrozenPalette.green.opacity(0.12), in: RoundedRectangle(cornerRadius: 11))
-            VStack(alignment: .leading, spacing: 6) {
-                Text(title).font(.system(size: 15, weight: .semibold))
-                Text(detail).font(.system(size: 13)).foregroundStyle(.white.opacity(0.52)).fixedSize(horizontal: false, vertical: true)
-            }
-        }
-    }
-
-    private func actionRow(_ title: String, _ subtitle: String, _ icon: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 12) {
-                Image(systemName: icon).frame(width: 25).foregroundStyle(.white.opacity(0.65))
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(title).font(.system(size: 14, weight: .semibold)).foregroundStyle(.white)
-                    Text(subtitle).font(.system(size: 12)).foregroundStyle(.white.opacity(0.43))
-                }
-                Spacer()
-                Image(systemName: "chevron.right").font(.system(size: 11, weight: .semibold)).foregroundStyle(.white.opacity(0.3))
-            }.padding(17).contentShape(Rectangle())
-        }.buttonStyle(.plain)
-    }
-
-    private func tabButton(_ title: String, _ icon: String, _ index: Int) -> some View {
-        Button { withAnimation(.easeInOut(duration: 0.18)) { tab = index } } label: {
-            VStack(spacing: 6) {
-                Image(systemName: icon).font(.system(size: 18, weight: .medium))
-                Text(title).font(.system(size: 11, weight: .semibold))
-            }.foregroundStyle(tab == index ? .white : .white.opacity(0.42))
-                .frame(maxWidth: .infinity).padding(.vertical, 12)
-                .background { if tab == index { RoundedRectangle(cornerRadius: 16).fill(.white.opacity(0.095)) } }
-        }.buttonStyle(.plain)
-    }
-}
-
-private struct IPAFile: Identifiable {
-    let name: String
-    let path: String
-    let size: Int64
-    var id: String { path }
-}
-
-private struct InboxItem: Identifiable {
-    let id = UUID()
-    let title: String
-    let detail: String
-    let date: String
-}
-
-private enum FrozenPalette {
-    static let green = Color(red: 0.20, green: 0.88, blue: 0.58)
-    static let blue = Color(red: 0.28, green: 0.65, blue: 1.00)
-}
-
-private struct ParticleField: View {
-    var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 12.0, paused: false)) { timeline in
-            Canvas { context, size in
-                guard size.width > 0, size.height > 0 else { return }
-                let time = timeline.date.timeIntervalSinceReferenceDate
-                for index in 0..<42 {
-                    let seed = Double(index)
-                    let rawX = (sin(seed * 12.9898) * 0.5 + 0.5) * size.width
-                    let baseY = (cos(seed * 78.233) * 0.5 + 0.5) * size.height
-                    let speed = 1.2 + (Double(index % 5) * 0.55)
-                    var y = (baseY - time * speed).truncatingRemainder(dividingBy: size.height)
-                    if y < 0 { y += size.height }
-                    let diameter = 1.2 + Double(index % 3) * 0.75
-                    let rect = CGRect(x: rawX, y: y, width: diameter, height: diameter)
-                    context.fill(Path(ellipseIn: rect), with: .color(Color.white.opacity(0.12 + Double(index % 5) * 0.055)))
+                        .rotationEffect(.degrees(Double(index * 16)))
+                        .frame(width: width, height: height)
+                        .position(x: x, y: y)
+                        .blur(radius: 10)
                 }
             }
         }
-        .accessibilityHidden(true)
-    }
-}
-
-extension View {
-    func placeholder(_ text: String, color: Color) -> some View {
-        self.modifier(PlaceholderStyleModifier(placeholder: text, color: color))
-    }
-}
-
-private struct PlaceholderStyleModifier: ViewModifier {
-    let placeholder: String
-    let color: Color
-
-    func body(content: Content) -> some View {
-        ZStack(alignment: .leading) {
-            if placeholder.isEmpty == false {
-                Text(placeholder).foregroundColor(color)
-                    .padding(.leading, 2)
-            }
-            content
-        }
+        .allowsHitTesting(false)
     }
 }
