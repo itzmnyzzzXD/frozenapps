@@ -402,6 +402,8 @@ struct FrozenBatchActionsView: View {
     @State private var working = false
     @State private var queue: [String] = []
     @State private var confirmation = false
+    @State private var retryFailedPreflightOnce = true
+    @AppStorage("frozenApps.batch.queue.v1") private var persistedQueue = ""
 
     var body: some View {
         ZStack {
@@ -416,6 +418,9 @@ struct FrozenBatchActionsView: View {
                                 .font(.system(size: 23, weight: .bold, design: .rounded)).foregroundStyle(.white)
                             Text("Select several IPA files, run archive preflight checks, and build a reviewable queue. Signing and installation remain engine-controlled actions.")
                                 .font(.system(size: 11, weight: .medium)).foregroundStyle(.white.opacity(0.55)).fixedSize(horizontal: false, vertical: true)
+                            Toggle("Retry a failed preflight once", isOn: $retryFailedPreflightOnce)
+                                .font(.system(size: 11, weight: .medium)).tint(Theme.accent2)
+                                .foregroundStyle(.white.opacity(0.78))
                             Button { showImporter = true } label: {
                                 Label("Select IPA files", systemImage: "doc.badge.plus")
                                     .font(.system(size: 12, weight: .bold, design: .rounded))
@@ -497,6 +502,7 @@ struct FrozenBatchActionsView: View {
         }
         .navigationTitle("Batch Actions")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear { restoreQueue() }
         .fileImporter(isPresented: $showImporter,
                       allowedContentTypes: [UTType(filenameExtension: "ipa") ?? .data],
                       allowsMultipleSelection: true) { result in
@@ -505,6 +511,7 @@ struct FrozenBatchActionsView: View {
                 selectedFiles = urls.filter { $0.pathExtension.lowercased() == "ipa" }
                 reports = []
                 queue = []
+                persistQueue()
             case .failure(let error):
                 reports = ["Picker failed: \(error.localizedDescription)"]
             }
@@ -514,6 +521,7 @@ struct FrozenBatchActionsView: View {
                 selectedFiles = []
                 reports = []
                 queue = []
+                persistQueue()
             }
             Button("Cancel", role: .cancel) {}
         } message: {
@@ -529,19 +537,41 @@ struct FrozenBatchActionsView: View {
         reports = []
         queue = []
         for file in selectedFiles {
-            let scoped = file.startAccessingSecurityScopedResource()
-            defer { if scoped { file.stopAccessingSecurityScopedResource() } }
-            do {
-                let attributes = try FileManager.default.attributesOfItem(atPath: file.path)
-                let size = (attributes[.size] as? NSNumber)?.int64Value ?? 0
-                let isReadable = FileManager.default.isReadableFile(atPath: file.path)
-                guard isReadable, size > 0 else { throw NSError(domain: "FrozenBatch", code: 1, userInfo: [NSLocalizedDescriptionKey: "File is empty or unreadable."]) }
-                guard file.pathExtension.lowercased() == "ipa" else { throw NSError(domain: "FrozenBatch", code: 2, userInfo: [NSLocalizedDescriptionKey: "Not an IPA extension."]) }
-                reports.append("READY FOR IMPORT · \(file.lastPathComponent)\nSize: \(ByteCountFormatter.string(fromByteCount: size, countStyle: .file))\nArchive contents and app metadata must still pass FrozenApps Library validation.")
+            var report = inspectFile(file)
+            if report.hasPrefix("FAILED PRECHECK") && retryFailedPreflightOnce {
+                report = inspectFile(file)
+            }
+            reports.append(report)
+            if report.hasPrefix("READY FOR IMPORT") {
                 queue.append(file.lastPathComponent)
-            } catch {
-                reports.append("FAILED PRECHECK · \(file.lastPathComponent)\n\(error.localizedDescription)")
             }
         }
+        persistQueue()
+    }
+
+    private func inspectFile(_ file: URL) -> String {
+        let scoped = file.startAccessingSecurityScopedResource()
+        defer { if scoped { file.stopAccessingSecurityScopedResource() } }
+        do {
+            let attributes = try FileManager.default.attributesOfItem(atPath: file.path)
+            let size = (attributes[.size] as? NSNumber)?.int64Value ?? 0
+            let isReadable = FileManager.default.isReadableFile(atPath: file.path)
+            guard isReadable, size > 0 else { throw NSError(domain: "FrozenBatch", code: 1, userInfo: [NSLocalizedDescriptionKey: "File is empty or unreadable."]) }
+            guard file.pathExtension.lowercased() == "ipa" else { throw NSError(domain: "FrozenBatch", code: 2, userInfo: [NSLocalizedDescriptionKey: "Not an IPA extension."]) }
+            return "READY FOR IMPORT · \(file.lastPathComponent)\nSize: \(ByteCountFormatter.string(fromByteCount: size, countStyle: .file))\nArchive contents and app metadata must still pass FrozenApps Library validation."
+        } catch {
+            return "FAILED PRECHECK · \(file.lastPathComponent)\n\(error.localizedDescription)"
+        }
+    }
+
+    private func restoreQueue() {
+        guard let data = persistedQueue.data(using: .utf8),
+              let restored = try? JSONDecoder().decode([String].self, from: data) else { return }
+        queue = restored
+    }
+
+    private func persistQueue() {
+        guard let data = try? JSONEncoder().encode(queue) else { return }
+        persistedQueue = String(decoding: data, as: UTF8.self)
     }
 }
