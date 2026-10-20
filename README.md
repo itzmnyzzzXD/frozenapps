@@ -4,7 +4,7 @@ FrozenApps is an iPhone/iPad-first signing and installation workspace. It brings
 
 ## Current build
 
-The v1.0.3 redesign uses a custom violet-and-ice-cyan identity, five purpose-built tabs, redesigned Apple Account setup/edit screens, refreshed utility icons, a pairing-first onboarding path, and a more visible live install-progress ring with percentages. Downloading a custom IPA from a link also shows a numeric percentage when the server reports transfer progress.
+The 1.0.5 development update keeps the violet-and-ice-cyan identity and adds a GitHub-first App Catalog plus Batch Actions to Frozen Center. The catalog can inspect public GitHub latest releases and download only actual `.ipa` assets into the IPA Library; custom public `owner/repository` sources can be added in-app. Batch Actions runs a multi-file preflight and produces copyable reports and a reviewable handoff queue. This development build is not an official release until CI passes and a release is published.
 
 The UI changes are applied by `scripts/apply-frozenapps-branding.py` to the pinned engine checkout during every build. That keeps the customised screens reproducible rather than leaving edits in a generated directory that disappears on the next build. The existing pairing, Apple authentication, two-factor, provisioning, signing, and installation callbacks are retained.
 
@@ -15,6 +15,8 @@ The UI changes are applied by `scripts/apply-frozenapps-branding.py` to the pinn
 - **Custom IPA workflow:** import a local IPA or fetch one from a direct download link, view transfer progress, load a package into Signer, and run signing/install steps.
 - **Files library:** store multiple IPA packages separately from the signer's working copy; validate ZIP structure and app metadata; search/sort by name, date, and size; view bundle ID, version and SHA-256; load, or delete with confirmation.
 - **Tools and settings:** account/session management, pairing tools, certificates, entitlements, location tools, managed apps, language, tunnel settings, logs, privacy and licence information.
+- **App Catalog (1.0.5):** browse curated GitHub projects, add public `owner/repository` sources, inspect the latest release, and save actual IPA release assets into `Documents/FrozenApps Library`. Projects without an IPA asset remain source links; the app does not fabricate downloadable builds.
+- **Batch Actions (1.0.5):** select multiple IPA files, run file-access and basic preflight checks, copy reports, and prepare a manual queue. Deep archive validation, signing and installation still use the existing library and signer workflows; this screen does not claim queued files were signed or installed.
 - **Branding:** new FrozenApps app mark and utility glyphs, violet/ice-cyan visual system, glass surfaces, custom onboarding and account editor, animated backdrop, and Signer / Network / Tools / Files / Settings tabs.
 
 ## Compatibility
@@ -22,6 +24,16 @@ The UI changes are applied by `scripts/apply-frozenapps-branding.py` to the pinn
 The app targets iOS/iPadOS 17.4 and later, but the supported pairing method depends on OS version. Self-pairing is available only on supported newer versions. On iOS/iPadOS 17.4–26.7, an existing pairing file is required, and creating that pairing file may require a computer. LocalDevVPN, local-network access, eligible Apple Account access, Apple service availability, and user-approved Developer Mode may also be necessary.
 
 "Computer-free" is not a promise for every version or device. Read [release readiness](RELEASE_READINESS.md) and the compatibility details maintained with the underlying engine before setup.
+
+## Discover and batch-check apps
+
+1. Open Frozen Center and choose **App Catalog**.
+2. Add a public GitHub source as `owner/repository`, or select a built-in source.
+3. Check the latest release. FrozenApps only offers a download action when GitHub's release response contains an actual `.ipa` asset.
+4. Downloaded files are saved into the FrozenApps IPA Library directory. Open IPA Library to validate package structure and app metadata before loading a package into Signer.
+5. Open **Batch Actions** to select several IPA files and generate a preflight report. A queue is a planning/handoff list, not proof that signing or installation has run.
+
+The catalog does not host third-party IPAs. GitHub projects may publish no IPA asset, may have platform restrictions, or may require separate setup. Verify the repository owner, release notes, licence and file integrity before using a package.
 
 ## Import a custom IPA
 
