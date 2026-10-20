@@ -38,6 +38,29 @@ private struct FrozenCatalogSource: Codable, Identifiable, Equatable {
     ]
 }
 
+
+private struct FrozenCatalogDiscovery: Identifiable {
+    let name: String
+    let query: String
+    let subtitle: String
+    var id: String { name }
+
+    static let projects: [FrozenCatalogDiscovery] = [
+        .init(name: "StickDebug", query: "StickDebug", subtitle: "Developer and device utilities"),
+        .init(name: "Scarlet", query: "Scarlet iOS sideload", subtitle: "Third-party signing/distribution project"),
+        .init(name: "E-Sign", query: "E-Sign iOS", subtitle: "Third-party signing app"),
+        .init(name: "YTPlus", query: "YTPlus iOS", subtitle: "YouTube client project"),
+        .init(name: "uYouEnhanced", query: "uYouEnhanced", subtitle: "YouTube client project"),
+        .init(name: "EeveeSpotify", query: "EeveeSpotify", subtitle: "Spotify client project"),
+        .init(name: "Twitch Adblock", query: "Twitch adblock iOS", subtitle: "Community client project"),
+        .init(name: "Balatro", query: "Balatro iOS port", subtitle: "Game and port discovery"),
+        .init(name: "PokeMMO", query: "PokeMMO iOS", subtitle: "Game client discovery"),
+        .init(name: "iTorrent", query: "iTorrent iOS", subtitle: "Torrent client discovery"),
+        .init(name: "qBitControl", query: "qBitControl", subtitle: "Remote torrent control"),
+        .init(name: "Eclipse / emulator builds", query: "iOS emulator IPA", subtitle: "Emulation and gaming")
+    ]
+}
+
 /// A source-first catalog: downloads are offered only when a repository's
 /// public GitHub release actually contains an IPA asset. Otherwise the source
 /// link remains available without pretending a compatible IPA exists.
@@ -88,6 +111,35 @@ struct FrozenAppCatalogView: View {
 
                     ForEach(visibleSources) { source in
                         sourceCard(source)
+                    }
+
+                    HStack {
+                        Text("APP DISCOVERY").font(.system(size: 9, weight: .heavy, design: .rounded)).tracking(1.5).foregroundStyle(Theme.accent2)
+                        Spacer()
+                        Text("GitHub search").font(.system(size: 9, weight: .medium)).foregroundStyle(.white.opacity(0.4))
+                    }
+                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 9), GridItem(.flexible(), spacing: 9)], spacing: 9) {
+                        ForEach(FrozenCatalogDiscovery.projects) { item in
+                            Button {
+                                var components = URLComponents(string: "https://github.com/search")!
+                                components.queryItems = [URLQueryItem(name: "q", value: item.query), URLQueryItem(name: "type", value: "repositories")]
+                                if let url = components.url { openURL(url) }
+                            } label: {
+                                VStack(alignment: .leading, spacing: 7) {
+                                    HStack {
+                                        Image(systemName: "magnifyingglass").foregroundStyle(Theme.accent2)
+                                        Spacer()
+                                        Image(systemName: "arrow.up.right").font(.system(size: 9, weight: .bold)).foregroundStyle(.white.opacity(0.4))
+                                    }
+                                    Text(item.name).font(.system(size: 11, weight: .bold, design: .rounded)).foregroundStyle(.white)
+                                    Text(item.subtitle).font(.system(size: 9, weight: .medium)).foregroundStyle(.white.opacity(0.48)).lineLimit(2)
+                                }
+                                .padding(12).frame(maxWidth: .infinity, minHeight: 78, alignment: .leading)
+                                .background(.white.opacity(0.045), in: RoundedRectangle(cornerRadius: 13))
+                                .overlay { RoundedRectangle(cornerRadius: 13).strokeBorder(.white.opacity(0.07)) }
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
 
                     PanelCard {
