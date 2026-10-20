@@ -27,38 +27,268 @@ struct ContentView: View {
     private var signedIn: Bool { !appleUserID.isEmpty }
 
     var body: some View {
+        loginScreen
+    }
+
+    private var loginScreen: some View {
         ZStack {
-            ZStack {
-                LinearGradient(
-                    colors: [
-                        Color(red: 0.025, green: 0.07, blue: 0.12),
-                        Color(red: 0.025, green: 0.06, blue: 0.09),
-                        Color(red: 0.025, green: 0.10, blue: 0.08)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                ).ignoresSafeArea()
-                ParticleField().ignoresSafeArea().allowsHitTesting(false)
-            }
+            LinearGradient(
+                colors: [
+                    Color(red: 0.95, green: 0.92, blue: 0.89),
+                    Color(red: 0.89, green: 0.85, blue: 0.80),
+                    Color(red: 0.80, green: 0.77, blue: 0.72)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+
             VStack(spacing: 0) {
-                header
-                if termsAccepted {
-                    Group {
-                        if tab == 0 { signer }
-                        else if tab == 1 { settings }
-                        else { filePage }
-                    }.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                    tabs
-                } else { termsPage }
+                Spacer(minLength: 30)
+
+                ZStack {
+                    Circle()
+                        .fill(Color.white.opacity(0.38))
+                        .frame(width: 640, height: 240)
+                        .shadow(color: .black.opacity(0.08), radius: 38, x: 0, y: 18)
+
+                    Circle()
+                        .fill(Color.white.opacity(0.12))
+                        .frame(width: 520, height: 170)
+                        .offset(y: 12)
+                }
+                .padding(.bottom, 18)
+
+                HStack(alignment: .top, spacing: 28) {
+                    loginCard
+                    eventCard
+                }
+                .padding(.horizontal, 30)
+
+                Spacer()
+
+                bottomDecor
             }
         }
-        .sheet(isPresented: $showGuide) { guide }
-        .sheet(isPresented: $showInbox) { inboxPage }
-        .fileImporter(isPresented: $showImporter, allowedContentTypes: [UTType(filenameExtension: "ipa") ?? .data], allowsMultipleSelection: true, onCompletion: importFiles)
-        .alert("FrozenApps", isPresented: Binding(get: { !notice.isEmpty }, set: { if !$0 { notice = "" } })) {
-            Button("OK", role: .cancel) { notice = "" }
-        } message: { Text(notice) }
-        .onAppear { refreshFiles() }
+    }
+
+    private var loginCard: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack {
+                Text("Cannabis Lab")
+                    .font(.custom("Georgia", size: 24))
+                    .foregroundStyle(Color.black.opacity(0.7))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                Button(action: {}) {
+                    Text("Sign up")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(.black.opacity(0.8))
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.bottom, 4)
+
+            Text("Log in")
+                .font(.custom("Georgia", size: 36))
+                .fontWeight(.medium)
+                .foregroundStyle(.black.opacity(0.8))
+
+            VStack(spacing: 14) {
+                authInput(icon: "@", placeholder: "e-mail address")
+                authInput(icon: "◌", placeholder: "password", isPassword: true)
+            }
+
+            HStack(alignment: .center) {
+                Spacer()
+                Button(action: {}) {
+                    Text("Forgot?")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.black.opacity(0.65))
+                }
+                .buttonStyle(.plain)
+            }
+
+            Text("For use by adults only (18 years or age and over)")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.black.opacity(0.5))
+                .lineSpacing(5)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Button(action: {}) {
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 42, height: 42)
+                    .background(Color.black.opacity(0.9), in: Circle())
+            }
+            .offset(x: 230, y: 0)
+            .buttonStyle(.plain)
+
+            Text("Please consume responsibly")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(.black.opacity(0.45))
+                .padding(.top, 4)
+        }
+        .padding(26)
+        .frame(width: 360, height: 420)
+        .background(Color.white.opacity(0.28))
+        .overlay(
+            RoundedRectangle(cornerRadius: 26)
+                .stroke(Color.black.opacity(0.05), lineWidth: 1)
+        )
+        .cornerRadius(26)
+    }
+
+    private var eventCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .top) {
+                Text("Thu\n24th")
+                    .font(.system(size: 54, weight: .light))
+                    .foregroundStyle(.black.opacity(0.72))
+                    .lineSpacing(-6)
+                    .multilineTextAlignment(.leading)
+
+                Spacer()
+
+                Text("Grand opening\nNew store")
+                    .font(.system(size: 16, weight: .regular))
+                    .foregroundStyle(.black.opacity(0.5))
+                    .multilineTextAlignment(.trailing)
+                    .padding(.top, 10)
+            }
+
+            VStack(alignment: .leading, spacing: 18) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("18 PM")
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundStyle(.black.opacity(0.7))
+                    Text("Kerkstraat 12B")
+                        .font(.system(size: 14, weight: .regular))
+                        .foregroundStyle(.black.opacity(0.5))
+                    Text("Amsterdam")
+                        .font(.system(size: 14, weight: .regular))
+                        .foregroundStyle(.black.opacity(0.5))
+                }
+
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [Color(red: 1.0, green: 0.76, blue: 0.38), Color(red: 0.93, green: 0.48, blue: 0.18)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        .frame(width: 210, height: 210)
+                        .shadow(color: .orange.opacity(0.35), radius: 35, x: 0, y: 15)
+                }
+                .frame(maxWidth: .infinity, alignment: .center)
+            }
+            .padding(.top, 8)
+
+            HStack(alignment: .center) {
+                Spacer()
+                HStack(spacing: 8) {
+                    Text("C.Lab")
+                        .font(.system(size: 20, weight: .medium))
+                        .foregroundStyle(.black.opacity(0.7))
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 18))
+                        .foregroundStyle(.black.opacity(0.45))
+                }
+
+                Spacer()
+
+                Button(action: {}) {
+                    HStack(spacing: 8) {
+                        Text("Join in")
+                            .font(.system(size: 15, weight: .medium))
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 15, weight: .bold))
+                    }
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 12)
+                    .background(Color.black.opacity(0.88), in: Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.top, 6)
+        }
+        .padding(22)
+        .frame(width: 350, height: 515)
+        .background(Color.white.opacity(0.27))
+        .overlay(
+            RoundedRectangle(cornerRadius: 30)
+                .stroke(Color.black.opacity(0.06), lineWidth: 1)
+        )
+        .cornerRadius(30)
+    }
+
+    private var bottomDecor: some View {
+        ZStack(alignment: .bottom) {
+            RoundedRectangle(cornerRadius: 36)
+                .fill(Color.black.opacity(0.82))
+                .frame(width: 740, height: 120)
+                .offset(y: 10)
+
+            HStack(alignment: .center, spacing: 12) {
+                Text("New in")
+                    .font(.system(size: 40, weight: .bold))
+                    .foregroundStyle(.white)
+                Text("C.Lab Joins")
+                    .font(.system(size: 33, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.85))
+                Spacer()
+                Text("Discover")
+                    .font(.system(size: 22, weight: .medium))
+                    .foregroundStyle(.white)
+            }
+            .frame(width: 700, height: 90)
+            .padding(.horizontal, 24)
+
+            Circle()
+                .fill(Color(red: 0.92, green: 0.72, blue: 0.52))
+                .frame(width: 200, height: 200)
+                .offset(x: -460, y: 90)
+                .opacity(0.95)
+
+            Circle()
+                .fill(Color(white: 0.9))
+                .frame(width: 140, height: 140)
+                .offset(x: 480, y: 90)
+                .opacity(0.95)
+        }
+        .frame(height: 220)
+    }
+
+    private func authInput(icon: String, placeholder: String, isPassword: Bool = false) -> some View {
+        HStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(Color.black.opacity(0.08))
+                    .frame(width: 26, height: 26)
+                Text(icon)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.black.opacity(0.7))
+            }
+
+            if isPassword {
+                SecureField(placeholder, text: .constant(""))
+                    .textFieldStyle(.plain)
+                    .placeholder(placeholder, color: .black.opacity(0.35))
+            } else {
+                TextField(placeholder, text: .constant(""))
+                    .textFieldStyle(.plain)
+                    .placeholder(placeholder, color: .black.opacity(0.35))
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(Color.white.opacity(0.22))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.black.opacity(0.05), lineWidth: 1))
+        .cornerRadius(16)
     }
 
     private var header: some View {
@@ -85,10 +315,10 @@ struct ContentView: View {
                 Text("Your device. Your data.").font(.system(size: 30, weight: .bold, design: .rounded))
                 Text("Please review and accept these terms before continuing.")
                     .font(.system(size: 15)).foregroundStyle(.white.opacity(0.55))
-                policy("lock.fill", "Local storage", "This version saves preferences, Apple sign-in profile details, and imported IPA files on this device. It does not upload them to a FrozenApps database.")
-                policy("key.slash", "No passwords or verification codes", "FrozenApps must never ask you to type your Apple Account password or two-factor code into the app. Apple's own system sheet handles Sign in with Apple.")
+                policy("lock.fill", "Local storage", "This version saves preferences, Apple sign-in profile details, and imported IPA files on this device. It does not upload them to a FrozenApps server.")
+                policy("key.slash", "No passwords or verification codes", "FrozenApps must never ask you to type your Apple Account password or two-factor code into the app.")
                 policy("apple.logo", "Sign-in is not signing", "Signing in with Apple does not provide a developer certificate, sign an IPA, pair a device, or enable Developer Mode.")
-                policy("checkmark.shield", "Use responsibly", "Only use apps and files you are authorized to use. Follow Apple's terms and the requirements of your signing method. Local storage does not guarantee legal immunity.")
+                policy("checkmark.shield", "Use responsibly", "Only use apps and files you are authorized to use. Follow Apple's terms and the requirements of your signing method.")
                 Button {
                     termsAccepted = true
                     inbox.insert(InboxItem(title: "Terms accepted", detail: "Acceptance is saved locally.", date: "Just now"), at: 0)
@@ -312,7 +542,7 @@ struct ContentView: View {
         UNUserNotificationCenter.current().add(request) { error in
             DispatchQueue.main.async {
                 if let error { notice = "Could not schedule alert: \(error.localizedDescription)" }
-                else { inbox.insert(InboxItem(title: "Test alert scheduled", detail: "A local notification should arrive shortly.", date: "Just now"), at: 0); notice = "Test notification scheduled." }
+                else { inbox.insert(InboxItem(title: "Test alert scheduled", detail: "A local notification should arrive shortly.", date: "Just now"), at: 0); notice = "Test notification scheduled. " }
             }
         }
     }
@@ -429,7 +659,6 @@ private struct InboxItem: Identifiable {
     let date: String
 }
 
-
 private enum FrozenPalette {
     static let green = Color(red: 0.20, green: 0.88, blue: 0.58)
     static let blue = Color(red: 0.28, green: 0.65, blue: 1.00)
@@ -455,5 +684,26 @@ private struct ParticleField: View {
             }
         }
         .accessibilityHidden(true)
+    }
+}
+
+extension View {
+    func placeholder(_ text: String, color: Color) -> some View {
+        self.modifier(PlaceholderStyleModifier(placeholder: text, color: color))
+    }
+}
+
+private struct PlaceholderStyleModifier: ViewModifier {
+    let placeholder: String
+    let color: Color
+
+    func body(content: Content) -> some View {
+        ZStack(alignment: .leading) {
+            if placeholder.isEmpty == false {
+                Text(placeholder).foregroundColor(color)
+                    .padding(.leading, 2)
+            }
+            content
+        }
     }
 }
