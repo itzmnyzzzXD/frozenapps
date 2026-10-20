@@ -19,7 +19,7 @@ struct FrozenParticleOverlay: View {
                 if y < 0 { y += size.height }
                 let diameter = 1.0 + Double(index % 3) * 0.65
                 let rect = CGRect(x: xUnit * size.width, y: y, width: diameter, height: diameter)
-                let opacity = 0.10 + Double(index % 5) * 0.035
+                let opacity = 0.065 + Double(index % 5) * 0.025
                 context.fill(Path(ellipseIn: rect), with: .color(Color.white.opacity(opacity)))
             }
         }
