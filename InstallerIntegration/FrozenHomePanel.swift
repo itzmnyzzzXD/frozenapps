@@ -18,12 +18,12 @@ struct FrozenHomePanel: View {
                 Image(systemName: "sparkles")
                     .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(Theme.accent2)
-                Text("FROZEN CONTROL CENTER")
+                Text("FROZENAPPS  /  YOUR WORKSPACE")
                     .font(.system(size: 9, weight: .heavy, design: .rounded))
                     .tracking(1.4)
                     .foregroundStyle(.white.opacity(0.78))
                 Spacer()
-                Text("1.0.3")
+                Text("1.0.5")
                     .font(.system(size: 10, weight: .bold, design: .rounded).monospacedDigit())
                     .foregroundStyle(Theme.accent2)
                     .padding(.horizontal, 10)
@@ -33,12 +33,12 @@ struct FrozenHomePanel: View {
 
             HStack(alignment: .center, spacing: 10) {
                 VStack(alignment: .leading, spacing: 7) {
-                    Text("Pair with\nFrozenApps.")
+                    Text("Everything,\nin one place.")
                         .font(.system(size: 27, weight: .bold, design: .rounded))
                         .tracking(-0.65)
                         .foregroundStyle(.white)
                         .fixedSize(horizontal: false, vertical: true)
-                    Text("Connect your device, sign apps and manage installs from one focused workspace.")
+                    Text("Discover apps, pair your device, sign packages and keep your library organised.")
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(.white.opacity(0.62))
                         .fixedSize(horizontal: false, vertical: true)
@@ -74,9 +74,9 @@ struct FrozenHomePanel: View {
 
             Button(action: onOpenNetwork) {
                 HStack(spacing: 9) {
-                    Image(systemName: "point.3.connected.trianglepath.dotted")
+                    Image(systemName: "sparkles.rectangle.stack")
                         .font(.system(size: 14, weight: .semibold))
-                    Text("Prepare for pairing")
+                    Text("Open connection center")
                         .font(.system(size: 13, weight: .semibold))
                     Spacer()
                     Image(systemName: "arrow.up.right")
@@ -85,10 +85,10 @@ struct FrozenHomePanel: View {
                 .foregroundStyle(.white)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 13)
-                .background(.white.opacity(0.085), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 15, style: .continuous))
                 .overlay {
                     RoundedRectangle(cornerRadius: 15, style: .continuous)
-                        .strokeBorder(.white.opacity(0.11), lineWidth: 1)
+                        .strokeBorder(LinearGradient(colors: [.white.opacity(0.32), Theme.accent.opacity(0.26), .white.opacity(0.06)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
                 }
             }
             .buttonStyle(.plain)
@@ -99,20 +99,20 @@ struct FrozenHomePanel: View {
             ZStack(alignment: .topTrailing) {
                 LinearGradient(
                     colors: [
-                        Color(red: 0.11, green: 0.08, blue: 0.24),
-                        Color(red: 0.035, green: 0.12, blue: 0.20),
-                        Color(red: 0.025, green: 0.075, blue: 0.12)
+                        Color(red: 0.12, green: 0.025, blue: 0.055),
+                        Color(red: 0.22, green: 0.045, blue: 0.085),
+                        Color(red: 0.035, green: 0.018, blue: 0.03)
                     ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
                 Circle()
-                    .fill(Theme.accent.opacity(0.18))
+                    .fill(Theme.accent.opacity(0.28))
                     .frame(width: 175, height: 175)
                     .blur(radius: 34)
                     .offset(x: 55, y: -65)
                 Circle()
-                    .fill(Theme.accent2.opacity(0.09))
+                    .fill(Theme.accent2.opacity(0.14))
                     .frame(width: 130, height: 130)
                     .blur(radius: 28)
                     .offset(x: -90, y: 100)
