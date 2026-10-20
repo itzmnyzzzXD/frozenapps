@@ -23,7 +23,7 @@ struct FrozenHomePanel: View {
                     .tracking(1.4)
                     .foregroundStyle(.white.opacity(0.78))
                 Spacer()
-                Text("1.0.5")
+                Text("1.0.7")
                     .font(.system(size: 10, weight: .bold, design: .rounded).monospacedDigit())
                     .foregroundStyle(Theme.accent2)
                     .padding(.horizontal, 10)
