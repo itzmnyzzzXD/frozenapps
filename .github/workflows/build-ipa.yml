@@ -18,7 +18,7 @@ permissions:
 
 concurrency:
   group: frozenapps-build-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -96,8 +96,41 @@ jobs:
           mkdir -p "$IPA_ROOT/Payload"
           ditto "$APP" "$IPA_ROOT/Payload/FrozenApps.app"
           (cd "$IPA_ROOT" && /usr/bin/zip -qry "$IPA" Payload)
-          /usr/bin/unzip -t "$IPA"
-          /usr/bin/unzip -Z1 "$IPA" | grep -q '^Payload/FrozenApps.app/Info.plist$'
+          test -s "$IPA"
+          python3 - "$IPA" "$(awk -F: '/^[[:space:]]*MARKETING_VERSION:/ { gsub(/[" ]/, "", $2); print $2; exit }' project.yml)" "$(awk -F: '/^[[:space:]]*CURRENT_PROJECT_VERSION:/ { gsub(/[" ]/, "", $2); print $2; exit }' project.yml)" <<'PY'
+          import os, plistlib, sys, zipfile
+
+          ipa, expected_version, expected_build = sys.argv[1:]
+          if os.path.getsize(ipa) < 1_000_000:
+              raise SystemExit("IPA is unexpectedly small; refusing to publish a likely incomplete package.")
+          required = {
+              "Payload/FrozenApps.app/Info.plist",
+              "Payload/FrozenApps.app/FrozenApps",
+              "Payload/FrozenApps.app/PlugIns/FrozenAppsLiveActivity.appex/Info.plist",
+          }
+          with zipfile.ZipFile(ipa) as package:
+              damaged = package.testzip()
+              if damaged:
+                  raise SystemExit(f"IPA ZIP integrity check failed at: {damaged}")
+              names = set(package.namelist())
+              missing = required - names
+              if missing:
+                  raise SystemExit("IPA is missing required app bundle entries: " + ", ".join(sorted(missing)))
+              plist = plistlib.loads(package.read("Payload/FrozenApps.app/Info.plist"))
+              actual = {
+                  "CFBundleIdentifier": "com.itzmnyzzz.frozenapps",
+                  "CFBundleShortVersionString": expected_version,
+                  "CFBundleVersion": expected_build,
+                  "MinimumOSVersion": "17.4",
+              }
+              for key, expected in actual.items():
+                  if str(plist.get(key, "")) != expected:
+                      raise SystemExit(f"IPA metadata mismatch for {key}: expected {expected!r}, got {plist.get(key)!r}")
+              print("PASS: IPA ZIP CRC and required app bundle entries")
+              print(f"PASS: bundle {plist['CFBundleIdentifier']} version {expected_version} build {expected_build}")
+              print(f"PASS: minimum iOS {plist['MinimumOSVersion']}")
+              print("SIGNING: this workflow deliberately creates an unsigned IPA; it is not ready to install until signed using a supported method.")
+          PY
           shasum -a 256 "$IPA" | tee "$GITHUB_WORKSPACE/FrozenApps-unsigned.ipa.sha256"
           ls -lh "$IPA"
 
@@ -116,6 +149,13 @@ jobs:
           fi
           if [[ ! "$RELEASE_TAG" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "Invalid release tag: $RELEASE_TAG" >&2
+            exit 1
+          fi
+          PROJECT_VERSION="$(awk -F: '/^[[:space:]]*MARKETING_VERSION:/ { gsub(/[" ]/, "", $2); print $2; exit }' project.yml)"
+          NORMALIZED_TAG="$RELEASE_TAG"
+          NORMALIZED_TAG="${NORMALIZED_TAG#v}"
+          if [[ "$NORMALIZED_TAG" != "$PROJECT_VERSION" ]]; then
+            echo "Release tag $RELEASE_TAG does not match app version $PROJECT_VERSION; refusing to publish a mismatched IPA." >&2
             exit 1
           fi
           echo "FROZEN_RELEASE_TAG=$RELEASE_TAG" >> "$GITHUB_ENV"
