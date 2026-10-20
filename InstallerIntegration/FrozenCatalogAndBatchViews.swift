@@ -98,8 +98,9 @@ struct FrozenAppCatalogView: View {
                             .autocorrectionDisabled()
                     }
                     .padding(13)
-                    .background(.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 14))
-                    .overlay { RoundedRectangle(cornerRadius: 14).strokeBorder(.white.opacity(0.09)) }
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .overlay { RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(LinearGradient(colors: [.white.opacity(0.26), Theme.accent.opacity(0.18), .white.opacity(0.045)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1) }
+                    .shadow(color: Theme.accent.opacity(0.08), radius: 12, x: 0, y: 5)
 
                     HStack {
                         Text("SOURCES").font(.system(size: 9, weight: .heavy, design: .rounded)).tracking(1.5).foregroundStyle(Theme.accent2)
@@ -203,7 +204,7 @@ struct FrozenAppCatalogView: View {
                         .frame(width: 48, height: 48)
                         .background(Theme.brand, in: RoundedRectangle(cornerRadius: 15))
                     VStack(alignment: .leading, spacing: 3) {
-                        Text("FROZENAPPS · DISCOVER")
+                        Text("FROZENAPPS  /  APP DISCOVERY")
                             .font(.system(size: 9, weight: .heavy, design: .rounded))
                             .tracking(1.4)
                             .foregroundStyle(Theme.accent2)
