@@ -34,6 +34,7 @@ struct FrozenNetworkView: View {
                         Image(systemName: "arrow.clockwise")
                             .font(.system(size: 14, weight: .semibold))
                     }
+                    .buttonStyle(FrozenGlassPressStyle())
                     .accessibilityLabel("Refresh network details")
                 }
             }
@@ -68,7 +69,8 @@ struct FrozenNetworkView: View {
                 .foregroundStyle(.white.opacity(0.56))
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(.vertical, 4)
+        .padding(16)
+        .frozenGlassSurface(cornerRadius: 24, tint: Theme.accent, elevated: true)
     }
 
     private var connectionCard: some View {
@@ -272,8 +274,7 @@ struct FrozenNetworkView: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.white.opacity(0.025), in: RoundedRectangle(cornerRadius: 17, style: .continuous))
-        .overlay { RoundedRectangle(cornerRadius: 17, style: .continuous).strokeBorder(.white.opacity(0.07), lineWidth: 1) }
+        .frozenGlassSurface(cornerRadius: 17, tint: Theme.accent2.opacity(0.20))
     }
 
     private func metricTile(title: String, value: String, icon: String) -> some View {
@@ -289,8 +290,7 @@ struct FrozenNetworkView: View {
         }
         .frame(maxWidth: .infinity, minHeight: 64, alignment: .leading)
         .padding(12)
-        .background(.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
-        .overlay { RoundedRectangle(cornerRadius: 15, style: .continuous).strokeBorder(.white.opacity(0.07), lineWidth: 1) }
+        .frozenGlassSurface(cornerRadius: 15, tint: Theme.accent.opacity(0.18))
     }
 }
 
