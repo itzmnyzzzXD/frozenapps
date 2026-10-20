@@ -81,8 +81,8 @@ func makeIcon(size: Int, variant: String) -> CGImage {
     if !tinted {
         let dark = variant == "dark"
         let colors: [CGColor] = dark
-            ? [cgColor(0.025, 0.006, 0.018), cgColor(0.105, 0.018, 0.040), cgColor(0.20, 0.035, 0.075)]
-            : [cgColor(0.018, 0.006, 0.014), cgColor(0.30, 0.035, 0.095), cgColor(0.92, 0.24, 0.40)]
+            ? [cgColor(0.006, 0.018, 0.035), cgColor(0.012, 0.055, 0.095), cgColor(0.020, 0.13, 0.18)]
+            : [cgColor(0.008, 0.018, 0.035), cgColor(0.025, 0.12, 0.21), cgColor(0.06, 0.55, 0.75)]
         let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray,
                                   locations: [0, 0.56, 1])!
         context.drawLinearGradient(gradient,
@@ -91,9 +91,9 @@ func makeIcon(size: Int, variant: String) -> CGImage {
                                    options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
 
         let glowColors: [CGColor] = [
-            cgColor(1.0, 0.28, 0.48, dark ? 0.18 : 0.30),
-            cgColor(1.0, 0.55, 0.63, 0.10),
-            cgColor(1.0, 0.55, 0.63, 0.0)
+            cgColor(0.20, 0.85, 1.0, dark ? 0.18 : 0.30),
+            cgColor(0.55, 0.95, 1.0, 0.10),
+            cgColor(0.55, 0.95, 1.0, 0.0)
         ]
         let glow = CGGradient(colorsSpace: colorSpace, colors: glowColors as CFArray,
                               locations: [0, 0.45, 1])!
@@ -107,13 +107,13 @@ func makeIcon(size: Int, variant: String) -> CGImage {
         let border = CGPath(roundedRect: rect.insetBy(dx: dimension * 0.045, dy: dimension * 0.045),
                             cornerWidth: dimension * 0.23, cornerHeight: dimension * 0.23, transform: nil)
         context.addPath(border)
-        context.setStrokeColor(cgColor(1.0, 0.78, 0.84, 0.24))
+        context.setStrokeColor(cgColor(0.68, 0.94, 1.0, 0.24))
         context.setLineWidth(max(1, dimension * 0.0035))
         context.strokePath()
     }
 
     let white = tinted ? cgColor(1, 1, 1, 1) : cgColor(0.94, 1.0, 0.98, 1)
-    let mint = tinted ? cgColor(1, 1, 1, 1) : cgColor(1.0, 0.53, 0.66, 1)
+    let mint = tinted ? cgColor(1, 1, 1, 1) : cgColor(0.33, 0.91, 1.0, 1)
 
     // A bold F monogram with softened corners: readable at tiny notification-icon sizes.
     roundedRect(context, x: dimension * 0.265, y: dimension * 0.245,
@@ -140,7 +140,7 @@ func makeIcon(size: Int, variant: String) -> CGImage {
                              y: dimension * y - dimension * radius,
                              width: dimension * radius * 2,
                              height: dimension * radius * 2)
-            context.setFillColor(cgColor(1.0, 0.88, 0.91, 0.72))
+            context.setFillColor(cgColor(0.70, 0.96, 1.0, 0.72))
             context.fillEllipse(in: dot)
         }
     }
