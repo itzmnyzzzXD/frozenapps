@@ -63,7 +63,7 @@ GitHub Actions compiles the app and native engine, validates the app bundle and 
 
 **Required upstream attribution:** SideInstaller by FrizzleM — https://github.com/FrizzleM/SideInstaller.
 
-The upstream source is pinned as a Git submodule. The full upstream custom licence is kept at [LICENSES/SideInstaller-LICENSE.md](LICENSES/SideInstaller-LICENSE.md). Source distributions must retain the copyright and licence notices and clearly identify modifications. The upstream licence restricts redistribution of compiled derivatives and commercial use without written authorization; read it before redistributing an IPA.
+The upstream source is pinned as a Git submodule. The full upstream custom licence is kept at [LICENSES/SideInstaller-LICENSE.md](LICENSES/SideInstaller-LICENSE.md). Source distributions must retain the copyright and licence notices and clearly identify modifications. The upstream licence prohibits redistribution of compiled IPA derivatives and commercial use without prior written authorization. The build workflow therefore keeps IPA files out of public releases and workflow artifacts unless the repository variable `SIDEINSTALLER_BINARY_REDISTRIBUTION_AUTHORIZED` is set to `true` after authorization has been obtained. Source builds and validation remain available without that setting.
 
 
 ## 1.0.5 UI refresh and Signer install catalog
