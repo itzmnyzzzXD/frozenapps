@@ -1069,13 +1069,13 @@ replace_once(
 
 replace_once("ios-app/Theme.swift",
     "static let accent = Color(red: 0.13, green: 0.44, blue: 0.96)",
-    "static let accent = Color(red: 0.95, green: 0.20, blue: 0.36)")
+    "static let accent = Color(red: 0.07, green: 0.48, blue: 0.84)")
 replace_once("ios-app/Theme.swift",
     "static let glow = Color(red: 1 / 255, green: 26 / 255, blue: 92 / 255)",
-    "static let glow = Color(red: 0.085, green: 0.008, blue: 0.030)")
+    "static let glow = Color(red: 0.005, green: 0.018, blue: 0.045)")
 replace_once("ios-app/Theme.swift",
     "static let accent2 = Color(red: 0.30, green: 0.68, blue: 1.0)",
-    "static let accent2 = Color(red: 1.0, green: 0.52, blue: 0.64)")
+    "static let accent2 = Color(red: 0.35, green: 0.88, blue: 1.0)")
 
 
 # Bring every upstream PanelCard into the same restrained glass system. Standard
@@ -1436,8 +1436,8 @@ replace_once(
             RoundedRectangle(cornerRadius: 26, style: .continuous)
                 .fill(LinearGradient(
                     colors: [
-                        Color(red: 0.23, green: 0.025, blue: 0.075),
-                        Color(red: 0.085, green: 0.012, blue: 0.035)
+                        Color(red: 0.012, green: 0.055, blue: 0.105),
+                        Color(red: 0.005, green: 0.018, blue: 0.045)
                     ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
