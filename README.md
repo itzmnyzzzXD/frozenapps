@@ -4,7 +4,7 @@ FrozenApps is an iPhone/iPad-first signing and installation workspace. It brings
 
 ## Current build
 
-The 1.0.7 release candidate builds on FrozenApps' violet-and-ice-cyan identity with a more capable GitHub-first App Catalog and Batch Actions. App sources can be pinned as favorites, searched, filtered by release/IPA status, sorted by name, IPA count or status, refreshed individually or together, and removed through a confirmation step. Source input is validated and duplicate sources are reported instead of being silently ignored. The catalog offers downloads only for actual `.ipa` release assets. Batch Actions continues to run a multi-file preflight and produce copyable reports and a reviewable handoff queue; it never claims queued files were signed or installed. This candidate is not an official release until CI validates the build and a versioned release is published.
+The v1.0.8 development update focuses on a polished OLED Blueglass interface: a responsive Apple-account setup screen with a native illustrated side panel on wider iPads, an animated black/blue/violet/ice-white backdrop, and a single premium workspace dropdown for Signer, Frozen Center, Network, Tools, Files, and Settings. The redesign keeps the existing pairing, Apple authentication, two-factor, provisioning, signing, and installation callbacks intact. The release still requires a successful CI build, validation, and a versioned release upload.
 
 The UI changes are applied by `scripts/apply-frozenapps-branding.py` to the pinned engine checkout during every build. That keeps the customised screens reproducible rather than leaving edits in a generated directory that disappears on the next build. The existing pairing, Apple authentication, two-factor, provisioning, signing, and installation callbacks are retained.
 
@@ -63,7 +63,7 @@ GitHub Actions compiles the app and native engine, validates the app bundle and 
 
 **Required upstream attribution:** SideInstaller by FrizzleM — https://github.com/FrizzleM/SideInstaller.
 
-The upstream source is pinned as a Git submodule. The full upstream custom licence is kept at [LICENSES/SideInstaller-LICENSE.md](LICENSES/SideInstaller-LICENSE.md). Source distributions must retain the copyright and licence notices and clearly identify modifications. The upstream licence prohibits redistribution of compiled IPA derivatives and commercial use without prior written authorization. The build workflow therefore keeps IPA files out of public releases and workflow artifacts unless the repository variable `SIDEINSTALLER_BINARY_REDISTRIBUTION_AUTHORIZED` is set to `true` after authorization has been obtained. Source builds and validation remain available without that setting.
+The upstream source is pinned as a Git submodule. The full upstream custom licence is kept at [LICENSES/SideInstaller-LICENSE.md](LICENSES/SideInstaller-LICENSE.md). Source distributions must retain the copyright and licence notices and clearly identify modifications. The upstream licence restricts redistribution of compiled IPA derivatives and commercial use without prior written authorization. Only publish compiled IPA builds when that authorization is in place; generated packages are unsigned and require a supported signing method before installation.
 
 
 ## 1.0.5 UI refresh and Signer install catalog
