@@ -99,9 +99,9 @@ struct FrozenHomePanel: View {
             ZStack(alignment: .topTrailing) {
                 LinearGradient(
                     colors: [
-                        Color(red: 0.12, green: 0.025, blue: 0.055),
-                        Color(red: 0.22, green: 0.045, blue: 0.085),
-                        Color(red: 0.035, green: 0.018, blue: 0.03)
+                        Color(red: 0.012, green: 0.045, blue: 0.085),
+                        Color(red: 0.018, green: 0.09, blue: 0.14),
+                        Color(red: 0.008, green: 0.018, blue: 0.035)
                     ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
