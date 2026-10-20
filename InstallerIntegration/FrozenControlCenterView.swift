@@ -169,8 +169,11 @@ struct FrozenControlCenterView: View {
                             NavigationLink { FrozenFilesView() } label: {
                                 FrozenCenterToolCard(title: "IPA Library", subtitle: "Search, inspect & hash", icon: "shippingbox.fill", tint: .purple)
                             }
+                            NavigationLink { FrozenDeviceCenterView() } label: {
+                                FrozenCenterToolCard(title: "Device Center", subtitle: "Connection recovery & reports", icon: "iphone.gen3.radiowaves.left.and.right", tint: .orange)
+                            }
                             NavigationLink { FrozenNetworkView() } label: {
-                                FrozenCenterToolCard(title: "Pairing & Device", subtitle: "Network & discovery", icon: "point.3.connected.trianglepath.dotted", tint: .orange)
+                                FrozenCenterToolCard(title: "Pairing & Network", subtitle: "Network & discovery tools", icon: "point.3.connected.trianglepath.dotted", tint: .yellow)
                             }
                             NavigationLink { FrozenSmartAlertsView() } label: {
                                 FrozenCenterToolCard(title: "Smart Alerts", subtitle: "Expiry & failure warnings", icon: "bell.badge.fill", tint: .orange)
