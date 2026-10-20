@@ -1433,7 +1433,7 @@ replace_once(
             }''',
     '''            .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Text("1.0.3")
+                    Text("1.0.5")
                         .font(.system(size: 10, weight: .bold, design: .rounded).monospacedDigit())
                         .foregroundStyle(Theme.accent2)
                 }

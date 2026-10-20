@@ -208,7 +208,8 @@ struct FrozenSignerInstallCatalogView: View {
             .preferredColorScheme(.dark)
         }
         .task {
-            for app in FrozenSignerCatalogApp.all where app.repository != nil {
+            let nativeInstallers = Set(["SideStore", "LiveContainer", "Madeira"])
+            for app in FrozenSignerCatalogApp.all where app.repository != nil && !nativeInstallers.contains(app.name) {
                 await loadRelease(for: app)
             }
         }
@@ -352,8 +353,27 @@ struct FrozenSignerInstallCatalogView: View {
                     .lineLimit(3)
                     .fixedSize(horizontal: false, vertical: true)
 
-                if let release = releases[app.id] {
-                    let ipaAssets = release.assets.filter { $0.name.lowercased().hasSuffix(".ipa") }
+                if ["SideStore", "LiveContainer", "Madeira"].contains(app.name) {
+                    Button {
+                        switch app.name {
+                        case "SideStore": engine.installSource = .sideStore
+                        case "LiveContainer": engine.installSource = .liveContainer
+                        default: engine.installSource = .madeira
+                        }
+                        dismiss()
+                    } label: {
+                        actionButton("Use built-in installer", icon: "arrow.right.circle.fill")
+                    }
+                    Text("Keeps FrozenApps' native pairing, certificate handoff and install steps.")
+                        .font(.system(size: 8, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.45))
+                        .fixedSize(horizontal: false, vertical: true)
+                } else if let release = releases[app.id] {
+                    let ipaAssets = release.assets.filter {
+                        $0.name.lowercased().hasSuffix(".ipa") &&
+                        !$0.name.localizedCaseInsensitiveContains("visionos") &&
+                        !$0.name.localizedCaseInsensitiveContains("tvos")
+                    }
                     if !ipaAssets.isEmpty {
                         if ipaAssets.count == 1, let asset = ipaAssets.first {
                             Button {
