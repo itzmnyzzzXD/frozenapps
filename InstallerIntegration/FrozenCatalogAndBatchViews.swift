@@ -78,6 +78,7 @@ struct FrozenAppCatalogView: View {
     @State private var downloading = Set<String>()
     @State private var messages: [String: String] = [:]
     @State private var showAddSource = false
+    @State private var sourceBeingEdited: FrozenCatalogSource?
     @State private var sourceSort = "Name"
     @State private var sourceFilter = "All sources"
     @State private var sourceFeedback: String?
@@ -176,7 +177,11 @@ struct FrozenAppCatalogView: View {
                         .buttonStyle(.plain)
                         .foregroundStyle(Theme.accent2)
                         .disabled(isRefreshingAll || sources.isEmpty)
-                        Button { showAddSource = true } label: {
+                        Button {
+                            sourceBeingEdited = nil
+                            newRepository = ""
+                            showAddSource = true
+                        } label: {
                             Label("Add source", systemImage: "plus")
                                 .font(.system(size: 10, weight: .bold, design: .rounded))
                         }
@@ -314,14 +319,23 @@ struct FrozenAppCatalogView: View {
         .navigationTitle("App Catalog")
         .navigationBarTitleDisplayMode(.inline)
         .task { restoreSources() }
-        .alert("Add GitHub source", isPresented: $showAddSource) {
+        .alert(Text(sourceBeingEdited == nil ? "Add GitHub source" : "Edit GitHub source"), isPresented: $showAddSource) {
             TextField("owner/repository", text: $newRepository)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
-            Button("Cancel", role: .cancel) { newRepository = "" }
-            Button("Add") { addSource() }
+            Button("Cancel", role: .cancel) {
+                newRepository = ""
+                sourceBeingEdited = nil
+            }
+            Button {
+                addSource()
+            } label: {
+                Text(sourceBeingEdited == nil ? "Add" : "Save changes")
+            }
         } message: {
-            Text("Enter a public GitHub repository as owner/repository. FrozenApps checks its latest public release for IPA assets.")
+            Text(sourceBeingEdited == nil
+                 ? "Enter a public GitHub repository as owner/repository. FrozenApps checks its latest public release for IPA assets."
+                 : "Update the repository used by this custom source. Existing downloaded IPA files will remain in your library.")
         }
         .confirmationDialog("Remove custom source?", isPresented: $showRemoveSourceConfirmation, titleVisibility: .visible) {
             Button("Remove source", role: .destructive) {
@@ -409,6 +423,11 @@ struct FrozenAppCatalogView: View {
                             sourceFeedback = "Copied \(source.repository)."
                         }
                         if !FrozenCatalogSource.builtIn.contains(source) {
+                            Button("Edit source", systemImage: "pencil") {
+                                sourceBeingEdited = source
+                                newRepository = source.repository
+                                showAddSource = true
+                            }
                             Divider()
                             Button("Remove source", systemImage: "trash", role: .destructive) {
                                 sourcePendingRemoval = source
@@ -588,16 +607,31 @@ struct FrozenAppCatalogView: View {
         }
 
         let source = FrozenCatalogSource(repository: normalized)
-        guard !sources.contains(where: { $0.id == source.id }) else {
-            sourceFeedback = "\(source.repository) is already in your sources."
+        guard !FrozenCatalogSource.builtIn.contains(source),
+              !sources.contains(where: { $0.id == source.id && $0.id != sourceBeingEdited?.id }) else {
+            sourceFeedback = "\(source.repository) is already in your sources, or is a built-in source."
             return
+        }
+
+        if let original = sourceBeingEdited {
+            if original.id != source.id {
+                releases[original.id] = nil
+                messages[original.id] = nil
+                var favorites = favoriteSourceIDs
+                if favorites.remove(original.id) != nil { favorites.insert(source.id) }
+                favoriteSourceIDsRaw = favorites.sorted().joined(separator: "\n")
+            }
+            sources.removeAll { $0.id == original.id }
+            sourceFeedback = "Updated \(source.repository). Checking its latest public release…"
+        } else {
+            sourceFeedback = "Added \(source.repository). Checking its latest public release…"
         }
 
         sources.append(source)
         sources.sort { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
         persistSources()
         newRepository = ""
-        sourceFeedback = "Added \(source.repository). Checking its latest public release…"
+        sourceBeingEdited = nil
         Task { await loadRelease(for: source) }
     }
 
