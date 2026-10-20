@@ -178,7 +178,7 @@ struct FrozenAppCatalogView: View {
         }
         .navigationTitle("App Catalog")
         .navigationBarTitleDisplayMode(.inline)
-        .task(perform: restoreSources)
+        .task { restoreSources() }
         .alert("Add GitHub source", isPresented: $showAddSource) {
             TextField("owner/repository", text: $newRepository)
                 .textInputAutocapitalization(.never)
