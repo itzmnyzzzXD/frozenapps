@@ -106,15 +106,16 @@ private struct FrozenCenterToolCard: View {
             Spacer(minLength: 0)
             Image(systemName: "chevron.right").font(.system(size: 9, weight: .bold)).foregroundStyle(.white.opacity(0.35)).padding(.top, 4)
         }
-        .frame(maxWidth: .infinity, alignment: .leading).padding(12)
-        .background(.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(.white.opacity(0.07), lineWidth: 1))
-        .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .frame(maxWidth: .infinity, minHeight: 64, alignment: .leading)
+        .padding(13)
+        .frozenGlassSurface(cornerRadius: 17, tint: tint.opacity(0.30))
+        .contentShape(RoundedRectangle(cornerRadius: 17, style: .continuous))
     }
 }
 
 struct FrozenControlCenterView: View {
     @EnvironmentObject private var engine: Engine
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     var body: some View {
         NavigationStack {
@@ -139,8 +140,12 @@ struct FrozenControlCenterView: View {
                                 }
                             }
                             Text("Browse app sources, preflight multiple IPAs, inspect signing material, monitor installs and diagnose pairing.")
-                                .font(.system(size: 12, weight: .medium)).foregroundStyle(.white.opacity(0.55)).fixedSize(horizontal: false, vertical: true)
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(.white.opacity(0.62))
+                                .fixedSize(horizontal: false, vertical: true)
                         }
+                        .padding(17)
+                        .frozenGlassSurface(cornerRadius: 25, tint: Theme.accent, elevated: true)
                         PanelCard {
                             HStack(spacing: 12) {
                                 Image(systemName: engine.isRunning ? "arrow.trianglehead.2.clockwise.rotate.90" : (engine.lastError != nil ? "exclamationmark.triangle.fill" : "checkmark.circle.fill"))
@@ -156,7 +161,13 @@ struct FrozenControlCenterView: View {
                                 Spacer(minLength: 0)
                             }
                         }
-                        LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
+                        LazyVGrid(
+                            columns: Array(
+                                repeating: GridItem(.flexible(), spacing: 12),
+                                count: horizontalSizeClass == .regular ? 3 : 2
+                            ),
+                            spacing: 12
+                        ) {
                             NavigationLink { FrozenCertificateHealthView() } label: {
                                 FrozenCenterToolCard(title: "Certificate Health", subtitle: "Expiry & profile check", icon: "checkmark.shield.fill", tint: .green)
                             }
