@@ -4,7 +4,7 @@ FrozenApps is an iPhone/iPad-first signing and installation workspace. It brings
 
 ## Current build
 
-The 1.0.5 development update keeps the violet-and-ice-cyan identity and adds a GitHub-first App Catalog plus Batch Actions to Frozen Center. The catalog can inspect public GitHub latest releases and download only actual `.ipa` assets into the IPA Library; custom public `owner/repository` sources can be added in-app. Batch Actions runs a multi-file preflight and produces copyable reports and a reviewable handoff queue. This development build is not an official release until CI passes and a release is published.
+The 1.0.7 release candidate builds on FrozenApps' violet-and-ice-cyan identity with a more capable GitHub-first App Catalog and Batch Actions. App sources can be pinned as favorites, searched, filtered by release/IPA status, sorted by name, IPA count or status, refreshed individually or together, and removed through a confirmation step. Source input is validated and duplicate sources are reported instead of being silently ignored. The catalog offers downloads only for actual `.ipa` release assets. Batch Actions continues to run a multi-file preflight and produce copyable reports and a reviewable handoff queue; it never claims queued files were signed or installed. This candidate is not an official release until CI validates the build and a versioned release is published.
 
 The UI changes are applied by `scripts/apply-frozenapps-branding.py` to the pinned engine checkout during every build. That keeps the customised screens reproducible rather than leaving edits in a generated directory that disappears on the next build. The existing pairing, Apple authentication, two-factor, provisioning, signing, and installation callbacks are retained.
 
