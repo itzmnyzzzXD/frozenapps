@@ -91,7 +91,7 @@ struct FrozenHomePanel: View {
                         .strokeBorder(LinearGradient(colors: [.white.opacity(0.32), Theme.accent.opacity(0.26), .white.opacity(0.06)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
                 }
             }
-            .buttonStyle(.plain)
+            .buttonStyle(FrozenGlassPressStyle())
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
