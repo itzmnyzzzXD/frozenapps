@@ -1076,6 +1076,57 @@ replace_once("ios-app/Theme.swift",
 replace_once("ios-app/Theme.swift",
     "static let accent2 = Color(red: 0.30, green: 0.68, blue: 1.0)",
     "static let accent2 = Color(red: 1.0, green: 0.52, blue: 0.64)")
+
+
+# Bring every upstream PanelCard into the same restrained glass system. Standard
+# materials are used for content surfaces; native controls keep system placement.
+replace_section(
+    "ios-app/Theme.swift",
+    "private struct CardSurface<S: InsettableShape>: ViewModifier {",
+    "extension View {",
+    r'''private struct CardSurface<S: InsettableShape>: ViewModifier {
+    var shape: S
+    var shown: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .background {
+                shape
+                    .fill(.regularMaterial)
+                    .opacity(shown ? 1 : 0)
+                    .overlay {
+                        shape.fill(
+                            LinearGradient(
+                                colors: [
+                                    .white.opacity(shown ? 0.035 : 0),
+                                    Theme.accent.opacity(shown ? 0.075 : 0),
+                                    Color.black.opacity(shown ? 0.22 : 0)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                    }
+            }
+            .overlay {
+                shape.strokeBorder(
+                    LinearGradient(
+                        stops: [
+                            .init(color: .white.opacity(shown ? 0.28 : 0), location: 0),
+                            .init(color: Theme.accent2.opacity(shown ? 0.22 : 0), location: 0.26),
+                            .init(color: .white.opacity(shown ? 0.045 : 0), location: 0.72),
+                            .init(color: Theme.accent.opacity(shown ? 0.20 : 0), location: 1)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
+            }
+            .shadow(color: .black.opacity(shown ? 0.18 : 0), radius: shown ? 15 : 0, x: 0, y: 6)
+    }
+}'''
+)
 replace_once(
     "ios-app/Theme.swift",
     '''                Color.black.opacity(Backdrop.wash(at: t))
