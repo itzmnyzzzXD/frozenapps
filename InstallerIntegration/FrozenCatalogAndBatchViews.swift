@@ -550,7 +550,7 @@ struct FrozenAppCatalogView: View {
     private func sourceStatusTitle(_ source: FrozenCatalogSource) -> String {
         if loading.contains(source.id) { return "CHECKING RELEASE" }
         if let message = messages[source.id], !message.hasPrefix("Saved ") { return "NEEDS ATTENTION" }
-        guard let release = releases[source.id] else { return "NOT CHECKED" }
+        guard releases[source.id] != nil else { return "NOT CHECKED" }
         let count = ipaAssetCount(for: source)
         return count > 0 ? "\(count) IPA ASSET\(count == 1 ? "" : "S")" : "NO IPA IN LATEST RELEASE"
     }
