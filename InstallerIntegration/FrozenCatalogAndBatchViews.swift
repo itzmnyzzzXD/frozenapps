@@ -33,8 +33,8 @@ private struct FrozenCatalogSource: Codable, Identifiable, Equatable {
         .init(repository: "SideStore/SideStore"),
         .init(repository: "LiveContainer/LiveContainer"),
         .init(repository: "utmapp/UTM"),
-        .init(repository: "PPSSPPTeam/ppsspp"),
-        .init(repository: "RetroArch/RetroArch")
+        .init(repository: "hrydgard/ppsspp"),
+        .init(repository: "libretro/RetroArch")
     ]
 }
 
