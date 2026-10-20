@@ -64,3 +64,10 @@ GitHub Actions compiles the app and native engine, validates the app bundle and 
 **Required upstream attribution:** SideInstaller by FrizzleM — https://github.com/FrizzleM/SideInstaller.
 
 The upstream source is pinned as a Git submodule. The full upstream custom licence is kept at [LICENSES/SideInstaller-LICENSE.md](LICENSES/SideInstaller-LICENSE.md). Source distributions must retain the copyright and licence notices and clearly identify modifications. The upstream licence restricts redistribution of compiled derivatives and commercial use without written authorization; read it before redistributing an IPA.
+
+
+## 1.0.5 UI refresh and Signer install catalog
+
+The Signer install card uses a rose-and-black glass treatment with a warm ivory discovery panel. Open **Signer → Install → Browse app catalog** to search the expanded catalogue by category. When a public GitHub latest release has actual IPA assets, FrozenApps can download an asset and hand it to the existing **Custom .ipa** import/sign/install pipeline. If a release has no IPA assets, the card only offers project or release links; discovery is not a guarantee that an IPA exists or that the app is compatible.
+
+Catalog imports still use FrozenApps' existing signing and installation implementation. Third-party apps can require their own setup, entitlements, device compatibility or signing constraints.

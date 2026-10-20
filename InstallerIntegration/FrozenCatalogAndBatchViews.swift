@@ -34,6 +34,9 @@ private struct FrozenCatalogSource: Codable, Identifiable, Equatable {
         .init(repository: "LiveContainer/LiveContainer"),
         .init(repository: "utmapp/UTM"),
         .init(repository: "hrydgard/ppsspp"),
+        .init(repository: "PojavLauncherTeam/PojavLauncher_iOS"),
+        .init(repository: "YTLitePlus/YTLitePlus"),
+        .init(repository: "qnblackcat/uYouPlus"),
         .init(repository: "libretro/RetroArch")
     ]
 }

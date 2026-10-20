@@ -1069,13 +1069,13 @@ replace_once(
 
 replace_once("ios-app/Theme.swift",
     "static let accent = Color(red: 0.13, green: 0.44, blue: 0.96)",
-    "static let accent = Color(red: 0.43, green: 0.29, blue: 1.0)")
+    "static let accent = Color(red: 0.95, green: 0.20, blue: 0.36)")
 replace_once("ios-app/Theme.swift",
     "static let glow = Color(red: 1 / 255, green: 26 / 255, blue: 92 / 255)",
-    "static let glow = Color(red: 0.035, green: 0.018, blue: 0.09)")
+    "static let glow = Color(red: 0.085, green: 0.008, blue: 0.030)")
 replace_once("ios-app/Theme.swift",
     "static let accent2 = Color(red: 0.30, green: 0.68, blue: 1.0)",
-    "static let accent2 = Color(red: 0.20, green: 0.88, blue: 0.98)")
+    "static let accent2 = Color(red: 1.0, green: 0.52, blue: 0.64)")
 replace_once(
     "ios-app/Theme.swift",
     '''                Color.black.opacity(Backdrop.wash(at: t))
@@ -1385,8 +1385,8 @@ replace_once(
             RoundedRectangle(cornerRadius: 26, style: .continuous)
                 .fill(LinearGradient(
                     colors: [
-                        Color(red: 0.12, green: 0.10, blue: 0.24),
-                        Color(red: 0.04, green: 0.13, blue: 0.20)
+                        Color(red: 0.23, green: 0.025, blue: 0.075),
+                        Color(red: 0.085, green: 0.012, blue: 0.035)
                     ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
@@ -1602,5 +1602,176 @@ for swift_path in APP.glob("*.swift"):
 
 # Generate all declared app-icon sizes from the FrozenApps vector design.
 subprocess.run(["swift", str(ROOT / "scripts" / "generate-app-icon.swift")], cwd=ROOT, check=True)
+
+
+
+# FrozenApps rose-glass refresh and the full Signer install catalog.
+# Keep these patches on the pinned source so every clean CI build receives them.
+replace_once(
+    "ios-app/ContentView.swift",
+    "@State private var showImporter = false",
+    "@State private var showImporter = false\n    @State private var showInstallCatalog = false"
+)
+replace_once(
+    "ios-app/ContentView.swift",
+    '''            .sheet(isPresented: $showImporter) {''',
+    '''            .sheet(isPresented: $showInstallCatalog) { FrozenSignerInstallCatalogView() }
+            .sheet(isPresented: $showImporter) {'''
+)
+replace_section(
+    "ios-app/ContentView.swift",
+    "    private var appCard: some View {",
+    "    /// The two ways in for a custom build: pick a file, or paste a link.",
+    r'''    private var appCard: some View {
+        PanelCard {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .firstTextBaseline) {
+                    sectionTitle(L("Install"), systemImage: "square.and.arrow.down.fill")
+                    Spacer(minLength: 6)
+                    Text("APP LIBRARY")
+                        .font(.system(size: 8, weight: .heavy, design: .rounded))
+                        .tracking(1.1)
+                        .foregroundStyle(Theme.accent2)
+                }
+
+                Menu {
+                    Picker(L("Install"), selection: $engine.installSource) {
+                        ForEach(InstallSource.allCases) { src in
+                            Text(src.displayName).tag(src)
+                        }
+                    }
+                    Divider()
+                    Button {
+                        showInstallCatalog = true
+                    } label: {
+                        Label("Browse app catalog", systemImage: "square.grid.2x2.fill")
+                    }
+                    Button {
+                        engine.installSource = .custom
+                        showImporter = true
+                    } label: {
+                        Label("Choose any IPA from Files", systemImage: "folder.badge.plus")
+                    }
+                } label: {
+                    HStack(spacing: 12) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 13, style: .continuous)
+                                .fill(LinearGradient(
+                                    colors: [Theme.accent.opacity(0.94), Theme.accent2.opacity(0.76)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ))
+                            Image(systemName: engine.installSource == .custom ? "doc.zipper" : "app.dashed")
+                                .font(.system(size: 17, weight: .bold))
+                                .foregroundStyle(.white)
+                        }
+                        .frame(width: 42, height: 42)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(engine.installSource.displayName)
+                                .font(.system(size: 14, weight: .bold, design: .rounded))
+                                .foregroundStyle(.white)
+                            Text(engine.installSource == .custom
+                                 ? (engine.customIPAName ?? "Pick or download an IPA")
+                                 : "Choose a maintained release or browse more apps")
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundStyle(.white.opacity(0.49))
+                                .lineLimit(1)
+                        }
+                        Spacer(minLength: 3)
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(Theme.accent2)
+                    }
+                    .padding(12)
+                    .background {
+                        RoundedRectangle(cornerRadius: 17, style: .continuous)
+                            .fill(LinearGradient(
+                                colors: [.white.opacity(0.09), Theme.accent.opacity(0.09), .white.opacity(0.025)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ))
+                    }
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 17, style: .continuous)
+                            .strokeBorder(
+                                LinearGradient(colors: [.white.opacity(0.20), Theme.accent2.opacity(0.24), .white.opacity(0.045)],
+                                              startPoint: .topLeading,
+                                              endPoint: .bottomTrailing),
+                                lineWidth: 1
+                            )
+                    }
+                    .contentShape(RoundedRectangle(cornerRadius: 17, style: .continuous))
+                }
+
+                if engine.installSource == .custom || engine.installSource.hasNightly {
+                    ZStack {
+                        if engine.installSource == .custom {
+                            importControl.transition(.opacity)
+                        } else {
+                            Picker(L("Release"), selection: $engine.releaseChannel) {
+                                ForEach(ReleaseChannel.allCases) { channel in
+                                    Text(channel.displayName).tag(channel)
+                                }
+                            }
+                            .pickerStyle(.segmented)
+                            .transition(.opacity)
+                        }
+                    }
+                    .transition(.opacity)
+                }
+
+                Button {
+                    showInstallCatalog = true
+                } label: {
+                    HStack(spacing: 12) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .fill(LinearGradient(
+                                    colors: [Color(red: 1.0, green: 0.91, blue: 0.83),
+                                             Color(red: 1.0, green: 0.73, blue: 0.63)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ))
+                            Image(systemName: "sparkles.rectangle.stack.fill")
+                                .font(.system(size: 18, weight: .bold))
+                                .foregroundStyle(Color(red: 0.25, green: 0.07, blue: 0.09))
+                        }
+                        .frame(width: 46, height: 46)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Discover more apps")
+                                .font(.system(size: 14, weight: .bold, design: .rounded))
+                                .foregroundStyle(.white)
+                            Text("Signers, media, emulators, games and utilities")
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundStyle(.white.opacity(0.57))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        Spacer(minLength: 4)
+                        Image(systemName: "arrow.up.right")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(Theme.accent2)
+                    }
+                    .padding(13)
+                    .background {
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .fill(LinearGradient(
+                                colors: [.white.opacity(0.085), Theme.accent.opacity(0.12), .white.opacity(0.025)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ))
+                    }
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .strokeBorder(Theme.accent2.opacity(0.23), lineWidth: 1)
+                    }
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint("Browse apps with available IPA releases and project links.")
+            }
+            .animation(.smooth(duration: 0.28), value: engine.installSource)
+        }
+        .disabled(engine.isRunning)
+    }'''
+)
 
 print("Applied FrozenApps branding to pinned engine source.")
