@@ -129,34 +129,64 @@ replace_section(
     var body: some View {
         ZStack {
             AppBackground()
-            ScrollView {
-                VStack(spacing: 22) {
-                    brandHeader
-                    credentialsCard
-                    actions
-                    HStack(spacing: 8) {
-                        Image(systemName: "lock.shield.fill")
-                            .foregroundStyle(Theme.accent2)
-                        Text("Your saved password is stored with iOS Keychain. Apple sign-in and developer signing still require network access.")
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(.white.opacity(0.48))
-                            .fixedSize(horizontal: false, vertical: true)
+            GeometryReader { geometry in
+                ScrollView {
+                    Group {
+                        if geometry.size.width >= 780 {
+                            HStack(alignment: .center, spacing: 22) {
+                                FrozenAccountHero()
+                                    .frame(maxWidth: min(290, geometry.size.width * 0.36))
+
+                                VStack(spacing: 20) {
+                                    credentialsCard
+                                    actions
+                                    privacyNote
+                                }
+                                .frame(maxWidth: min(440, geometry.size.width * 0.54))
+                            }
+                            .padding(.horizontal, min(28, geometry.size.width * 0.035))
+                            .padding(.vertical, 26)
+                            .frame(maxWidth: 1120)
+                            .frame(maxWidth: .infinity,
+                                   minHeight: geometry.size.height,
+                                   alignment: .center)
+                        } else {
+                            VStack(spacing: 22) {
+                                brandHeader
+                                credentialsCard
+                                actions
+                                privacyNote
+                            }
+                            .padding(22)
+                            .padding(.top, 22)
+                            .frame(maxWidth: 520)
+                            .frame(maxWidth: .infinity)
+                        }
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 4)
                 }
-                .padding(22)
-                .padding(.top, 24)
-                .frame(maxWidth: 520)
-                .frame(maxWidth: .infinity)
+                .frame(width: geometry.size.width, height: geometry.size.height)
+                .scrollDismissesKeyboard(.interactively)
             }
-            .scrollDismissesKeyboard(.interactively)
         }
         .preferredColorScheme(.dark)
         .task {
             try? await Task.sleep(for: .milliseconds(650))
             focus = .email
         }
+    }
+
+    private var privacyNote: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "lock.shield.fill")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(Theme.accent2)
+            Text("Your saved password is stored with iOS Keychain. Apple sign-in and developer signing still require network access.")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(.white.opacity(0.48))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 4)
     }
 
     private var brandHeader: some View {
@@ -785,6 +815,173 @@ replace_once(
     }'''
 )
 
+# Replace the platform tab strip with one OLED workspace selector. The native TabView
+# remains underneath, so page identity/state and existing navigation callbacks survive.
+replace_once(
+    "ios-app/RootView.swift",
+    '''    @State private var page: Page = .install
+
+    var body: some View {''',
+    r'''    @State private var page: Page = .install
+
+    private var currentPageTitle: String {
+        switch page {
+        case .install: "Signer"
+        case .center: "Frozen Center"
+        case .network: "Network"
+        case .tools: "Tools"
+        case .files: "Files"
+        case .settings: "Settings"
+        }
+    }
+
+    private var currentPageSymbol: String {
+        switch page {
+        case .install: "signature"
+        case .center: "snowflake"
+        case .network: "point.3.connected.trianglepath.dotted"
+        case .tools: "wrench.and.screwdriver"
+        case .files: "folder.fill"
+        case .settings: "slider.horizontal.3"
+        }
+    }
+
+    private func selectPage(_ destination: Page) {
+        withAnimation(.smooth(duration: 0.28)) {
+            page = destination
+        }
+    }
+
+    private var navigationHeader: some View {
+        HStack(spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(LinearGradient(
+                        colors: [Theme.accent, Theme.violet, Theme.accent2],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ))
+                Circle()
+                    .strokeBorder(.white.opacity(0.30), lineWidth: 1)
+                    .padding(4)
+                Image(systemName: "snowflake")
+                    .font(.system(size: 19, weight: .semibold))
+                    .foregroundStyle(.white)
+            }
+            .frame(width: 42, height: 42)
+            .shadow(color: Theme.violet.opacity(0.24), radius: 12, x: 0, y: 4)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("FROZENAPPS")
+                    .font(.system(size: 11, weight: .heavy, design: .rounded))
+                    .tracking(1.35)
+                    .foregroundStyle(.white)
+                Text("OLED WORKSPACE")
+                    .font(.system(size: 8, weight: .bold, design: .rounded))
+                    .tracking(1.5)
+                    .foregroundStyle(Theme.accent2.opacity(0.78))
+            }
+
+            Spacer(minLength: 6)
+
+            Menu {
+                Section("Workspace") {
+                    Button { selectPage(.install) } label: {
+                        Label("Signer", systemImage: "signature")
+                    }
+                    Button { selectPage(.center) } label: {
+                        Label("Frozen Center", systemImage: "snowflake")
+                    }
+                    Button { selectPage(.network) } label: {
+                        Label("Network", systemImage: "point.3.connected.trianglepath.dotted")
+                    }
+                    Button { selectPage(.tools) } label: {
+                        Label("Tools", systemImage: "wrench.and.screwdriver")
+                    }
+                    Button { selectPage(.files) } label: {
+                        Label("Files", systemImage: "folder.fill")
+                    }
+                    Button { selectPage(.settings) } label: {
+                        Label("Settings", systemImage: "slider.horizontal.3")
+                    }
+                }
+            } label: {
+                HStack(spacing: 9) {
+                    Image(systemName: currentPageSymbol)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Theme.accent2)
+                        .frame(width: 25, height: 25)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("CURRENT TAB")
+                            .font(.system(size: 7, weight: .heavy, design: .rounded))
+                            .tracking(1.05)
+                            .foregroundStyle(.white.opacity(0.46))
+                        Text(currentPageTitle)
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                    }
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 9, weight: .heavy))
+                        .foregroundStyle(.white.opacity(0.55))
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 9)
+                .background {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(LinearGradient(
+                            colors: [
+                                Color.black.opacity(0.92),
+                                Theme.accent.opacity(0.12),
+                                Theme.violet.opacity(0.10)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ))
+                }
+                .overlay {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .strokeBorder(
+                            LinearGradient(
+                                colors: [.white.opacity(0.22), Theme.accent2.opacity(0.26), Theme.violet.opacity(0.17)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1
+                        )
+                }
+                .shadow(color: Theme.accent.opacity(0.11), radius: 12, x: 0, y: 4)
+                .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            }
+            .menuStyle(.borderlessButton)
+            .accessibilityLabel("Choose workspace tab")
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 11)
+        .background {
+            ZStack {
+                Color.black.opacity(0.98)
+                LinearGradient(
+                    colors: [Theme.accent.opacity(0.13), Theme.violet.opacity(0.075), .clear],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            }
+            .ignoresSafeArea(edges: .top)
+        }
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(LinearGradient(
+                    colors: [.clear, Theme.accent2.opacity(0.22), Theme.violet.opacity(0.20), .clear],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                ))
+                .frame(height: 1)
+        }
+    }
+
+    var body: some View {'''
+)
 # Make the engine Tools page read as FrozenApps while retaining its original utility routes.
 replace_once(
     "ios-app/RootView.swift",
@@ -981,30 +1178,34 @@ replace_once(
                 .tabItem { Label(L("About"), systemImage: "info.circle") }
                 .tag(Page.about)
         }''',
-    '''        TabView(selection: $page) {
-            ContentView()
-                .tabItem { Label("Signer", systemImage: "signature") }
-                .tag(Page.install)
-            FrozenControlCenterView()
-                .tabItem { Label("Frozen", systemImage: "snowflake") }
-                .tag(Page.center)
-            FrozenNetworkView()
-                .tabItem { Label("Network", systemImage: "point.3.connected.trianglepath.dotted") }
-                .tag(Page.network)
-            ToolsView(pairingManager: pairingManager,
-                      certManager: certManager,
-                      locationManager: locationManager,
-                      entitlementsManager: entitlementsManager,
-                      appsManager: appsManager,
-                      sideBySideManager: sideBySideManager)
-                .tabItem { Label("Tools", systemImage: "wrench.and.screwdriver") }
-                .tag(Page.tools)
-            FrozenFilesView()
-                .tabItem { Label("Files", systemImage: "folder") }
-                .tag(Page.files)
-            SettingsView()
-                .tabItem { Label("Settings", systemImage: "slider.horizontal.3") }
-                .tag(Page.settings)
+    '''        VStack(spacing: 0) {
+            navigationHeader
+            TabView(selection: $page) {
+                ContentView()
+                    .tabItem { Label("Signer", systemImage: "signature") }
+                    .tag(Page.install)
+                FrozenControlCenterView()
+                    .tabItem { Label("Frozen", systemImage: "snowflake") }
+                    .tag(Page.center)
+                FrozenNetworkView()
+                    .tabItem { Label("Network", systemImage: "point.3.connected.trianglepath.dotted") }
+                    .tag(Page.network)
+                ToolsView(pairingManager: pairingManager,
+                          certManager: certManager,
+                          locationManager: locationManager,
+                          entitlementsManager: entitlementsManager,
+                          appsManager: appsManager,
+                          sideBySideManager: sideBySideManager)
+                    .tabItem { Label("Tools", systemImage: "wrench.and.screwdriver") }
+                    .tag(Page.tools)
+                FrozenFilesView()
+                    .tabItem { Label("Files", systemImage: "folder") }
+                    .tag(Page.files)
+                SettingsView()
+                    .tabItem { Label("Settings", systemImage: "slider.horizontal.3") }
+                    .tag(Page.settings)
+            }
+            .toolbar(.hidden, for: .tabBar)
         }'''
 )
 
@@ -1069,14 +1270,50 @@ replace_once(
 
 replace_once("ios-app/Theme.swift",
     "static let accent = Color(red: 0.13, green: 0.44, blue: 0.96)",
-    "static let accent = Color(red: 0.07, green: 0.48, blue: 0.84)")
+    "static let accent = Color(red: 0.23, green: 0.34, blue: 0.98)")
 replace_once("ios-app/Theme.swift",
     "static let glow = Color(red: 1 / 255, green: 26 / 255, blue: 92 / 255)",
-    "static let glow = Color(red: 0.005, green: 0.018, blue: 0.045)")
+    "static let glow = Color(red: 0.002, green: 0.004, blue: 0.018)")
 replace_once("ios-app/Theme.swift",
     "static let accent2 = Color(red: 0.30, green: 0.68, blue: 1.0)",
-    "static let accent2 = Color(red: 0.35, green: 0.88, blue: 1.0)")
+    "static let accent2 = Color(red: 0.79, green: 0.87, blue: 1.0)\n    static let violet = Color(red: 0.57, green: 0.31, blue: 0.99)")
 
+
+# v1.0.8 OLED Blueglass system: blue, ultraviolet and ice-white light over true black.
+replace_section(
+    "ios-app/Theme.swift",
+    "    static var brand: LinearGradient {",
+    "    /// A diagonal gradient built from any tint, for tinted glyphs.",
+    r'''    static var brand: LinearGradient {
+        LinearGradient(colors: [accent, violet, accent2],
+                       startPoint: .topLeading, endPoint: .bottomTrailing)
+    }'''
+)
+replace_once(
+    "ios-app/Theme.swift",
+    '''                mesh(at: t)
+                    .blur(radius: 24)
+                    // Low enough to read as a deep tint rather than a light.
+                    .opacity(0.2)''',
+    '''                mesh(at: t)
+                    .blur(radius: 32)
+                    .opacity(0.27)'''
+)
+replace_once(
+    "ios-app/Theme.swift",
+    "RadialGradient(colors: [Theme.accent2, Theme.accent, Theme.glow],",
+    "RadialGradient(colors: [Theme.accent2, Theme.violet, Theme.accent, Theme.glow],"
+)
+replace_section(
+    "ios-app/Theme.swift",
+    "    private let meshColors: [Color] = [",
+    "    /// A 3×3 grid of control points",
+    r'''    private let meshColors: [Color] = [
+        Theme.glow,       Theme.accent,   Theme.glow,
+        Theme.violet,     Theme.accent2,  Theme.accent,
+        Theme.glow,       Theme.violet,   Theme.glow,
+    ]'''
+)
 
 # Bring every upstream PanelCard into the same restrained glass system. Standard
 # materials are used for content surfaces; native controls keep system placement.
