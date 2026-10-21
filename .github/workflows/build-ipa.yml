@@ -110,6 +110,7 @@ jobs:
           required = {
               "Payload/FrozenApps.app/Info.plist",
               "Payload/FrozenApps.app/FrozenApps",
+              "Payload/FrozenApps.app/Assets.car",
               "Payload/FrozenApps.app/PlugIns/FrozenAppsLiveActivity.appex/Info.plist",
           }
           with zipfile.ZipFile(ipa) as package:
@@ -123,6 +124,9 @@ jobs:
               plist = plistlib.loads(package.read("Payload/FrozenApps.app/Info.plist"))
               actual = {
                   "CFBundleIdentifier": "com.itzmnyzzz.frozenapps",
+                  "CFBundlePackageType": "APPL",
+                  "CFBundleExecutable": "FrozenApps",
+                  "CFBundleDisplayName": "SideStick",
                   "CFBundleShortVersionString": expected_version,
                   "CFBundleVersion": expected_build,
                   "MinimumOSVersion": "17.4",
