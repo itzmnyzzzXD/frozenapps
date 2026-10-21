@@ -71,6 +71,7 @@ struct FrozenAppCatalogView: View {
     @Environment(\.openURL) private var openURL
     @AppStorage("frozenApps.catalog.sources.v1") private var savedSources = ""
     @State private var search = ""
+    @State private var debouncedSearch = ""
     @State private var showFilterPanel = false
     @State private var newRepository = ""
     @State private var sources: [FrozenCatalogSource] = FrozenCatalogSource.builtIn
@@ -93,7 +94,7 @@ struct FrozenAppCatalogView: View {
     }
 
     private var visibleSources: [FrozenCatalogSource] {
-        let query = search.trimmingCharacters(in: .whitespacesAndNewlines)
+        let query = debouncedSearch.trimmingCharacters(in: .whitespacesAndNewlines)
         var result = sources.filter {
             query.isEmpty || $0.repository.localizedCaseInsensitiveContains(query)
         }
@@ -187,6 +188,10 @@ struct FrozenAppCatalogView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .navigationBar)
         .task { restoreSources() }
+        .task(id: search) {
+            do { try await Task.sleep(for: .milliseconds(220)) } catch { return }
+            debouncedSearch = search
+        }
         .alert(Text(sourceBeingEdited == nil ? "Add GitHub source" : "Edit GitHub source"), isPresented: $showAddSource) {
             TextField("owner/repository", text: $newRepository).textInputAutocapitalization(.never).autocorrectionDisabled()
             Button("Cancel", role: .cancel) { newRepository = ""; sourceBeingEdited = nil }

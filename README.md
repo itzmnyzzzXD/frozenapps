@@ -8,6 +8,13 @@ SideStick v1.2.0 preserves the approved workspace layout while adding a lighter 
 
 The workspace and branding patches are reapplied to the pinned engine checkout during every build, so generated-source changes remain reproducible. That keeps the customised screens reproducible rather than leaving edits in a generated directory that disappears on the next build. The existing pairing, Apple authentication, two-factor, provisioning, signing, and installation callbacks are retained.
 
+
+## Live App Sources and notification preferences
+
+The additive **Live App Sources** screen accepts direct HTTPS `apps.json` URLs using an AltStore/SideStore-style manifest. The locked SideStick default catalog is stored in `catalog/apps.json`; custom URLs are saved locally and can be removed without deleting saved IPAs. Manifest icons are fetched and cached by URL digest. Source downloads must pass the existing archive and app metadata checks and, when provided by the manifest, the expected bundle identifier before being saved to the existing IPA library.
+
+A separate notification-preferences screen provides event-category controls and registers local notification action categories. The pre-existing pairing Live Activity and expiry reminder flows remain in the pinned SideInstaller engine. Not every signing/install event is wired to the new notification service yet; this screen establishes the category and permission layer without changing those engine callbacks.
+
 ## What is included
 
 - **Signer:** on-device pairing, Apple developer-session authentication and two-factor callbacks, certificate/App ID/provisioning setup, IPA signing, and installation.

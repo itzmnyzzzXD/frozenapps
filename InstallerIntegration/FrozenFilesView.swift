@@ -139,6 +139,7 @@ struct FrozenFilesView: View {
     @State private var pendingDelete: DeleteTarget?
     @State private var inspectorItem: FrozenLibraryItem?
     @State private var searchText = ""
+    @State private var debouncedSearchText = ""
     @State private var showFilters = false
     @State private var fileScope = "All files"
 
@@ -162,7 +163,7 @@ struct FrozenFilesView: View {
     }
 
     private var normalizedSearch: String {
-        searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        debouncedSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private var visibleLibraryItems: [FrozenLibraryItem] {
@@ -291,6 +292,10 @@ struct FrozenFilesView: View {
             .navigationTitle("IPA Library")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar(.hidden, for: .navigationBar)
+        }
+        .task(id: searchText) {
+            do { try await Task.sleep(for: .milliseconds(220)) } catch { return }
+            debouncedSearchText = searchText
         }
         .sheet(item: $inspectorItem) { item in
             FrozenIPAInspectorView(item: item)
