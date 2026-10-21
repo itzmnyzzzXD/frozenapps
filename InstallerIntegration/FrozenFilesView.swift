@@ -411,7 +411,7 @@ struct FrozenFilesView: View {
                     }.foregroundStyle(.white.opacity(0.55))
                     ForEach(visibleLibraryItems) { item in
                         fileRow(name: item.fileName, detail: "\(item.sizeText) · Saved locally", icon: "doc.badge.plus",
-                            identity: item.id, isLoading: loadingID == item.id,
+                            identity: item.id, iconURL: item.url, isLoading: loadingID == item.id,
                             inspectAction: { inspectorItem = item },
                             useAction: { loadForSigning(url: item.url, name: item.fileName, id: item.id) },
                             deleteAction: { pendingDelete = .library(item) })
@@ -427,7 +427,7 @@ struct FrozenFilesView: View {
                     }.foregroundStyle(.white.opacity(0.55))
                     ForEach(visibleDownloads) { item in
                         fileRow(name: item.displayName, detail: "\(item.sizeText) · \(item.fileName)",
-                            icon: item.isImported ? "doc.badge.plus" : "doc.zipper", identity: item.id,
+                            icon: item.isImported ? "doc.badge.plus" : "doc.zipper", identity: item.id, iconURL: item.url,
                             isLoading: loadingID == item.id,
                             inspectAction: { inspectorItem = FrozenLibraryItem(url: item.url, size: item.size, modified: item.modified) },
                             useAction: { loadForSigning(url: item.url, name: item.fileName, id: item.id) },
@@ -474,16 +474,21 @@ struct FrozenFilesView: View {
     }
 
     private func fileRow(name: String, detail: String, icon: String, identity: String,
+                         iconURL: URL? = nil,
                          isLoading: Bool, inspectAction: @escaping () -> Void,
                          useAction: @escaping () -> Void,
                          deleteAction: @escaping () -> Void) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 12) {
-                Image(systemName: icon)
-                    .font(.system(size: 20, weight: .medium))
-                    .foregroundStyle(Theme.accent2)
-                    .frame(width: 44, height: 44)
-                    .background(Theme.accent.opacity(0.10), in: RoundedRectangle(cornerRadius: 14))
+                if let iconURL {
+                    SideStickEmbeddedIPAIcon(ipaURL: iconURL, fallbackSymbol: icon, size: 44)
+                } else {
+                    Image(systemName: icon)
+                        .font(.system(size: 20, weight: .medium))
+                        .foregroundStyle(Theme.accent2)
+                        .frame(width: 44, height: 44)
+                        .background(Theme.accent.opacity(0.10), in: RoundedRectangle(cornerRadius: 14))
+                }
                 VStack(alignment: .leading, spacing: 4) {
                     Text(name)
                         .font(.system(size: 14, weight: .semibold))

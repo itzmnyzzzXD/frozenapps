@@ -651,7 +651,19 @@ struct FrozenAppCatalogView: View {
                 throw NSError(domain: "FrozenCatalog", code: http.statusCode,
                               userInfo: [NSLocalizedDescriptionKey: http.statusCode == 404 ? "No public latest release was found for this source." : "GitHub returned HTTP \(http.statusCode)."])
             }
-            releases[source.id] = try JSONDecoder().decode(FrozenCatalogRelease.self, from: data)
+            let release = try JSONDecoder().decode(FrozenCatalogRelease.self, from: data)
+            let defaultsKey = "sidestick.catalog.lastSeenRelease.\(source.id)"
+            let previousTag = UserDefaults.standard.string(forKey: defaultsKey)
+            if let previousTag, previousTag != release.tag_name {
+                await SideStickNotificationService.post(
+                    .catalog,
+                    title: "New app release available",
+                    body: "\(source.title) has a new release (\(release.tag_name)). Open SideStick to review its assets.",
+                    identifier: "sidestick-catalog-\(source.id)-\(release.tag_name)"
+                )
+            }
+            UserDefaults.standard.set(release.tag_name, forKey: defaultsKey)
+            releases[source.id] = release
             messages[source.id] = nil
         } catch {
             messages[source.id] = error.localizedDescription
