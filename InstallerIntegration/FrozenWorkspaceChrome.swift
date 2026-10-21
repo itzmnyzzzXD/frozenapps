@@ -38,7 +38,8 @@ struct FrozenWorkspaceRail: View {
                     Rectangle().fill(.white.opacity(0.16)).frame(width: 24, height: 1).padding(.vertical, 3)
                     ForEach(FrozenWorkspaceDestinations.all) { destination in railButton(destination) }
                     Spacer(minLength: 4)
-                    Text("1.1.0").font(.system(size: 8, weight: .semibold, design: .rounded).monospacedDigit()).foregroundStyle(.white.opacity(0.35))
+                    Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.2.0")
+                        .font(.system(size: 8, weight: .semibold, design: .rounded).monospacedDigit()).foregroundStyle(.white.opacity(0.35))
                 }
                 .padding(9).frame(width: 64)
                 .frozenGlassSurface(cornerRadius: 30, tint: .white.opacity(0.04), elevated: true)

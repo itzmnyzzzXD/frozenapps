@@ -20,6 +20,7 @@ rustup target add aarch64-apple-ios aarch64-apple-ios-sim
 python3 scripts/apply-frozenapps-branding.py
 python3 scripts/apply-workspace-redesign.py
 python3 scripts/apply-settings-redesign.py
+python3 scripts/apply-sidestick-branding.py
 bash Vendor/SideInstaller/build-rust.sh
 xcodegen generate
 set -o pipefail

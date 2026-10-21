@@ -1,55 +1,25 @@
 import SwiftUI
 
-/// A restrained, smoky background with broad refraction rather than neon blobs.
+/// Cached wallpaper plus one inexpensive tint pass replace the old full-screen blur stack.
 struct FrozenWorkspaceBackdrop: View {
     var body: some View {
         GeometryReader { proxy in
-            ZStack {
-                LinearGradient(
-                    colors: [
-                        Color(red: 0.15, green: 0.15, blue: 0.16),
-                        Color(red: 0.075, green: 0.078, blue: 0.086),
-                        Color(red: 0.018, green: 0.020, blue: 0.026)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                RadialGradient(
-                    colors: [Color(red: 1.0, green: 0.88, blue: 0.73).opacity(0.20), .clear],
-                    center: UnitPoint(x: 0.02, y: 0.08),
-                    startRadius: 4,
-                    endRadius: max(560, proxy.size.width * 0.95)
-                )
-                RadialGradient(
-                    colors: [Color.white.opacity(0.11), .clear],
-                    center: UnitPoint(x: 0.77, y: 0.83),
-                    startRadius: 0,
-                    endRadius: max(440, proxy.size.height * 0.74)
-                )
-                Rectangle()
-                    .fill(LinearGradient(
+            Image("SideStickBackground")
+                .resizable()
+                .scaledToFill()
+                .frame(width: proxy.size.width, height: proxy.size.height)
+                .clipped()
+                .overlay {
+                    LinearGradient(
                         stops: [
-                            .init(color: .clear, location: 0),
-                            .init(color: Color.white.opacity(0.045), location: 0.30),
-                            .init(color: Color.white.opacity(0.12), location: 0.48),
-                            .init(color: Color.white.opacity(0.025), location: 0.59),
-                            .init(color: .clear, location: 1)
+                            .init(color: Color.black.opacity(0.10), location: 0),
+                            .init(color: Color.black.opacity(0.16), location: 0.46),
+                            .init(color: Color.black.opacity(0.46), location: 1)
                         ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ))
-                    .frame(width: proxy.size.width * 1.85, height: proxy.size.height * 1.35)
-                    .rotationEffect(.degrees(-25))
-                    .offset(x: proxy.size.width * 0.03, y: -proxy.size.height * 0.20)
-                    .blur(radius: 38)
-                LinearGradient(
-                    colors: [.clear, Color.black.opacity(0.12), Color.black.opacity(0.38)],
-                    startPoint: .center,
-                    endPoint: .bottom
-                )
-            }
-            .frame(width: proxy.size.width, height: proxy.size.height)
-            .clipped()
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                }
         }
         .ignoresSafeArea()
         .accessibilityHidden(true)

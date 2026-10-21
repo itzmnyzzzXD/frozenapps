@@ -64,85 +64,85 @@ func drawSnowflake(_ context: CGContext, center: CGPoint, radius: CGFloat,
     context.restoreGState()
 }
 
+struct StickPixel: Hashable {
+    let x: Int
+    let y: Int
+}
+
 func makeIcon(size: Int, variant: String) -> CGImage {
     let dimension = CGFloat(size)
-    let colorSpace = CGColorSpaceCreateDeviceRGB()
-    let context = CGContext(data: nil, width: size, height: size,
-                            bitsPerComponent: 8, bytesPerRow: 0,
-                            space: colorSpace,
-                            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+    let context = CGContext(
+        data: nil,
+        width: size,
+        height: size,
+        bitsPerComponent: 8,
+        bytesPerRow: 0,
+        space: CGColorSpaceCreateDeviceRGB(),
+        bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+    )!
     let rect = CGRect(x: 0, y: 0, width: dimension, height: dimension)
-    context.clear(rect)
-    context.setAllowsAntialiasing(true)
-    context.setShouldAntialias(true)
-    context.interpolationQuality = .high
+    context.setFillColor(cgColor(1, 1, 1, 1))
+    context.fill(rect)
+    context.setAllowsAntialiasing(false)
+    context.setShouldAntialias(false)
+    context.interpolationQuality = .none
 
-    let tinted = variant == "tinted"
-    if !tinted {
-        let dark = variant == "dark"
-        let colors: [CGColor] = dark
-            ? [cgColor(0.006, 0.018, 0.035), cgColor(0.012, 0.055, 0.095), cgColor(0.020, 0.13, 0.18)]
-            : [cgColor(0.008, 0.018, 0.035), cgColor(0.025, 0.12, 0.21), cgColor(0.06, 0.55, 0.75)]
-        let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray,
-                                  locations: [0, 0.56, 1])!
-        context.drawLinearGradient(gradient,
-                                   start: CGPoint(x: dimension * 0.05, y: dimension * 0.02),
-                                   end: CGPoint(x: dimension * 0.95, y: dimension * 0.98),
-                                   options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
-
-        let glowColors: [CGColor] = [
-            cgColor(0.20, 0.85, 1.0, dark ? 0.18 : 0.30),
-            cgColor(0.55, 0.95, 1.0, 0.10),
-            cgColor(0.55, 0.95, 1.0, 0.0)
-        ]
-        let glow = CGGradient(colorsSpace: colorSpace, colors: glowColors as CFArray,
-                              locations: [0, 0.45, 1])!
-        context.drawRadialGradient(glow,
-                                   startCenter: CGPoint(x: dimension * 0.76, y: dimension * 0.70),
-                                   startRadius: 0,
-                                   endCenter: CGPoint(x: dimension * 0.76, y: dimension * 0.70),
-                                   endRadius: dimension * 0.68,
-                                   options: [])
-
-        let border = CGPath(roundedRect: rect.insetBy(dx: dimension * 0.045, dy: dimension * 0.045),
-                            cornerWidth: dimension * 0.23, cornerHeight: dimension * 0.23, transform: nil)
-        context.addPath(border)
-        context.setStrokeColor(cgColor(0.68, 0.94, 1.0, 0.24))
-        context.setLineWidth(max(1, dimension * 0.0035))
-        context.strokePath()
+    // The rod is built from chunky square pixels, with an 8-neighbour outline.
+    // Every step advances right and up, like the vanilla Minecraft inventory item.
+    var wood = [StickPixel: CGColor]()
+    for step in 0..<14 {
+        let x = 5 + step
+        let y = 18 - step
+        wood[StickPixel(x: x, y: y)] = cgColor(0.76, 0.52, 0.29)
+        wood[StickPixel(x: x + 1, y: y)] = cgColor(0.63, 0.39, 0.20)
+        wood[StickPixel(x: x, y: y + 1)] = cgColor(0.53, 0.31, 0.15)
+        wood[StickPixel(x: x + 1, y: y + 1)] = cgColor(0.40, 0.23, 0.12)
     }
 
-    let white = tinted ? cgColor(1, 1, 1, 1) : cgColor(0.94, 1.0, 0.98, 1)
-    let mint = tinted ? cgColor(1, 1, 1, 1) : cgColor(0.33, 0.91, 1.0, 1)
-
-    // A bold F monogram with softened corners: readable at tiny notification-icon sizes.
-    roundedRect(context, x: dimension * 0.265, y: dimension * 0.245,
-                width: dimension * 0.125, height: dimension * 0.515,
-                radius: dimension * 0.055, color: white)
-    roundedRect(context, x: dimension * 0.275, y: dimension * 0.635,
-                width: dimension * 0.405, height: dimension * 0.125,
-                radius: dimension * 0.055, color: white)
-    roundedRect(context, x: dimension * 0.275, y: dimension * 0.465,
-                width: dimension * 0.295, height: dimension * 0.115,
-                radius: dimension * 0.052, color: white)
-
-    drawSnowflake(context,
-                  center: CGPoint(x: dimension * 0.685, y: dimension * 0.405),
-                  radius: dimension * 0.145,
-                  lineWidth: max(1.3, dimension * 0.036),
-                  color: mint)
-
-    // A few restrained glints reinforce the ice motif without cluttering the mark.
-    if !tinted {
-        let glints: [(CGFloat, CGFloat, CGFloat)] = [(0.76, 0.82, 0.012), (0.19, 0.56, 0.009), (0.79, 0.22, 0.008)]
-        for (x, y, radius) in glints {
-            let dot = CGRect(x: dimension * x - dimension * radius,
-                             y: dimension * y - dimension * radius,
-                             width: dimension * radius * 2,
-                             height: dimension * radius * 2)
-            context.setFillColor(cgColor(0.70, 0.96, 1.0, 0.72))
-            context.fillEllipse(in: dot)
+    let body = Set(wood.keys)
+    var outline = Set<StickPixel>()
+    for pixel in body {
+        for dx in -1...1 {
+            for dy in -1...1 {
+                let neighbour = StickPixel(x: pixel.x + dx, y: pixel.y + dy)
+                if !body.contains(neighbour) { outline.insert(neighbour) }
+            }
         }
+    }
+
+    let cell = dimension / 24.0
+    func pixelRect(_ pixel: StickPixel) -> CGRect {
+        CGRect(
+            x: CGFloat(pixel.x) * cell,
+            y: dimension - CGFloat(pixel.y + 1) * cell,
+            width: cell + 0.15,
+            height: cell + 0.15
+        )
+    }
+
+    // Small, hard-edged shadow gives the pixel item depth without any blur cost.
+    for pixel in body {
+        let shadowPixel = StickPixel(x: pixel.x + 1, y: pixel.y + 1)
+        context.setFillColor(cgColor(0.25, 0.18, 0.14, 0.11))
+        context.fill(pixelRect(shadowPixel))
+    }
+    context.setFillColor(cgColor(0.24, 0.14, 0.085))
+    for pixel in outline { context.fill(pixelRect(pixel)) }
+    for (pixel, color) in wood {
+        context.setFillColor(color)
+        context.fill(pixelRect(pixel))
+    }
+
+    // A few square highlights and darker wood-grain pixels preserve the blocky look.
+    for step in [1, 4, 7, 10, 12] {
+        let pixel = StickPixel(x: 5 + step, y: 18 - step)
+        context.setFillColor(cgColor(0.88, 0.68, 0.42))
+        context.fill(pixelRect(pixel))
+    }
+    for step in [2, 6, 9, 13] {
+        let pixel = StickPixel(x: 6 + step, y: 19 - step)
+        context.setFillColor(cgColor(0.34, 0.19, 0.095))
+        context.fill(pixelRect(pixel))
     }
 
     return context.makeImage()!

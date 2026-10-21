@@ -1,12 +1,12 @@
-# FrozenApps
+# SideStick
 
-FrozenApps is an iPhone/iPad-first signing and installation workspace. It brings device pairing, Apple developer authentication, provisioning, IPA signing, app installation, local network diagnostics, and a personal IPA library into one native SwiftUI app.
+SideStick is an iPhone/iPad-first signing and installation workspace. It brings device pairing, Apple developer authentication, provisioning, IPA signing, app installation, local network diagnostics, and a personal IPA library into one native SwiftUI app.
 
 ## Current build
 
-FrozenApps v1.1.0 is a structural workspace redesign built around the supplied visual references—not just a color refresh. The signed-in app uses a translucent command bar, an icon rail on iPad and compact dock on narrower screens, a two-column Signer workspace, and redesigned Settings and Tools layouts. IPA Library and App Catalog use real search, sort and category controls with filter side panels and adaptive result grids. The app-wide glass system adds smoky surfaces, a fine specular edge, warm directional refraction and restrained shadows. Login/onboarding and two-factor screens are left as they were. Existing account storage, Keychain, Apple authentication, pairing, provisioning, signing, install and file-operation callbacks remain connected to their original stores and engine. GitHub Actions builds and validates the app; the published IPA is unsigned and needs a supported signing method before installation.
+SideStick v1.2.0 preserves the approved workspace layout while adding a lighter background renderer, your blue/purple wallpaper, the white-backed pixel-art Minecraft stick icon, and SideStick branding throughout the visible app. The signed-in app uses a translucent command bar, an icon rail on iPad and compact dock on narrower screens, a two-column Signer workspace, and redesigned Settings and Tools layouts. IPA Library and App Catalog use real search, sort and category controls with filter side panels and adaptive result grids. The app-wide glass system adds smoky surfaces, a fine specular edge, warm directional refraction and restrained shadows. Login/onboarding and two-factor screens are left as they were. Existing account storage, Keychain, Apple authentication, pairing, provisioning, signing, install and file-operation callbacks remain connected to their original stores and engine. GitHub Actions builds and validates the app; the published IPA is unsigned and needs a supported signing method before installation.
 
-The UI changes are applied by `scripts/apply-frozenapps-branding.py` to the pinned engine checkout during every build. That keeps the customised screens reproducible rather than leaving edits in a generated directory that disappears on the next build. The existing pairing, Apple authentication, two-factor, provisioning, signing, and installation callbacks are retained.
+The workspace and branding patches are reapplied to the pinned engine checkout during every build, so generated-source changes remain reproducible. That keeps the customised screens reproducible rather than leaving edits in a generated directory that disappears on the next build. The existing pairing, Apple authentication, two-factor, provisioning, signing, and installation callbacks are retained.
 
 ## What is included
 
@@ -15,9 +15,9 @@ The UI changes are applied by `scripts/apply-frozenapps-branding.py` to the pinn
 - **Custom IPA workflow:** import a local IPA or fetch one from a direct download link, view transfer progress, load a package into Signer, and run signing/install steps.
 - **Files library:** store multiple IPA packages separately from the signer's working copy; validate ZIP structure and app metadata; search/sort by name, date, and size; view bundle ID, version and SHA-256; load, or delete with confirmation.
 - **Tools and settings:** account/session management, pairing tools, certificates, entitlements, location tools, managed apps, language, tunnel settings, logs, privacy and licence information.
-- **App Catalog (1.0.5):** browse curated GitHub projects, add, search, sort, refresh, copy or remove custom public `owner/repository` sources, inspect actual release assets, and save real IPA files into `Documents/FrozenApps Library`. Built-in sources cannot be removed; removing a custom source does not delete downloaded files. Projects without IPA assets remain source links.
+- **App Catalog (1.0.5):** browse curated GitHub projects, add, search, sort, refresh, copy or remove custom public `owner/repository` sources, inspect actual release assets, and save real IPA files into `Documents/SideStick Library`. Built-in sources cannot be removed; removing a custom source does not delete downloaded files. Projects without IPA assets remain source links.
 - **Batch Actions (1.0.5):** select multiple IPA files, run file-access and basic preflight checks, copy reports, and prepare a manual queue. Deep archive validation, signing and installation still use the existing library and signer workflows; this screen does not claim queued files were signed or installed.
-- **Branding:** a regenerated ice-cyan FrozenApps app icon (the Swift icon-generation pipeline is the source of truth), a deep-navy/ice-cyan accent system, utility glyphs, glass surfaces, custom onboarding and account editor, animated backdrop, and Signer / Network / Tools / Files / Settings tabs.
+- **Branding:** a white-backed pixel-art Minecraft stick app icon, your blue/purple image as the app background, the existing glass surfaces, account/onboarding screens, and the approved Signer / Network / Tools / Files / Settings workspace.
 
 ## Compatibility
 
@@ -27,17 +27,17 @@ The app targets iOS/iPadOS 17.4 and later, but the supported pairing method depe
 
 ## Discover and batch-check apps
 
-1. Open Frozen Center and choose **App Catalog**.
+1. Open SideStick Center and choose **App Catalog**.
 2. Add a public GitHub source as `owner/repository`, or select a built-in source.
-3. Check the latest release. FrozenApps only offers a download action when GitHub's release response contains an actual `.ipa` asset.
-4. Downloaded files are saved into the FrozenApps IPA Library directory. Open IPA Library to validate package structure and app metadata before loading a package into Signer.
+3. Check the latest release. SideStick only offers a download action when GitHub's release response contains an actual `.ipa` asset.
+4. Downloaded files are saved into the SideStick IPA Library directory. Open IPA Library to validate package structure and app metadata before loading a package into Signer.
 5. Open **Batch Actions** to select several IPA files and generate a preflight report. A queue is a planning/handoff list, not proof that signing or installation has run.
 
 The catalog does not host third-party IPAs. GitHub projects may publish no IPA asset, may have platform restrictions, or may require separate setup. Verify the repository owner, release notes, licence and file integrity before using a package.
 
 ## Import a custom IPA
 
-1. Open **Files** and import one or more `.ipa` files. FrozenApps checks the archive and main app metadata before saving the package.
+1. Open **Files** and import one or more `.ipa` files. SideStick checks the archive and main app metadata before saving the package.
 2. Open the package details to check its app name, bundle ID, version, size, modified date, and SHA-256 checksum.
 3. Tap **Load into Signer**. This creates a separate working copy; the library copy remains intact.
 4. Open **Signer**, choose the imported IPA, and follow the pairing, authentication, two-factor, provisioning, signing, and installation steps.
@@ -57,7 +57,7 @@ bash scripts/build-engine.sh
 bash scripts/validate-build.sh
 ```
 
-GitHub Actions compiles the app and native engine, validates the app bundle and architecture, packages `FrozenApps-unsigned.ipa`, and calculates a SHA-256 checksum. The generated IPA is **unsigned**; it is not ready to install as-is. CI compilation also cannot prove that Apple authentication, device pairing, provisioning, signing, or installation works on a physical iPad. Physical-device testing remains necessary.
+GitHub Actions compiles the app and native engine, validates the app bundle and architecture, packages `SideStick-unsigned.ipa`, and calculates a SHA-256 checksum. The generated IPA is **unsigned**; it is not ready to install as-is. CI compilation also cannot prove that Apple authentication, device pairing, provisioning, signing, or installation works on a physical iPad. Physical-device testing remains necessary.
 
 ## Attribution and licence
 
@@ -68,6 +68,6 @@ The upstream source is pinned as a Git submodule. The full upstream custom licen
 
 ## 1.0.5 UI refresh and Signer install catalog
 
-The Signer install card uses a rose-and-black glass treatment with a warm ivory discovery panel. Open **Signer → Install → Browse app catalog** to search the expanded catalogue by category. When a public GitHub latest release has actual IPA assets, FrozenApps can download an asset and hand it to the existing **Custom .ipa** import/sign/install pipeline. If a release has no IPA assets, the card only offers project or release links; discovery is not a guarantee that an IPA exists or that the app is compatible.
+The Signer install card uses a rose-and-black glass treatment with a warm ivory discovery panel. Open **Signer → Install → Browse app catalog** to search the expanded catalogue by category. When a public GitHub latest release has actual IPA assets, SideStick can download an asset and hand it to the existing **Custom .ipa** import/sign/install pipeline. If a release has no IPA assets, the card only offers project or release links; discovery is not a guarantee that an IPA exists or that the app is compatible.
 
-Catalog imports still use FrozenApps' existing signing and installation implementation. Third-party apps can require their own setup, entitlements, device compatibility or signing constraints.
+Catalog imports still use SideStick' existing signing and installation implementation. Third-party apps can require their own setup, entitlements, device compatibility or signing constraints.

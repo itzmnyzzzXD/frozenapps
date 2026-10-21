@@ -13,7 +13,7 @@ fail() {
 }
 
 {
-  echo "FrozenApps build validation"
+  echo "SideStick build validation"
   echo "Commit: ${GITHUB_SHA:-local}"
   echo "Date (UTC): $(date -u +%Y-%m-%dT%H:%M:%SZ)"
   echo
@@ -44,7 +44,7 @@ EXPECTED_MIN_OS=$(awk -F: '
   MIN_OS=$(/usr/libexec/PlistBuddy -c 'Print :MinimumOSVersion' "$APP/Info.plist")
 
   [[ "$APP_ID" == "com.itzmnyzzz.frozenapps" ]] || fail "Unexpected app bundle identifier: $APP_ID"
-  [[ "$APP_DISPLAY_NAME" == "FrozenApps" ]] || fail "Unexpected app display name: $APP_DISPLAY_NAME"
+  [[ "$APP_DISPLAY_NAME" == "SideStick" ]] || fail "Unexpected app display name: $APP_DISPLAY_NAME"
   [[ "$APP_VERSION" == "$EXPECTED_VERSION" ]] || fail "Expected version $EXPECTED_VERSION from project.yml, got $APP_VERSION"
   [[ "$APP_BUILD" == "$EXPECTED_BUILD" ]] || fail "Expected build $EXPECTED_BUILD from project.yml, got $APP_BUILD"
   [[ "$MIN_OS" == "$EXPECTED_MIN_OS" ]] || fail "Expected minimum OS $EXPECTED_MIN_OS from project.yml, got $MIN_OS"

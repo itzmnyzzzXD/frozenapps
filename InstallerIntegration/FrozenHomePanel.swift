@@ -4,8 +4,8 @@ extension Notification.Name {
     static let frozenAppsOpenNetwork = Notification.Name("FrozenApps.OpenNetwork")
 }
 
-/// FrozenApps' quick status card on the Signer screen. Actions navigate into
-/// FrozenApps-owned tools rather than adding controls to the upstream engine UI.
+/// SideStick's quick status card on the Signer screen. Actions navigate into
+/// app-owned tools rather than adding controls to the upstream engine UI.
 struct FrozenHomePanel: View {
     let wifiConnected: Bool
     let tunnelConnected: Bool
@@ -23,7 +23,7 @@ struct FrozenHomePanel: View {
                     .tracking(1.4)
                     .foregroundStyle(.white.opacity(0.78))
                 Spacer()
-                Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.1.0")
+                Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.2.0")
                     .font(.system(size: 10, weight: .bold, design: .rounded).monospacedDigit())
                     .foregroundStyle(Theme.accent2)
                     .padding(.horizontal, 10)
