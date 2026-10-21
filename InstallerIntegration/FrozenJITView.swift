@@ -57,7 +57,7 @@ struct FrozenJITView: View {
 
     var body: some View {
         ZStack {
-            AppBackground()
+            FrozenWorkspaceBackdrop()
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     hero
@@ -134,7 +134,7 @@ struct FrozenJITView: View {
     }
 
     private var helperCard: some View {
-        PanelCard {
+        FrozenWorkspacePanel {
             VStack(alignment: .leading, spacing: 13) {
                 Label("Companion helper", systemImage: "network")
                     .font(.system(size: 15, weight: .bold, design: .rounded))
@@ -183,7 +183,7 @@ struct FrozenJITView: View {
     }
 
     private var deviceCard: some View {
-        PanelCard {
+        FrozenWorkspacePanel {
             VStack(alignment: .leading, spacing: 12) {
                 Label("Paired device", systemImage: "ipad.and.iphone")
                     .font(.system(size: 15, weight: .bold, design: .rounded))
@@ -219,7 +219,7 @@ struct FrozenJITView: View {
     }
 
     private var appCard: some View {
-        PanelCard {
+        FrozenWorkspacePanel {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     Label("Eligible apps", systemImage: "app.badge.checkmark")
@@ -287,7 +287,7 @@ struct FrozenJITView: View {
     }
 
     private var requirementsCard: some View {
-        PanelCard {
+        FrozenWorkspacePanel {
             VStack(alignment: .leading, spacing: 11) {
                 Label("Before using JIT", systemImage: "checklist")
                     .font(.system(size: 15, weight: .bold, design: .rounded))

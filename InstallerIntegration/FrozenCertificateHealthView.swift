@@ -100,7 +100,7 @@ struct FrozenCertificateHealthView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                AppBackground()
+                FrozenWorkspaceBackdrop()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 15) {
                         VStack(alignment: .leading, spacing: 7) {
@@ -116,7 +116,7 @@ struct FrozenCertificateHealthView: View {
                         profileCard
                         certificateCard
                         compatibilityCard
-                        PanelCard {
+                        FrozenWorkspacePanel {
                             VStack(alignment: .leading, spacing: 6) {
                                 Label("Expiry is not revocation", systemImage: "info.circle.fill")
                                     .font(.system(size: 13, weight: .bold, design: .rounded)).foregroundStyle(Theme.accent2)
@@ -145,7 +145,7 @@ struct FrozenCertificateHealthView: View {
     }
 
     private var profileCard: some View {
-        PanelCard {
+        FrozenWorkspacePanel {
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
                     Label("Provisioning profile", systemImage: "doc.badge.gearshape")
@@ -174,7 +174,7 @@ struct FrozenCertificateHealthView: View {
     }
 
     private var certificateCard: some View {
-        PanelCard {
+        FrozenWorkspacePanel {
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
                     Label("Signing certificate", systemImage: "person.badge.key")
@@ -215,7 +215,7 @@ struct FrozenCertificateHealthView: View {
     }
 
     private var compatibilityCard: some View {
-        PanelCard {
+        FrozenWorkspacePanel {
             VStack(alignment: .leading, spacing: 9) {
                 Label("Profile compatibility", systemImage: "checkmark.seal")
                     .font(.system(size: 14, weight: .bold, design: .rounded)).foregroundStyle(.white)

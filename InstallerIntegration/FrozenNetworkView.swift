@@ -23,7 +23,7 @@ struct FrozenNetworkView: View {
                 .padding(20)
                 .padding(.bottom, 18)
             }
-            .background(AppBackground())
+            .background(FrozenWorkspaceBackdrop())
             .navigationTitle("Network")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -74,7 +74,7 @@ struct FrozenNetworkView: View {
     }
 
     private var connectionCard: some View {
-        PanelCard {
+        FrozenWorkspacePanel {
             VStack(alignment: .leading, spacing: 15) {
                 HStack(spacing: 12) {
                     ZStack {
@@ -126,7 +126,7 @@ struct FrozenNetworkView: View {
     }
 
     private var localAccessCard: some View {
-        PanelCard {
+        FrozenWorkspacePanel {
             VStack(alignment: .leading, spacing: 13) {
                 HStack(spacing: 9) {
                     Image(systemName: "lock.shield")
@@ -185,7 +185,7 @@ struct FrozenNetworkView: View {
     }
 
     private var discoveryCard: some View {
-        PanelCard {
+        FrozenWorkspacePanel {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 9) {
                     Image(systemName: "dot.radiowaves.left.and.right")

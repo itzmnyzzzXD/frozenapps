@@ -146,7 +146,7 @@ struct FrozenAppCatalogView: View {
 
     var body: some View {
         ZStack {
-            AppBackground()
+            FrozenWorkspaceBackdrop()
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
                     header
@@ -229,7 +229,7 @@ struct FrozenAppCatalogView: View {
                     }
 
                     if visibleSources.isEmpty {
-                        PanelCard {
+                        FrozenWorkspacePanel {
                             VStack(alignment: .leading, spacing: 8) {
                                 Label("No matching sources", systemImage: "line.3.horizontal.decrease.circle")
                                     .font(.system(size: 13, weight: .bold, design: .rounded))
@@ -282,7 +282,7 @@ struct FrozenAppCatalogView: View {
                         }
                     }
 
-                    PanelCard {
+                    FrozenWorkspacePanel {
                         VStack(alignment: .leading, spacing: 8) {
                             Label("More app categories", systemImage: "square.grid.2x2.fill")
                                 .font(.system(size: 13, weight: .bold, design: .rounded))
@@ -349,7 +349,7 @@ struct FrozenAppCatalogView: View {
     }
 
     private var header: some View {
-        PanelCard {
+        FrozenWorkspacePanel {
             VStack(alignment: .leading, spacing: 9) {
                 HStack(spacing: 11) {
                     Image(systemName: "square.grid.2x2.fill")
@@ -376,7 +376,7 @@ struct FrozenAppCatalogView: View {
     }
 
     private func sourceCard(_ source: FrozenCatalogSource) -> some View {
-        PanelCard {
+        FrozenWorkspacePanel {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .top, spacing: 10) {
                     Image(systemName: "shippingbox.fill")
@@ -731,10 +731,10 @@ struct FrozenBatchActionsView: View {
 
     var body: some View {
         ZStack {
-            AppBackground()
+            FrozenWorkspaceBackdrop()
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    PanelCard {
+                    FrozenWorkspacePanel {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("FROZENAPPS · AUTOMATION")
                                 .font(.system(size: 9, weight: .heavy, design: .rounded)).tracking(1.4).foregroundStyle(Theme.accent2)
@@ -755,7 +755,7 @@ struct FrozenBatchActionsView: View {
                         }
                     }
                     if !selectedFiles.isEmpty {
-                        PanelCard {
+                        FrozenWorkspacePanel {
                             VStack(alignment: .leading, spacing: 9) {
                                 HStack {
                                     Text("\(selectedFiles.count) selected IPA(s)")
@@ -785,7 +785,7 @@ struct FrozenBatchActionsView: View {
                         }
                     }
                     if !reports.isEmpty {
-                        PanelCard {
+                        FrozenWorkspacePanel {
                             VStack(alignment: .leading, spacing: 10) {
                                 HStack {
                                     Text("PREFLIGHT REPORT").font(.system(size: 9, weight: .heavy, design: .rounded)).tracking(1.4).foregroundStyle(Theme.accent2)
@@ -804,7 +804,7 @@ struct FrozenBatchActionsView: View {
                         }
                     }
                     if !queue.isEmpty {
-                        PanelCard {
+                        FrozenWorkspacePanel {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("INSTALL QUEUE").font(.system(size: 9, weight: .heavy, design: .rounded)).tracking(1.4).foregroundStyle(Theme.accent2)
                                 Text("Queue prepared for manual handoff. This screen does not claim that queued files have been signed or installed.")

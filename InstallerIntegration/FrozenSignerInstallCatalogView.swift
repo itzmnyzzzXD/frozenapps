@@ -107,7 +107,7 @@ struct FrozenSignerInstallCatalogView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                AppBackground()
+                FrozenWorkspaceBackdrop()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
                         hero
@@ -317,7 +317,7 @@ struct FrozenSignerInstallCatalogView: View {
     }
 
     private func appCard(_ app: FrozenSignerCatalogApp) -> some View {
-        PanelCard {
+        FrozenWorkspacePanel {
             VStack(alignment: .leading, spacing: 9) {
                 HStack(alignment: .top, spacing: 7) {
                     ZStack {

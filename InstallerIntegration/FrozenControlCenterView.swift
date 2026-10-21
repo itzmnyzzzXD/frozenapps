@@ -120,7 +120,7 @@ struct FrozenControlCenterView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                AppBackground()
+                FrozenWorkspaceBackdrop()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 15) {
                         VStack(alignment: .leading, spacing: 10) {
@@ -146,7 +146,7 @@ struct FrozenControlCenterView: View {
                         }
                         .padding(17)
                         .frozenGlassSurface(cornerRadius: 25, tint: Theme.accent, elevated: true)
-                        PanelCard {
+                        FrozenWorkspacePanel {
                             HStack(spacing: 12) {
                                 Image(systemName: engine.isRunning ? "arrow.trianglehead.2.clockwise.rotate.90" : (engine.lastError != nil ? "exclamationmark.triangle.fill" : "checkmark.circle.fill"))
                                     .font(.system(size: 20, weight: .semibold))
@@ -241,10 +241,10 @@ struct FrozenInstallationTrackerView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                AppBackground()
+                FrozenWorkspaceBackdrop()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 14) {
-                        PanelCard {
+                        FrozenWorkspacePanel {
                             VStack(alignment: .leading, spacing: 11) {
                                 Label("LIVE ENGINE STATE", systemImage: "waveform.path")
                                     .font(.system(size: 10, weight: .heavy, design: .rounded)).tracking(1.4).foregroundStyle(Theme.accent2)
@@ -267,7 +267,7 @@ struct FrozenInstallationTrackerView: View {
                                 }
                             }
                         }
-                        PanelCard {
+                        FrozenWorkspacePanel {
                             VStack(alignment: .leading, spacing: 10) {
                                 Text("PIPELINE STEPS").font(.system(size: 10, weight: .heavy, design: .rounded)).tracking(1.4).foregroundStyle(Theme.accent2)
                                 ForEach(Step.allCases) { step in
@@ -276,7 +276,7 @@ struct FrozenInstallationTrackerView: View {
                                 }
                             }
                         }
-                        PanelCard {
+                        FrozenWorkspacePanel {
                             VStack(alignment: .leading, spacing: 10) {
                                 HStack {
                                     Label("Recent engine log", systemImage: "text.alignleft")
@@ -352,10 +352,10 @@ struct FrozenStatusView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                AppBackground()
+                FrozenWorkspaceBackdrop()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 14) {
-                        PanelCard {
+                        FrozenWorkspacePanel {
                             VStack(alignment: .leading, spacing: 11) {
                                 HStack {
                                     Label("SERVICE STATUS", systemImage: "waveform.path.ecg")
@@ -385,7 +385,7 @@ struct FrozenStatusView: View {
                                     .font(.system(size: 9)).foregroundStyle(.white.opacity(0.4))
                             }
                         }
-                        PanelCard {
+                        FrozenWorkspacePanel {
                             VStack(alignment: .leading, spacing: 9) {
                                 Text("VERSION CHECK").font(.system(size: 10, weight: .heavy, design: .rounded)).tracking(1.4).foregroundStyle(Theme.accent2)
                                 statusRow("Installed app", installedVersion, true)
@@ -449,10 +449,10 @@ struct FrozenSmartAlertsView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                AppBackground()
+                FrozenWorkspaceBackdrop()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 14) {
-                        PanelCard {
+                        FrozenWorkspacePanel {
                             VStack(alignment: .leading, spacing: 11) {
                                 Label("ATTENTION NEEDED", systemImage: "bell.badge.fill")
                                     .font(.system(size: 10, weight: .heavy, design: .rounded)).tracking(1.4).foregroundStyle(Theme.accent2)
@@ -483,7 +483,7 @@ struct FrozenSmartAlertsView: View {
                                 }
                             }
                         }
-                        PanelCard {
+                        FrozenWorkspacePanel {
                             VStack(alignment: .leading, spacing: 9) {
                                 Text("LOCAL EXPIRY REMINDERS").font(.system(size: 10, weight: .heavy, design: .rounded)).tracking(1.4).foregroundStyle(Theme.accent2)
                                 Text("Schedules 30-, 7- and 1-day reminders for inspected items. Build and helper status are checked when this page opens; they are not background-monitored.")
@@ -563,10 +563,10 @@ struct FrozenSetupGuideView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                AppBackground()
+                FrozenWorkspaceBackdrop()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 13) {
-                        PanelCard {
+                        FrozenWorkspacePanel {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("LET'S GET READY").font(.system(size: 10, weight: .heavy, design: .rounded)).tracking(1.4).foregroundStyle(Theme.accent2)
                                 Text("Device setup checklist").font(.system(size: 23, weight: .bold, design: .rounded)).foregroundStyle(.white)
@@ -600,7 +600,7 @@ struct FrozenSetupGuideView: View {
     }
 
     private func checklist(_ title: String, _ detail: String, _ icon: String, _ checked: Binding<Bool>) -> some View {
-        PanelCard {
+        FrozenWorkspacePanel {
             Toggle(isOn: checked) {
                 HStack(alignment: .top, spacing: 10) {
                     Image(systemName: icon).foregroundStyle(Theme.accent2).frame(width: 19).padding(.top, 2)

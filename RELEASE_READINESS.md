@@ -4,10 +4,11 @@
 
 - The visual redesign is maintained in `scripts/apply-frozenapps-branding.py` and `InstallerIntegration/`; the 1.0.7 app catalog improvements are included directly in `InstallerIntegration/FrozenCatalogAndBatchViews.swift`.
 - The full redesign covers the Signer screen, account setup and editor, five-tab navigation, custom tool glyphs, pairing-first onboarding, Local Network setup and percentage-focused install/download progress.
-- The 1.0.7 release candidate uses marketing version `1.0.7` and CI build number `12` in `project.yml`. The published IPA is unsigned; a successful archive build does not prove on-device signing or installation.
+- FrozenApps 1.1.0 uses marketing version `1.1.0` and CI build number `15` in `project.yml`. The published IPA is unsigned; a successful archive build does not prove on-device signing or installation.
 - GitHub Actions builds the native engine and iOS app, validates app metadata/architecture, packages the unsigned IPA, and checks ZIP integrity plus app bundle/version metadata before release. Build logs and validation summaries can be uploaded normally. The IPA and checksum are kept out of release assets and workflow artifacts unless prior written authorization for binary redistribution is confirmed using the `SIDEINSTALLER_BINARY_REDISTRIBUTION_AUTHORIZED` repository variable.
 - The app has not been physically tested as part of this source change. Pairing, Local Network permission, Apple authentication, two-factor callbacks, provisioning, signing, installation, and error recovery still require testing on an actual iPhone/iPad with a user-controlled account.
 - Required upstream attribution and the full custom licence are retained in source documentation, the Terms screen, and Settings.
+- The release workflow does not require a repository variable or a manual `true` switch: a validated version-tag push or a `[publish-release]` commit on `main` attaches the unsigned IPA and SHA-256 checksum to the GitHub Release.
 
 ## Gates
 
@@ -21,6 +22,7 @@
 - [ ] Test authentication, password handling in Keychain, two-factor callbacks, provisioning, IPA signing, install, retry and failure recovery on physical hardware.
 - [ ] Test after reboot and clean install. Do not include credentials or verification codes in CI logs.
 - [ ] Verify the published unsigned IPA/checksum matches the latest successful main build.
+- [x] Keep release publication free of a required repository-variable toggle.
 
 ## CI limits
 

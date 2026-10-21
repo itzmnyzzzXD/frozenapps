@@ -23,7 +23,7 @@ struct FrozenHomePanel: View {
                     .tracking(1.4)
                     .foregroundStyle(.white.opacity(0.78))
                 Spacer()
-                Text("1.0.7")
+                Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.1.0")
                     .font(.system(size: 10, weight: .bold, design: .rounded).monospacedDigit())
                     .foregroundStyle(Theme.accent2)
                     .padding(.horizontal, 10)
@@ -97,22 +97,19 @@ struct FrozenHomePanel: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background {
             ZStack(alignment: .topTrailing) {
-                LinearGradient(
-                    colors: [
-                        Color(red: 0.012, green: 0.045, blue: 0.085),
-                        Color(red: 0.018, green: 0.09, blue: 0.14),
-                        Color(red: 0.008, green: 0.018, blue: 0.035)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
+                RoundedRectangle(cornerRadius: 26, style: .continuous).fill(.regularMaterial)
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                    .fill(LinearGradient(
+                        colors: [Color.white.opacity(0.095), Theme.accent.opacity(0.055), Color.black.opacity(0.15)],
+                        startPoint: .topLeading, endPoint: .bottomTrailing
+                    ))
                 Circle()
-                    .fill(Theme.accent.opacity(0.28))
+                    .fill(Theme.accent.opacity(0.12))
                     .frame(width: 175, height: 175)
                     .blur(radius: 34)
                     .offset(x: 55, y: -65)
                 Circle()
-                    .fill(Theme.accent2.opacity(0.14))
+                    .fill(Theme.accent2.opacity(0.075))
                     .frame(width: 130, height: 130)
                     .blur(radius: 28)
                     .offset(x: -90, y: 100)
@@ -123,14 +120,14 @@ struct FrozenHomePanel: View {
             RoundedRectangle(cornerRadius: 26, style: .continuous)
                 .strokeBorder(
                     LinearGradient(
-                        colors: [.white.opacity(0.24), Theme.accent.opacity(0.45), .white.opacity(0.06)],
+                        colors: [.white.opacity(0.36), Color(red: 1.0, green: 0.91, blue: 0.82).opacity(0.16), Theme.accent.opacity(0.18), .white.opacity(0.075)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     ),
                     lineWidth: 1
                 )
         }
-        .shadow(color: Theme.accent.opacity(0.16), radius: 22, x: 0, y: 10)
+        .shadow(color: Color.black.opacity(0.22), radius: 24, x: 0, y: 10)
     }
 
     private func statusChip(_ title: String, icon: String, tint: Color) -> some View {

@@ -357,7 +357,7 @@ struct FrozenFilesView: View {
                 .padding(.bottom, 20)
             }
             .scrollIndicators(.hidden)
-            .background(AppBackground())
+            .background(FrozenWorkspaceBackdrop())
             .navigationTitle("Files")
             .navigationBarTitleDisplayMode(.inline)
             .refreshable { refresh() }
@@ -679,7 +679,7 @@ private struct FrozenIPAInspectorView: View {
                 }
                 .padding(20)
             }
-            .background(AppBackground())
+            .background(FrozenWorkspaceBackdrop())
             .navigationTitle("IPA details")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

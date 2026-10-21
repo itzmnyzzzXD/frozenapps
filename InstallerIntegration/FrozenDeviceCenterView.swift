@@ -32,10 +32,10 @@ struct FrozenDeviceCenterView: View {
 
     var body: some View {
         ZStack {
-            AppBackground()
+            FrozenWorkspaceBackdrop()
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    PanelCard {
+                    FrozenWorkspacePanel {
                         VStack(alignment: .leading, spacing: 10) {
                             HStack(spacing: 11) {
                                 Image(systemName: "point.3.connected.trianglepath.dotted")
@@ -59,7 +59,7 @@ struct FrozenDeviceCenterView: View {
                         }
                     }
 
-                    PanelCard {
+                    FrozenWorkspacePanel {
                         VStack(alignment: .leading, spacing: 12) {
                             Text("DEVICE SNAPSHOT")
                                 .font(.system(size: 9, weight: .heavy, design: .rounded))
@@ -106,7 +106,7 @@ struct FrozenDeviceCenterView: View {
                                    tint: Theme.accent2)
                     }.buttonStyle(.plain)
 
-                    PanelCard {
+                    FrozenWorkspacePanel {
                         VStack(alignment: .leading, spacing: 8) {
                             Label("Recovery checklist", systemImage: "wrench.and.screwdriver.fill")
                                 .font(.system(size: 13, weight: .bold, design: .rounded)).foregroundStyle(.white)
@@ -117,7 +117,7 @@ struct FrozenDeviceCenterView: View {
                         }
                     }
 
-                    PanelCard {
+                    FrozenWorkspacePanel {
                         VStack(alignment: .leading, spacing: 9) {
                             Text("COPYABLE DIAGNOSTICS")
                                 .font(.system(size: 9, weight: .heavy, design: .rounded))

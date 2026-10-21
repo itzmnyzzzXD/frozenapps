@@ -1721,7 +1721,7 @@ replace_once(
             }''',
     '''            .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Text("1.0.5")
+                    Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.1.0")
                         .font(.system(size: 10, weight: .bold, design: .rounded).monospacedDigit())
                         .foregroundStyle(Theme.accent2)
                 }
@@ -2061,5 +2061,181 @@ replace_section(
         .disabled(engine.isRunning)
     }'''
 )
+
+
+# v1.1.0 — frosted-glass workspace treatment. Leave account/login and two-factor
+# authentication backgrounds unchanged.
+replace_once(
+    "ios-app/RootView.swift",
+    r'''                .background {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(LinearGradient(
+                            colors: [
+                                Color.black.opacity(0.92),
+                                Theme.accent.opacity(0.12),
+                                Theme.violet.opacity(0.10)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ))
+                }
+                .overlay {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .strokeBorder(
+                            LinearGradient(
+                                colors: [.white.opacity(0.22), Theme.accent2.opacity(0.26), Theme.violet.opacity(0.17)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1
+                        )
+                }
+                .shadow(color: Theme.accent.opacity(0.11), radius: 12, x: 0, y: 4)''',
+    r'''                .background {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(.regularMaterial)
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .fill(LinearGradient(
+                                    colors: [Color.white.opacity(0.10), Theme.accent.opacity(0.045), Color.black.opacity(0.12)],
+                                    startPoint: .topLeading, endPoint: .bottomTrailing
+                                ))
+                        }
+                }
+                .overlay {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .strokeBorder(LinearGradient(
+                            colors: [.white.opacity(0.36), Color(red: 1.0, green: 0.91, blue: 0.82).opacity(0.15), Theme.accent2.opacity(0.13), .white.opacity(0.075)],
+                            startPoint: .topLeading, endPoint: .bottomTrailing
+                        ), lineWidth: 1)
+                }
+                .shadow(color: Color.black.opacity(0.18), radius: 14, x: 0, y: 5)'''
+)
+replace_once(
+    "ios-app/RootView.swift",
+    r'''            ZStack {
+                Color.black.opacity(0.98)
+                LinearGradient(
+                    colors: [Theme.accent.opacity(0.13), Theme.violet.opacity(0.075), .clear],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            }
+            .ignoresSafeArea(edges: .top)
+        }
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(LinearGradient(
+                    colors: [.clear, Theme.accent2.opacity(0.22), Theme.violet.opacity(0.20), .clear],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                ))
+                .frame(height: 1)
+        }''',
+    r'''            ZStack {
+                Rectangle().fill(.ultraThinMaterial)
+                LinearGradient(
+                    colors: [Color.white.opacity(0.055), Theme.accent.opacity(0.035), Color.black.opacity(0.20)],
+                    startPoint: .topLeading, endPoint: .bottomTrailing
+                )
+            }
+            .ignoresSafeArea(edges: .top)
+        }
+        .overlay(alignment: .bottom) {
+            Rectangle().fill(Color.white.opacity(0.13)).frame(height: 1)
+        }'''
+)
+replace_once(
+    "ios-app/RootView.swift",
+    r'''                LinearGradient(
+                    colors: [
+                        Color(red: 0.12, green: 0.09, blue: 0.24),
+                        Color(red: 0.035, green: 0.11, blue: 0.19)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )''',
+    r'''                RoundedRectangle(cornerRadius: 25, style: .continuous).fill(.regularMaterial)
+                RoundedRectangle(cornerRadius: 25, style: .continuous)
+                    .fill(LinearGradient(
+                        colors: [Color.white.opacity(0.09), Theme.accent.opacity(0.045), Color.black.opacity(0.15)],
+                        startPoint: .topLeading, endPoint: .bottomTrailing
+                    ))'''
+)
+replace_once(
+    "ios-app/RootView.swift",
+    r'''colors: [.white.opacity(0.22), Theme.accent.opacity(0.38), .white.opacity(0.05)]''',
+    r'''colors: [.white.opacity(0.36), Color(red: 1.0, green: 0.91, blue: 0.82).opacity(0.15), Theme.accent.opacity(0.16), .white.opacity(0.075)]'''
+)
+replace_once(
+    "ios-app/ContentView.swift",
+    r'''        .background {
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .fill(LinearGradient(
+                    colors: [
+                        Color(red: 0.012, green: 0.055, blue: 0.105),
+                        Color(red: 0.005, green: 0.018, blue: 0.045)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ))
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .strokeBorder(
+                    LinearGradient(
+                        colors: [.white.opacity(0.24), Theme.accent.opacity(0.42), .white.opacity(0.05)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
+        }
+        .shadow(color: Theme.accent.opacity(0.12), radius: 20, x: 0, y: 8)''',
+    r'''        .background {
+            ZStack(alignment: .topTrailing) {
+                RoundedRectangle(cornerRadius: 26, style: .continuous).fill(.regularMaterial)
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                    .fill(LinearGradient(
+                        colors: [Color.white.opacity(0.095), Theme.accent.opacity(0.045), Color.black.opacity(0.15)],
+                        startPoint: .topLeading, endPoint: .bottomTrailing
+                    ))
+                Circle().fill(Theme.accent.opacity(0.10))
+                    .frame(width: 145, height: 145).blur(radius: 34).offset(x: 38, y: -52)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .strokeBorder(LinearGradient(
+                    colors: [.white.opacity(0.36), Color(red: 1.0, green: 0.91, blue: 0.82).opacity(0.16), Theme.accent.opacity(0.17), .white.opacity(0.075)],
+                    startPoint: .topLeading, endPoint: .bottomTrailing
+                ), lineWidth: 1)
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 26, style: .continuous).inset(by: 1)
+                .strokeBorder(.white.opacity(0.045), lineWidth: 1)
+        }
+        .shadow(color: Color.black.opacity(0.22), radius: 24, x: 0, y: 10)'''
+)
+for (const relative_path of ["ios-app/ContentView.swift","ios-app/SettingsView.swift"]) {
+    const path = VENDOR / relative_path;
+    let source = path.read_text(encoding="utf-8");
+    source = source.replace("AppBackground()", "FrozenWorkspaceBackdrop()");
+    path.write_text(source, encoding="utf-8");
+}
+const tools_path = APP / "RootView.swift";
+let tools_source = tools_path.read_text(encoding="utf-8");
+const tools_marker = "struct ToolsView: View {";
+const tools_start = tools_source.find(tools_marker);
+if (tools_start < 0) throw new Error("Could not find ToolsView while applying the workspace backdrop.");
+let next_struct = tools_source.find("\nstruct ", tools_start + tools_marker.length);
+if (next_struct < 0) next_struct = tools_source.length;
+let tools_section = tools_source.slice(tools_start, next_struct);
+if (tools_section.includes("AppBackground()")) {
+  tools_section = tools_section.replace("AppBackground()", "FrozenWorkspaceBackdrop()");
+  tools_source = tools_source.slice(0, tools_start) + tools_section + tools_source.slice(next_struct);
+  tools_path.write_text(tools_source, encoding="utf-8");
+}
 
 print("Applied FrozenApps branding to pinned engine source.")
