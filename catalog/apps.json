@@ -1,0 +1,78 @@
+{
+  "name": "SideStick Default App Source",
+  "identifier": "com.itzmnyzzz.frozenapps.catalog",
+  "apps": [
+    {
+      "name": "SideStore",
+      "developerName": "SideStore Contributors",
+      "subtitle": "Open-source on-device signing and app management.",
+      "localizedDescription": "SideStore is a community-maintained open-source signing and app-management project. Check the project's release notes and setup requirements before using an IPA.",
+      "iconURL": "https://raw.githubusercontent.com/SideStore/SideStore/develop/AltStore/Resources/Icons.xcassets/AppIcon.appiconset/1024.png",
+      "category": "Signing",
+      "versions": [
+        {
+          "version": "0.7.0-alpha",
+          "date": "2026-09-15T11:12:49Z",
+          "downloadURL": "https://github.com/SideStore/SideStore/releases/download/0.7.0-alpha/SideStore.ipa",
+          "size": 27770821,
+          "localizedDescription": "Release notes address sign-in HTTP 503 responses. This is an alpha release; review its upstream notes before installing."
+        }
+      ]
+    },
+    {
+      "name": "UTM SE",
+      "bundleIdentifier": "com.utmapp.UTM-SE",
+      "developerName": "UTM Contributors",
+      "subtitle": "Open-source virtual machines for iOS.",
+      "localizedDescription": "UTM SE is the no-JIT edition of UTM for running virtual machines on iOS. Virtual machine images and operating-system licences are separate from the app.",
+      "iconURL": "https://raw.githubusercontent.com/utmapp/UTM/main/Platform/Assets.xcassets/AppIcon.appiconset/Icon.png",
+      "category": "Developer",
+      "versions": [
+        {
+          "version": "5.0.8",
+          "date": "2026-10-17T02:44:56Z",
+          "downloadURL": "https://github.com/utmapp/UTM/releases/download/v5.0.8/UTM-SE.ipa",
+          "size": 237108214,
+          "minOSVersion": "15.0",
+          "localizedDescription": "Includes new snapshots and improved iOS touch controls. See the official UTM release notes for the complete changelog."
+        }
+      ]
+    },
+    {
+      "name": "PPSSPP",
+      "bundleIdentifier": "org.ppsspp.ppsspp",
+      "developerName": "PPSSPP Team",
+      "subtitle": "Open-source PSP emulator.",
+      "localizedDescription": "PPSSPP is a cross-platform PSP emulator. Use game files that you own and follow the project's legal and compatibility guidance.",
+      "iconURL": "https://raw.githubusercontent.com/hrydgard/ppsspp/master/ios/assets.xcassets/AppIcon.appiconset/icon_backfill_1024.png",
+      "category": "Emulation",
+      "versions": [
+        {
+          "version": "1.20.4",
+          "date": "2026-05-16T12:35:08Z",
+          "downloadURL": "https://github.com/hrydgard/ppsspp/releases/download/v1.20.4/PPSSPP-iOS-v1.20.4.ipa",
+          "size": 31124277,
+          "localizedDescription": "Official iOS release. The upstream project links the full changelog and other platform downloads."
+        }
+      ]
+    },
+    {
+      "name": "iSH",
+      "bundleIdentifier": "app.ish.Ish",
+      "developerName": "iSH Contributors",
+      "subtitle": "A small Linux shell environment for iOS.",
+      "localizedDescription": "iSH is an open-source shell environment using a user-mode x86 emulator. Its latest published GitHub IPA build shown here is dated May 2023; check upstream for newer instructions.",
+      "iconURL": "https://raw.githubusercontent.com/ish-app/ish/master/app/Assets.xcassets/AppIcon.appiconset/App%20Store.png",
+      "category": "Utilities",
+      "versions": [
+        {
+          "version": "1.3.2 (build 494)",
+          "date": "2023-05-20T23:52:42Z",
+          "downloadURL": "https://github.com/ish-app/ish/releases/download/builds/494/iSH.ipa",
+          "size": 4232682,
+          "localizedDescription": "Upstream release note: fixes diagnostics in the Files provider."
+        }
+      ]
+    }
+  ]
+}

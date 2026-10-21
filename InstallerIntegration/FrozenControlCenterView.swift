@@ -198,6 +198,12 @@ struct FrozenControlCenterView: View {
                             NavigationLink { FrozenAppCatalogView() } label: {
                                 FrozenCenterToolCard(title: "App Catalog", subtitle: "GitHub sources & IPA releases", icon: "square.grid.2x2.fill", tint: .indigo)
                             }
+                            NavigationLink { FrozenLiveSourcesView() } label: {
+                                FrozenCenterToolCard(title: "Live App Sources", subtitle: "Import apps.json catalogs", icon: "square.stack.3d.up.fill", tint: .cyan)
+                            }
+                            NavigationLink { FrozenNotificationPreferencesView() } label: {
+                                FrozenCenterToolCard(title: "Notifications", subtitle: "Event categories & delivery", icon: "bell.badge.fill", tint: .orange)
+                            }
                             NavigationLink { FrozenBatchActionsView() } label: {
                                 FrozenCenterToolCard(title: "Batch Actions", subtitle: "Multi-IPA preflight & queues", icon: "checklist", tint: .teal)
                             }
@@ -213,10 +219,11 @@ struct FrozenControlCenterView: View {
             .navigationBarTitleDisplayMode(.inline)
         }
         .preferredColorScheme(.dark)
+        .task { SideStickNotificationService.registerCategories() }
     }
 }
 
-struct FrozenInstallationTrackerView: View {
+struct FrozenInstallationTrackerView {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var engine: Engine
 
