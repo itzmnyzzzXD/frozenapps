@@ -230,8 +230,8 @@ for folder in (APP, ACTIVITY, INTEGRATION):
         # Remove the redundant copy underneath the TabView to avoid extra overdraw.
         if swift_path.name == "RootView.swift":
             branded = branded.replace(
-                'ZStack {\n                if proxy.size.width >= 760 {',
-                'ZStack {\\n                if proxy.size.width >= 760 {',
+                "                FrozenWorkspaceBackdrop()\n                if proxy.size.width >= 760 {",
+                "                if proxy.size.width >= 760 {",
                 1
             )
         if branded != source:
