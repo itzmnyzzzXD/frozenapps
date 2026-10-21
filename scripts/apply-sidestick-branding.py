@@ -87,8 +87,8 @@ with tempfile.TemporaryDirectory(prefix="sidestick-icon-") as temporary_director
         ["sips", "-g", "pixelWidth", "-g", "pixelHeight", str(normalized)],
         check=True, capture_output=True, text=True
     ).stdout
-    width_match = re.search(r"pixelWidth:\\s*(\\d+)", dimensions)
-    height_match = re.search(r"pixelHeight:\\s*(\\d+)", dimensions)
+    width_match = re.search("pixelWidth:[ ]*([0-9]+)", dimensions)
+    height_match = re.search("pixelHeight:[ ]*([0-9]+)", dimensions)
     if not width_match or not height_match:
         raise SystemExit("Could not read IMG_2151.jpeg dimensions to create the app icon.")
     image_width, image_height = int(width_match.group(1)), int(height_match.group(1))
@@ -119,7 +119,7 @@ with tempfile.TemporaryDirectory(prefix="sidestick-icon-") as temporary_director
         })
     (ICON_SET / "Contents.json").write_text(json.dumps({
         "images": manifest_images, "info": {"author": "xcode", "version": 1}
-    }, indent=2) + "\\n", encoding="utf-8")
+    }, indent=2) + "\n", encoding="utf-8")
 
 STRING_PATTERN = r'"(?:\\.|[^"\\])*"'
 
@@ -192,7 +192,7 @@ for folder in (APP, ACTIVITY, INTEGRATION):
             'Image("SideStickMark").resizable().scaledToFit().padding(9)'
         )
         branded = re.sub(
-            r'Label\\(([^,\\n]+),\\s*systemImage:\\s*"snowflake"\\)',
+            r'Label\(([^,\n]+),\s*systemImage:\s*"snowflake"\)',
             lambda match: 'Label { Text(' + match.group(1) + ') } icon: { '
                 'Image("SideStickMark").resizable().scaledToFit().frame(width: 17, height: 17) }',
             branded
@@ -230,7 +230,7 @@ for folder in (APP, ACTIVITY, INTEGRATION):
         # Remove the redundant copy underneath the TabView to avoid extra overdraw.
         if swift_path.name == "RootView.swift":
             branded = branded.replace(
-                'ZStack {\\n                FrozenWorkspaceBackdrop()\\n                if proxy.size.width >= 760 {',
+                'ZStack {\n                if proxy.size.width >= 760 {',
                 'ZStack {\\n                if proxy.size.width >= 760 {',
                 1
             )
