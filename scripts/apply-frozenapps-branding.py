@@ -2231,7 +2231,7 @@ tools_marker = "struct ToolsView: View {"
 tools_start = tools_source.find(tools_marker)
 if tools_start < 0:
     raise SystemExit("Could not find ToolsView while applying the workspace backdrop.")
-next_struct = tools_source.find("\\nstruct ", tools_start + len(tools_marker))
+next_struct = tools_source.find("\nstruct ", tools_start + len(tools_marker))
 if next_struct < 0:
     next_struct = len(tools_source)
 tools_section = tools_source[tools_start:next_struct]
