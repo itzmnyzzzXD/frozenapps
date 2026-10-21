@@ -275,7 +275,7 @@ struct FrozenControlCenterView: View {
     }
 }
 
-struct FrozenInstallationTrackerView {
+struct FrozenInstallationTrackerView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var engine: Engine
 
