@@ -732,7 +732,7 @@ enum SideStickNotificationService {
         let details = UNNotificationAction(identifier: "SIDESTICK_OPEN_APP", title: "Open SideStick", options: [.foreground])
         UNUserNotificationCenter.current().setNotificationCategories([
             .init(identifier: SideStickNotificationKind.signing.rawValue, actions: [details], intentIdentifiers: []),
-            .init(identifier: SideStickNotificationKind.installation.rawValue, actions: [retry, details], intentIdentifiers: []),
+            .init(identifier: SideStickNotificationKind.installation.rawValue, actions: [details], intentIdentifiers: []),
             .init(identifier: SideStickNotificationKind.certificates.rawValue, actions: [details], intentIdentifiers: []),
             .init(identifier: SideStickNotificationKind.pairing.rawValue, actions: [details], intentIdentifiers: []),
             .init(identifier: SideStickNotificationKind.catalog.rawValue, actions: [details], intentIdentifiers: []),
