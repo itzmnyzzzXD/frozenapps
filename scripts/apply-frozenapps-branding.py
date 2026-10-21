@@ -2218,24 +2218,25 @@ replace_once(
         }
         .shadow(color: Color.black.opacity(0.22), radius: 24, x: 0, y: 10)'''
 )
-for (const relative_path of ["ios-app/ContentView.swift","ios-app/SettingsView.swift"]) {
-    const path = VENDOR / relative_path;
-    let source = path.read_text(encoding="utf-8");
-    source = source.replace("AppBackground()", "FrozenWorkspaceBackdrop()");
-    path.write_text(source, encoding="utf-8");
-}
-const tools_path = APP / "RootView.swift";
-let tools_source = tools_path.read_text(encoding="utf-8");
-const tools_marker = "struct ToolsView: View {";
-const tools_start = tools_source.find(tools_marker);
-if (tools_start < 0) throw new Error("Could not find ToolsView while applying the workspace backdrop.");
-let next_struct = tools_source.find("\nstruct ", tools_start + tools_marker.length);
-if (next_struct < 0) next_struct = tools_source.length;
-let tools_section = tools_source.slice(tools_start, next_struct);
-if (tools_section.includes("AppBackground()")) {
-  tools_section = tools_section.replace("AppBackground()", "FrozenWorkspaceBackdrop()");
-  tools_source = tools_source.slice(0, tools_start) + tools_section + tools_source.slice(next_struct);
-  tools_path.write_text(tools_source, encoding="utf-8");
-}
+for relative_path in ("ios-app/ContentView.swift", "ios-app/SettingsView.swift"):
+    path = VENDOR / relative_path
+    source = path.read_text(encoding="utf-8")
+    source = source.replace("AppBackground()", "FrozenWorkspaceBackdrop()")
+    path.write_text(source, encoding="utf-8")
 
+# RootView also contains the two-factor screen. Limit the new backdrop to ToolsView.
+tools_path = APP / "RootView.swift"
+tools_source = tools_path.read_text(encoding="utf-8")
+tools_marker = "struct ToolsView: View {"
+tools_start = tools_source.find(tools_marker)
+if tools_start < 0:
+    raise SystemExit("Could not find ToolsView while applying the workspace backdrop.")
+next_struct = tools_source.find("\\nstruct ", tools_start + len(tools_marker))
+if next_struct < 0:
+    next_struct = len(tools_source)
+tools_section = tools_source[tools_start:next_struct]
+if "AppBackground()" in tools_section:
+    tools_section = tools_section.replace("AppBackground()", "FrozenWorkspaceBackdrop()")
+    tools_source = tools_source[:tools_start] + tools_section + tools_source[next_struct:]
+    tools_path.write_text(tools_source, encoding="utf-8")
 print("Applied FrozenApps branding to pinned engine source.")
