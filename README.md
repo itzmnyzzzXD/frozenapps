@@ -4,7 +4,7 @@ FrozenApps is an iPhone/iPad-first signing and installation workspace. It brings
 
 ## Current build
 
-The v1.0.8 development update focuses on a polished OLED Blueglass interface: a responsive Apple-account setup screen with a native illustrated side panel on wider iPads, an animated black/blue/violet/ice-white backdrop, and a single premium workspace dropdown for Signer, Frozen Center, Network, Tools, Files, and Settings. The redesign keeps the existing pairing, Apple authentication, two-factor, provisioning, signing, and installation callbacks intact. The release still requires a successful CI build, validation, and a versioned release upload.
+FrozenApps v1.0.9 carries forward the OLED Blueglass redesign: a responsive Apple-account setup screen with an illustrated side panel on wider iPads, a near-black animated blue/violet/ice-white backdrop, premium glass surfaces, and a single OLED-styled workspace dropdown for Signer, Frozen Center, Network, Tools, Files, and Settings. Existing account storage, Keychain, Apple authentication, two-factor verification, pairing, provisioning, signing, and installation flows are retained. This release is built and validated through GitHub Actions; the published IPA is unsigned and needs a supported signing method before installation.
 
 The UI changes are applied by `scripts/apply-frozenapps-branding.py` to the pinned engine checkout during every build. That keeps the customised screens reproducible rather than leaving edits in a generated directory that disappears on the next build. The existing pairing, Apple authentication, two-factor, provisioning, signing, and installation callbacks are retained.
 
