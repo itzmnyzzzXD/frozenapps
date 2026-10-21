@@ -139,6 +139,8 @@ struct FrozenFilesView: View {
     @State private var pendingDelete: DeleteTarget?
     @State private var inspectorItem: FrozenLibraryItem?
     @State private var searchText = ""
+    @State private var showFilters = false
+    @State private var fileScope = "All files"
 
     private enum DeleteTarget: Identifiable {
         case library(FrozenLibraryItem)
@@ -164,6 +166,7 @@ struct FrozenFilesView: View {
     }
 
     private var visibleLibraryItems: [FrozenLibraryItem] {
+        if fileScope == "Signer Downloads" { return [] }
         let filtered = normalizedSearch.isEmpty
             ? libraryItems
             : libraryItems.filter { $0.fileName.localizedCaseInsensitiveContains(normalizedSearch) }
@@ -178,6 +181,7 @@ struct FrozenFilesView: View {
     }
 
     private var visibleDownloads: [DownloadedIPA] {
+        if fileScope == "My IPA Library" { return [] }
         let filtered = normalizedSearch.isEmpty
             ? downloads.downloads
             : downloads.downloads.filter {
@@ -204,166 +208,89 @@ struct FrozenFilesView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
-                    VStack(alignment: .leading, spacing: 9) {
-                        HStack(spacing: 10) {
-                            Image(systemName: "shippingbox.fill")
-                                .font(.system(size: 18, weight: .semibold))
-                                .foregroundStyle(.white)
-                                .frame(width: 42, height: 42)
-                                .background(Theme.brand, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text("YOUR LIBRARY")
-                                    .font(.system(size: 9, weight: .heavy, design: .rounded))
-                                    .tracking(1.4)
-                                    .foregroundStyle(Theme.accent2)
-                                Text("Your files")
-                                    .font(.system(size: 26, weight: .bold, design: .rounded))
-                                    .tracking(-0.45)
-                                    .foregroundStyle(.white)
+            ZStack {
+                FrozenWorkspaceBackdrop()
+                GeometryReader { proxy in
+                    let wideLayout = proxy.size.width >= 790
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 17) {
+                            FrozenWorkspacePageHeader(eyebrow: "FrozenApps / Library", title: "IPA Library",
+                                description: "Inspect, sort and prepare local packages. Every library file stays separate from the Signer working copy.",
+                                symbol: "shippingbox")
+                            FrozenWorkspaceSearchField(placeholder: "Search packages by name", text: $searchText)
+                            HStack(spacing: 10) {
+                                summaryTile(value: "\(totalFiles)", label: "Packages", icon: "doc.zipper")
+                                summaryTile(value: totalSizeText, label: "Storage", icon: "externaldrive")
                             }
-                            Spacer(minLength: 0)
-                        }
-                        Text("Keep IPA packages in one place. Inspect the metadata, verify the checksum, and load a working copy into Signer when you're ready.")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(.white.opacity(0.57))
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    .padding(18)
-                    .frozenGlassSurface(cornerRadius: 25, tint: Theme.accent, elevated: true)
-
-                    HStack(spacing: 12) {
-                        summaryTile(value: "\(totalFiles)", label: "IPA files", icon: "doc.zipper")
-                        summaryTile(value: totalSizeText, label: "Storage used", icon: "externaldrive")
-                    }
-
-                    HStack(spacing: 10) {
-                        Label("Sort files", systemImage: "arrow.up.arrow.down")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                        Menu {
-                            Picker("Sort order", selection: $sortOrder) {
-                                ForEach(FrozenLibrarySort.allCases) { order in
-                                    Text(order.rawValue).tag(order)
+                            if !wideLayout {
+                                Button { withAnimation(.smooth(duration: 0.22)) { showFilters.toggle() } } label: {
+                                    HStack(spacing: 10) {
+                                        Image(systemName: "line.3.horizontal.decrease")
+                                        Text(showFilters ? "Hide filters" : "Filter and sort")
+                                        Spacer()
+                                        Text(fileScope).font(.system(size: 10, weight: .semibold)).foregroundStyle(.white.opacity(0.55))
+                                        Image(systemName: showFilters ? "chevron.up" : "chevron.down").font(.system(size: 10, weight: .bold))
+                                    }
+                                    .font(.system(size: 12, weight: .semibold)).foregroundStyle(.white)
+                                    .padding(13).frozenGlassSurface(cornerRadius: 15, tint: .white.opacity(0.035))
                                 }
+                                .buttonStyle(FrozenWorkspacePressStyle())
+                                if showFilters { fileFilters.transition(.move(edge: .top).combined(with: .opacity)) }
                             }
-                        } label: {
-                            FrozenGlassMenuLabel(title: sortOrder.rawValue, icon: "arrow.up.arrow.down")
-                        }
-                        .buttonStyle(FrozenGlassPressStyle())
-                        .accessibilityLabel("Sort IPA library")
-                    }
-
-                    Button { showImporter = true } label: {
-                        HStack(spacing: 9) {
-                            if isImporting { ProgressView().tint(.black) }
-                            else { Image(systemName: "plus") }
-                            Text(isImporting ? "Importing IPA files…" : "Import IPA from Files")
-                        }
-                        .font(.system(size: 15, weight: .semibold))
-                        .frame(maxWidth: .infinity)
-                        .padding(16)
-                        .foregroundStyle(.black)
-                        .background(Theme.brand, in: RoundedRectangle(cornerRadius: 17, style: .continuous))
-                    }
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 17, style: .continuous)
-                            .strokeBorder(.white.opacity(0.23), lineWidth: 1)
-                    }
-                    .shadow(color: Theme.accent.opacity(0.18), radius: 14, x: 0, y: 6)
-                    .buttonStyle(FrozenGlassPressStyle())
-                    .disabled(isImporting)
-
-                    if isImporting {
-                        VStack(alignment: .leading, spacing: 7) {
-                            ProgressView(value: importProgress)
-                                .tint(Theme.accent)
-                            Text(importStatus.isEmpty ? "Checking selected files…" : importStatus)
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundStyle(.secondary)
-                                .lineLimit(2)
-                        }
-                        .padding(13)
-                        .frozenGlassSurface(cornerRadius: 14, tint: Theme.accent.opacity(0.18))
-                    }
-
-                    if let message {
-                        Text(message)
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(13)
-                            .frozenGlassSurface(cornerRadius: 14, tint: Theme.accent.opacity(0.18))
-                    }
-
-                    if totalFiles == 0 {
-                        emptyState
-                    } else if visibleLibraryItems.isEmpty && visibleDownloads.isEmpty {
-                        noResultsState
-                    } else {
-                        if !visibleLibraryItems.isEmpty {
-                            VStack(alignment: .leading, spacing: 10) {
-                                Text("MY IPA LIBRARY")
-                                    .font(.system(size: 10, weight: .bold))
-                                    .tracking(1.5)
-                                    .foregroundStyle(.secondary)
-                                    .padding(.horizontal, 3)
-
-                                ForEach(visibleLibraryItems) { item in
-                                    fileRow(name: item.fileName,
-                                            detail: "\(item.sizeText) · Saved locally",
-                                            icon: "doc.badge.plus",
-                                            identity: item.id,
-                                            isLoading: loadingID == item.id,
-                                            inspectAction: { inspectorItem = item },
-                                            useAction: { loadForSigning(url: item.url, name: item.fileName, id: item.id) },
-                                            deleteAction: { pendingDelete = .library(item) })
+                            HStack(alignment: .top, spacing: 16) {
+                                if wideLayout { fileFilters.frame(width: 236) }
+                                VStack(alignment: .leading, spacing: 14) {
+                                    HStack(alignment: .center, spacing: 8) {
+                                        VStack(alignment: .leading, spacing: 3) {
+                                            Text("PACKAGES").font(.system(size: 9, weight: .heavy, design: .rounded)).tracking(1.45).foregroundStyle(.white.opacity(0.55))
+                                            Text("\(visibleLibraryItems.count + visibleDownloads.count) shown").font(.system(size: 13, weight: .semibold, design: .rounded)).foregroundStyle(.white)
+                                        }
+                                        Spacer(minLength: 3)
+                                        Button { showImporter = true } label: {
+                                            Label(isImporting ? "Importing…" : "Import IPA", systemImage: isImporting ? "arrow.down.circle" : "plus")
+                                                .font(.system(size: 11, weight: .semibold, design: .rounded)).foregroundStyle(.white)
+                                                .padding(.horizontal, 12).padding(.vertical, 10)
+                                                .background(.white.opacity(0.12), in: Capsule())
+                                                .overlay { Capsule().strokeBorder(.white.opacity(0.24), lineWidth: 1) }
+                                        }
+                                        .buttonStyle(FrozenWorkspacePressStyle()).disabled(isImporting)
+                                    }
+                                    if isImporting {
+                                        FrozenWorkspacePanel {
+                                            VStack(alignment: .leading, spacing: 8) {
+                                                HStack {
+                                                    Text("IMPORTING FILES").font(.system(size: 9, weight: .heavy, design: .rounded)).tracking(1.2)
+                                                    Spacer()
+                                                    Text("\(Int(importProgress * 100))%").font(.system(size: 10, weight: .bold, design: .rounded).monospacedDigit())
+                                                }.foregroundStyle(.white.opacity(0.76))
+                                                ProgressView(value: importProgress).tint(.white)
+                                                Text(importStatus.isEmpty ? "Checking selected packages…" : importStatus).font(.system(size: 10, weight: .medium)).foregroundStyle(.white.opacity(0.58))
+                                            }
+                                        }
+                                    }
+                                    if let message {
+                                        Label(message, systemImage: "checkmark.circle.fill").font(.system(size: 11, weight: .medium))
+                                            .foregroundStyle(.white.opacity(0.83)).frame(maxWidth: .infinity, alignment: .leading)
+                                            .padding(12).frozenGlassSurface(cornerRadius: 14, tint: .green.opacity(0.10))
+                                    }
+                                    if totalFiles == 0 { emptyState }
+                                    else if visibleLibraryItems.isEmpty && visibleDownloads.isEmpty { noResultsState }
+                                    else { libraryContents }
                                 }
+                                .frame(maxWidth: .infinity, alignment: .leading)
                             }
+                            Text("Imports are stored under FrozenApps Library. Loading a package into Signer creates a separate working copy.")
+                                .font(.system(size: 10, weight: .medium)).foregroundStyle(.white.opacity(0.46))
+                                .fixedSize(horizontal: false, vertical: true)
                         }
-
-                        if !visibleDownloads.isEmpty {
-                            VStack(alignment: .leading, spacing: 10) {
-                                Text("SIGNER DOWNLOADS")
-                                    .font(.system(size: 10, weight: .bold))
-                                    .tracking(1.5)
-                                    .foregroundStyle(.secondary)
-                                    .padding(.horizontal, 3)
-
-                                ForEach(visibleDownloads) { item in
-                                    fileRow(name: item.displayName,
-                                            detail: "\(item.sizeText) · \(item.fileName)",
-                                            icon: item.isImported ? "doc.badge.plus" : "doc.zipper",
-                                            identity: item.id,
-                                            isLoading: loadingID == item.id,
-                                            inspectAction: {
-                                                inspectorItem = FrozenLibraryItem(url: item.url, size: item.size, modified: item.modified)
-                                            },
-                                            useAction: { loadForSigning(url: item.url, name: item.fileName, id: item.id) },
-                                            deleteAction: { pendingDelete = .download(item) })
-                                }
-                            }
-                        }
+                        .padding(18).frame(maxWidth: 1260).frame(maxWidth: .infinity)
                     }
-
-                    Text("Imports are stored in this app's Documents folder under FrozenApps Library. Loading a file for signing creates a separate working copy.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 3)
+                    .scrollIndicators(.hidden).refreshable { refresh() }
                 }
-                .padding(20)
-                .padding(.bottom, 20)
             }
-            .scrollIndicators(.hidden)
-            .background(FrozenWorkspaceBackdrop())
-            .navigationTitle("Files")
+            .navigationTitle("IPA Library")
             .navigationBarTitleDisplayMode(.inline)
-            .refreshable { refresh() }
-            .searchable(text: $searchText,
-                        placement: .navigationBarDrawer(displayMode: .always),
-                        prompt: "Search IPA files")
+            .toolbar(.hidden, for: .navigationBar)
         }
         .sheet(item: $inspectorItem) { item in
             FrozenIPAInspectorView(item: item)
@@ -437,6 +364,75 @@ struct FrozenFilesView: View {
         }
         .task { refresh() }
     }
+
+    private var fileFilters: some View {
+        FrozenWorkspacePanel(cornerRadius: 22, elevated: true) {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack {
+                    Text("FILTER LIBRARY").font(.system(size: 9, weight: .heavy, design: .rounded)).tracking(1.4).foregroundStyle(.white.opacity(0.56))
+                    Spacer()
+                    Image(systemName: "slider.horizontal.3").foregroundStyle(.white.opacity(0.52))
+                }
+                Text("Category").font(.system(size: 13, weight: .bold, design: .rounded)).foregroundStyle(.white)
+                VStack(spacing: 2) {
+                    FrozenWorkspaceFilterChoice(title: "All files", subtitle: "Library + Signer downloads", selected: fileScope == "All files") { fileScope = "All files" }
+                    FrozenWorkspaceFilterChoice(title: "My IPA Library", subtitle: "Imported for safekeeping", selected: fileScope == "My IPA Library") { fileScope = "My IPA Library" }
+                    FrozenWorkspaceFilterChoice(title: "Signer Downloads", subtitle: "Cached install packages", selected: fileScope == "Signer Downloads") { fileScope = "Signer Downloads" }
+                }
+                Rectangle().fill(.white.opacity(0.12)).frame(height: 1).padding(.vertical, 2)
+                Text("Sort order").font(.system(size: 13, weight: .bold, design: .rounded)).foregroundStyle(.white)
+                Picker("Sort files", selection: $sortOrder) {
+                    ForEach(FrozenLibrarySort.allCases) { order in Text(order.rawValue).tag(order) }
+                }
+                .pickerStyle(.menu).tint(.white).padding(.horizontal, 12).padding(.vertical, 7)
+                .background(.white.opacity(0.075), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                Button { searchText = ""; fileScope = "All files"; sortOrder = .recent; showFilters = false } label: {
+                    Text("Reset filters").font(.system(size: 12, weight: .semibold)).foregroundStyle(.white.opacity(0.84))
+                        .frame(maxWidth: .infinity).padding(12).background(.white.opacity(0.09), in: Capsule())
+                        .overlay { Capsule().strokeBorder(.white.opacity(0.15), lineWidth: 1) }
+                }.buttonStyle(.plain)
+            }
+        }
+    }
+
+    private var libraryContents: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            if !visibleLibraryItems.isEmpty {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        Text("MY IPA LIBRARY").font(.system(size: 9, weight: .heavy, design: .rounded)).tracking(1.4)
+                        Spacer()
+                        Text("\(visibleLibraryItems.count) items").font(.system(size: 9, weight: .medium))
+                    }.foregroundStyle(.white.opacity(0.55))
+                    ForEach(visibleLibraryItems) { item in
+                        fileRow(name: item.fileName, detail: "\(item.sizeText) · Saved locally", icon: "doc.badge.plus",
+                            identity: item.id, isLoading: loadingID == item.id,
+                            inspectAction: { inspectorItem = item },
+                            useAction: { loadForSigning(url: item.url, name: item.fileName, id: item.id) },
+                            deleteAction: { pendingDelete = .library(item) })
+                    }
+                }
+            }
+            if !visibleDownloads.isEmpty {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        Text("SIGNER DOWNLOADS").font(.system(size: 9, weight: .heavy, design: .rounded)).tracking(1.4)
+                        Spacer()
+                        Text("\(visibleDownloads.count) items").font(.system(size: 9, weight: .medium))
+                    }.foregroundStyle(.white.opacity(0.55))
+                    ForEach(visibleDownloads) { item in
+                        fileRow(name: item.displayName, detail: "\(item.sizeText) · \(item.fileName)",
+                            icon: item.isImported ? "doc.badge.plus" : "doc.zipper", identity: item.id,
+                            isLoading: loadingID == item.id,
+                            inspectAction: { inspectorItem = FrozenLibraryItem(url: item.url, size: item.size, modified: item.modified) },
+                            useAction: { loadForSigning(url: item.url, name: item.fileName, id: item.id) },
+                            deleteAction: { pendingDelete = .download(item) })
+                    }
+                }
+            }
+        }
+    }
+
 
     private var noResultsState: some View {
         VStack(spacing: 10) {

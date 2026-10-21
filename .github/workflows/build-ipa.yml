@@ -62,8 +62,11 @@ jobs:
             brew install xcodegen
           fi
 
-      - name: Apply FrozenApps branding and privacy terms
-        run: python3 scripts/apply-frozenapps-branding.py
+      - name: Apply FrozenApps branding and structural workspace redesign
+        run: |
+          python3 scripts/apply-frozenapps-branding.py
+          python3 scripts/apply-workspace-redesign.py
+          python3 scripts/apply-settings-redesign.py
 
       - name: Build Rust pairing and signing engine plus iOS app
         shell: bash

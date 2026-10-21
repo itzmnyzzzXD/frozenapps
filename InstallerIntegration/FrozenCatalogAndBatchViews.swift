@@ -71,6 +71,7 @@ struct FrozenAppCatalogView: View {
     @Environment(\.openURL) private var openURL
     @AppStorage("frozenApps.catalog.sources.v1") private var savedSources = ""
     @State private var search = ""
+    @State private var showFilterPanel = false
     @State private var newRepository = ""
     @State private var sources: [FrozenCatalogSource] = FrozenCatalogSource.builtIn
     @State private var releases: [String: FrozenCatalogRelease] = [:]
@@ -147,191 +148,49 @@ struct FrozenAppCatalogView: View {
     var body: some View {
         ZStack {
             FrozenWorkspaceBackdrop()
-            ScrollView {
-                VStack(alignment: .leading, spacing: 14) {
-                    header
-                    HStack(spacing: 10) {
-                        Image(systemName: "magnifyingglass").foregroundStyle(Theme.accent2)
-                        TextField("Search apps or GitHub sources", text: $search)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                    }
-                    .padding(13)
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    .overlay { RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(LinearGradient(colors: [.white.opacity(0.26), Theme.accent.opacity(0.18), .white.opacity(0.045)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1) }
-                    .shadow(color: Theme.accent.opacity(0.08), radius: 12, x: 0, y: 5)
-
-                    HStack(spacing: 8) {
-                        Text("SOURCES · \(sources.count)").font(.system(size: 9, weight: .heavy, design: .rounded)).tracking(1.2).foregroundStyle(Theme.accent2)
-                        Spacer(minLength: 4)
-                        Button {
-                            Task { await refreshAllSources() }
-                        } label: {
-                            if isRefreshingAll {
-                                ProgressView().tint(Theme.accent2)
-                            } else {
-                                Label("Refresh all", systemImage: "arrow.clockwise")
-                                    .font(.system(size: 10, weight: .bold, design: .rounded))
+            GeometryReader { proxy in
+                let wideLayout = proxy.size.width >= 850
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        FrozenWorkspacePageHeader(eyebrow: "FrozenApps / Discovery", title: "App Catalog",
+                            description: "Browse public repositories, inspect real release assets and save available IPA packages into your library.",
+                            symbol: "square.grid.2x2")
+                        FrozenWorkspaceSearchField(placeholder: "Search apps or owner/repository", text: $search)
+                        if wideLayout {
+                            HStack(alignment: .top, spacing: 16) {
+                                catalogFilterPanel.frame(width: 246)
+                                catalogResults.frame(maxWidth: .infinity)
                             }
-                        }
-                        .buttonStyle(.plain)
-                        .foregroundStyle(Theme.accent2)
-                        .disabled(isRefreshingAll || sources.isEmpty)
-                        Button {
-                            sourceBeingEdited = nil
-                            newRepository = ""
-                            showAddSource = true
-                        } label: {
-                            Label("Add source", systemImage: "plus")
-                                .font(.system(size: 10, weight: .bold, design: .rounded))
-                        }
-                        .buttonStyle(.plain)
-                        .foregroundStyle(.white)
-                    }
-
-                    Menu {
-                        Section("Sort sources") {
-                            Picker("Sort by", selection: $sourceSort) {
-                                Text("Name").tag("Name")
-                                Text("IPA count").tag("IPA count")
-                                Text("Status").tag("Status")
-                            }
-                        }
-                        Section("Filter sources") {
-                            Picker("Show", selection: $sourceFilter) {
-                                Text("All sources").tag("All sources")
-                                Text("Favorites").tag("Favorites")
-                                Text("Has IPA").tag("Has IPA")
-                                Text("No IPA").tag("No IPA")
-                                Text("Needs attention").tag("Needs attention")
-                                Text("Not checked").tag("Not checked")
-                            }
-                        }
-                    } label: {
-                        FrozenGlassMenuLabel(
-                            title: sourceFilter == "All sources" ? "Filter & sort" : sourceFilter,
-                            icon: "slider.horizontal.3",
-                            subtitle: "Sort: \(sourceSort)"
-                        )
-                    }
-                    .buttonStyle(FrozenGlassPressStyle())
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                    if let sourceFeedback {
-                        Label(sourceFeedback,
-                              systemImage: sourceFeedbackIsError ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundStyle(sourceFeedbackIsError ? .orange : Theme.accent2)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .padding(10)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(.white.opacity(0.045), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    }
-
-                    if visibleSources.isEmpty {
-                        FrozenWorkspacePanel {
-                            VStack(alignment: .leading, spacing: 8) {
-                                Label("No matching sources", systemImage: "line.3.horizontal.decrease.circle")
-                                    .font(.system(size: 13, weight: .bold, design: .rounded))
-                                    .foregroundStyle(.white)
-                                Text("Try a different search or source filter. You can always return to All sources.")
-                                    .font(.system(size: 11, weight: .medium))
-                                    .foregroundStyle(.white.opacity(0.53))
-                                Button("Reset search and filters") {
-                                    search = ""
-                                    sourceFilter = "All sources"
-                                    sourceSort = "Name"
+                        } else {
+                            Button { withAnimation(.smooth(duration: 0.22)) { showFilterPanel.toggle() } } label: {
+                                HStack(spacing: 10) {
+                                    Image(systemName: "line.3.horizontal.decrease")
+                                    Text(showFilterPanel ? "Hide filters" : "Filters and sorting")
+                                    Spacer()
+                                    Text(sourceFilter == "All sources" ? "All sources" : sourceFilter).font(.system(size: 10, weight: .semibold)).foregroundStyle(.white.opacity(0.56))
+                                    Image(systemName: showFilterPanel ? "chevron.up" : "chevron.down").font(.system(size: 10, weight: .bold))
                                 }
-                                .font(.system(size: 11, weight: .bold, design: .rounded))
-                                .buttonStyle(.plain)
-                                .foregroundStyle(Theme.accent2)
+                                .font(.system(size: 12, weight: .semibold)).foregroundStyle(.white)
+                                .padding(13).frozenGlassSurface(cornerRadius: 15, tint: .white.opacity(0.04))
                             }
-                        }
-                    } else {
-                        ForEach(visibleSources) { source in
-                            sourceCard(source)
-                        }
-                    }
-
-                    HStack {
-                        Text("APP DISCOVERY").font(.system(size: 9, weight: .heavy, design: .rounded)).tracking(1.5).foregroundStyle(Theme.accent2)
-                        Spacer()
-                        Text("GitHub search").font(.system(size: 9, weight: .medium)).foregroundStyle(.white.opacity(0.4))
-                    }
-                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 9), GridItem(.flexible(), spacing: 9)], spacing: 9) {
-                        ForEach(FrozenCatalogDiscovery.projects) { item in
-                            Button {
-                                var components = URLComponents(string: "https://github.com/search")!
-                                components.queryItems = [URLQueryItem(name: "q", value: item.query), URLQueryItem(name: "type", value: "repositories")]
-                                if let url = components.url { openURL(url) }
-                            } label: {
-                                VStack(alignment: .leading, spacing: 7) {
-                                    HStack {
-                                        Image(systemName: "magnifyingglass").foregroundStyle(Theme.accent2)
-                                        Spacer()
-                                        Image(systemName: "arrow.up.right").font(.system(size: 9, weight: .bold)).foregroundStyle(.white.opacity(0.4))
-                                    }
-                                    Text(item.name).font(.system(size: 11, weight: .bold, design: .rounded)).foregroundStyle(.white)
-                                    Text(item.subtitle).font(.system(size: 9, weight: .medium)).foregroundStyle(.white.opacity(0.48)).lineLimit(2)
-                                }
-                                .padding(12).frame(maxWidth: .infinity, minHeight: 78, alignment: .leading)
-                                .background(.white.opacity(0.045), in: RoundedRectangle(cornerRadius: 13))
-                                .overlay { RoundedRectangle(cornerRadius: 13).strokeBorder(.white.opacity(0.07)) }
-                            }
-                            .buttonStyle(.plain)
+                            .buttonStyle(FrozenWorkspacePressStyle())
+                            if showFilterPanel { catalogFilterPanel.transition(.move(edge: .top).combined(with: .opacity)) }
+                            catalogResults
                         }
                     }
-
-                    FrozenWorkspacePanel {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Label("More app categories", systemImage: "square.grid.2x2.fill")
-                                .font(.system(size: 13, weight: .bold, design: .rounded))
-                                .foregroundStyle(.white)
-                            Text("YouTube clients (YTPlus/uYouEnhanced), Spotify clients (EeveeSpotify), Twitch clients, Scarlet, E-Sign, SideStore, emulators, torrent utilities and other projects can be discovered through their maintainers' public repositories. Availability and release assets vary by project.")
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundStyle(.white.opacity(0.58))
-                                .fixedSize(horizontal: false, vertical: true)
-                            Button {
-                                openURL(URL(string: "https://github.com/search?q=YTPlus&type=repositories")!)
-                            } label: {
-                                Label("Discover more GitHub projects", systemImage: "arrow.up.right.square")
-                                    .font(.system(size: 11, weight: .bold))
-                                    .frame(maxWidth: .infinity)
-                                    .padding(12)
-                                    .background(Theme.accent.opacity(0.16), in: RoundedRectangle(cornerRadius: 12))
-                            }
-                            .buttonStyle(.plain)
-                            .foregroundStyle(.white)
-                        }
-                    }
-
-                    Text("FrozenApps does not host third-party apps. Source links point to GitHub; only actual IPA release assets are downloadable here. Verify maintainers, licences and file hashes before installing. Signing and installation still require the supported engine and valid device/signing setup.")
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.43))
-                        .fixedSize(horizontal: false, vertical: true)
+                    .padding(18).frame(maxWidth: 1260).frame(maxWidth: .infinity)
                 }
-                .padding(18)
-                .frame(maxWidth: 700)
-                .frame(maxWidth: .infinity)
+                .scrollIndicators(.hidden)
             }
-            .scrollIndicators(.hidden)
         }
         .navigationTitle("App Catalog")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .navigationBar)
         .task { restoreSources() }
         .alert(Text(sourceBeingEdited == nil ? "Add GitHub source" : "Edit GitHub source"), isPresented: $showAddSource) {
-            TextField("owner/repository", text: $newRepository)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-            Button("Cancel", role: .cancel) {
-                newRepository = ""
-                sourceBeingEdited = nil
-            }
-            Button {
-                addSource()
-            } label: {
-                Text(sourceBeingEdited == nil ? "Add" : "Save changes")
-            }
+            TextField("owner/repository", text: $newRepository).textInputAutocapitalization(.never).autocorrectionDisabled()
+            Button("Cancel", role: .cancel) { newRepository = ""; sourceBeingEdited = nil }
+            Button { addSource() } label: { Text(sourceBeingEdited == nil ? "Add" : "Save changes") }
         } message: {
             Text(sourceBeingEdited == nil
                  ? "Enter a public GitHub repository as owner/repository. FrozenApps checks its latest public release for IPA assets."
@@ -347,6 +206,117 @@ struct FrozenAppCatalogView: View {
             Text("This removes the repository from your saved source list. IPA files already downloaded to your library will not be deleted.")
         }
     }
+
+    private var catalogFilterPanel: some View {
+        FrozenWorkspacePanel(cornerRadius: 22, elevated: true) {
+            VStack(alignment: .leading, spacing: 13) {
+                HStack {
+                    Text("FILTER SOURCES").font(.system(size: 9, weight: .heavy, design: .rounded)).tracking(1.35).foregroundStyle(.white.opacity(0.55))
+                    Spacer()
+                    Image(systemName: "slider.horizontal.3").foregroundStyle(.white.opacity(0.52))
+                }
+                Text("Category").font(.system(size: 13, weight: .bold, design: .rounded)).foregroundStyle(.white)
+                VStack(spacing: 2) {
+                    FrozenWorkspaceFilterChoice(title: "All sources", subtitle: "Every saved repository", selected: sourceFilter == "All sources") { sourceFilter = "All sources" }
+                    FrozenWorkspaceFilterChoice(title: "Favorites", subtitle: "Your starred sources", selected: sourceFilter == "Favorites") { sourceFilter = "Favorites" }
+                    FrozenWorkspaceFilterChoice(title: "Has IPA", subtitle: "Latest release contains an IPA", selected: sourceFilter == "Has IPA") { sourceFilter = "Has IPA" }
+                    FrozenWorkspaceFilterChoice(title: "No IPA", subtitle: "Source link only", selected: sourceFilter == "No IPA") { sourceFilter = "No IPA" }
+                    FrozenWorkspaceFilterChoice(title: "Needs attention", subtitle: "A check or download needs review", selected: sourceFilter == "Needs attention") { sourceFilter = "Needs attention" }
+                    FrozenWorkspaceFilterChoice(title: "Not checked", subtitle: "Release status not loaded yet", selected: sourceFilter == "Not checked") { sourceFilter = "Not checked" }
+                }
+                Rectangle().fill(.white.opacity(0.12)).frame(height: 1).padding(.vertical, 1)
+                Text("Sort by").font(.system(size: 13, weight: .bold, design: .rounded)).foregroundStyle(.white)
+                Picker("Sort sources", selection: $sourceSort) {
+                    Text("Name").tag("Name")
+                    Text("IPA count").tag("IPA count")
+                    Text("Status").tag("Status")
+                }
+                .pickerStyle(.menu).tint(.white).padding(.horizontal, 12).padding(.vertical, 7)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(.white.opacity(0.075), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                Button { search = ""; sourceFilter = "All sources"; sourceSort = "Name"; showFilterPanel = false } label: {
+                    Text("Reset filters").font(.system(size: 12, weight: .semibold)).foregroundStyle(.white.opacity(0.86))
+                        .frame(maxWidth: .infinity).padding(12).background(.white.opacity(0.09), in: Capsule())
+                        .overlay { Capsule().strokeBorder(.white.opacity(0.16), lineWidth: 1) }
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private var catalogResults: some View {
+        VStack(alignment: .leading, spacing: 15) {
+            HStack(spacing: 8) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("REPOSITORIES").font(.system(size: 9, weight: .heavy, design: .rounded)).tracking(1.45).foregroundStyle(.white.opacity(0.56))
+                    Text("\(visibleSources.count) sources").font(.system(size: 13, weight: .semibold, design: .rounded)).foregroundStyle(.white)
+                }
+                Spacer(minLength: 4)
+                Button { Task { await refreshAllSources() } } label: {
+                    if isRefreshingAll { ProgressView().tint(.white) } else { Label("Refresh", systemImage: "arrow.clockwise") }
+                }
+                .buttonStyle(.plain).font(.system(size: 10, weight: .semibold)).foregroundStyle(.white.opacity(0.82)).disabled(isRefreshingAll || sources.isEmpty)
+                Button { sourceBeingEdited = nil; newRepository = ""; showAddSource = true } label: {
+                    Label("Add source", systemImage: "plus").font(.system(size: 10, weight: .semibold)).foregroundStyle(.white)
+                        .padding(.horizontal, 11).padding(.vertical, 9).background(.white.opacity(0.12), in: Capsule())
+                        .overlay { Capsule().strokeBorder(.white.opacity(0.23), lineWidth: 1) }
+                }.buttonStyle(.plain)
+            }
+            if let sourceFeedback {
+                Label(sourceFeedback, systemImage: sourceFeedbackIsError ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
+                    .font(.system(size: 10, weight: .medium)).foregroundStyle(sourceFeedbackIsError ? .orange : .white.opacity(0.85))
+                    .fixedSize(horizontal: false, vertical: true).padding(11).frame(maxWidth: .infinity, alignment: .leading)
+                    .frozenGlassSurface(cornerRadius: 13, tint: sourceFeedbackIsError ? .orange.opacity(0.12) : .white.opacity(0.03))
+            }
+            if visibleSources.isEmpty {
+                FrozenWorkspacePanel {
+                    VStack(alignment: .leading, spacing: 9) {
+                        Label("No matching sources", systemImage: "line.3.horizontal.decrease.circle").font(.system(size: 13, weight: .bold, design: .rounded)).foregroundStyle(.white)
+                        Text("Try another search or filter, or restore All sources.").font(.system(size: 11, weight: .medium)).foregroundStyle(.white.opacity(0.56))
+                        Button("Reset search and filters") { search = ""; sourceFilter = "All sources"; sourceSort = "Name" }
+                            .font(.system(size: 11, weight: .bold)).buttonStyle(.plain).foregroundStyle(.white)
+                    }
+                }
+            } else {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 265), spacing: 12)], spacing: 12) {
+                    ForEach(visibleSources) { source in sourceCard(source) }
+                }
+            }
+            FrozenWorkspacePanel {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        Text("DISCOVER PROJECTS").font(.system(size: 9, weight: .heavy, design: .rounded)).tracking(1.45).foregroundStyle(.white.opacity(0.56))
+                        Spacer()
+                        Text("GitHub search").font(.system(size: 9, weight: .medium)).foregroundStyle(.white.opacity(0.40))
+                    }
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 145), spacing: 9)], spacing: 9) {
+                        ForEach(FrozenCatalogDiscovery.projects) { item in
+                            Button {
+                                var components = URLComponents(string: "https://github.com/search")!
+                                components.queryItems = [URLQueryItem(name: "q", value: item.query), URLQueryItem(name: "type", value: "repositories")]
+                                if let url = components.url { openURL(url) }
+                            } label: {
+                                VStack(alignment: .leading, spacing: 7) {
+                                    HStack {
+                                        Image(systemName: "magnifyingglass").foregroundStyle(.white.opacity(0.74))
+                                        Spacer()
+                                        Image(systemName: "arrow.up.right").font(.system(size: 9, weight: .bold)).foregroundStyle(.white.opacity(0.42))
+                                    }
+                                    Text(item.name).font(.system(size: 11, weight: .bold, design: .rounded)).foregroundStyle(.white)
+                                    Text(item.subtitle).font(.system(size: 9, weight: .medium)).foregroundStyle(.white.opacity(0.50)).lineLimit(2)
+                                }
+                                .padding(12).frame(maxWidth: .infinity, minHeight: 82, alignment: .leading)
+                                .frozenGlassSurface(cornerRadius: 14, tint: .white.opacity(0.03))
+                            }.buttonStyle(FrozenWorkspacePressStyle())
+                        }
+                    }
+                }
+            }
+            Text("FrozenApps does not host third-party apps. Only actual IPA release assets are downloadable here; other cards link to source repositories. Verify maintainers, licences and file integrity before installing.")
+                .font(.system(size: 10, weight: .medium)).foregroundStyle(.white.opacity(0.44)).fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
 
     private var header: some View {
         FrozenWorkspacePanel {
