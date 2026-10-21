@@ -25,7 +25,7 @@
       "developerName": "UTM Contributors",
       "subtitle": "Open-source virtual machines for iOS.",
       "localizedDescription": "UTM SE is the no-JIT edition of UTM for running virtual machines on iOS. Virtual machine images and operating-system licences are separate from the app.",
-      "iconURL": "https://raw.githubusercontent.com/utmapp/UTM/main/Platform/Assets.xcassets/AppIcon.appiconset/Icon.png",
+      "iconURL": "https://raw.githubusercontent.com/utmapp/UTM/main/Platform/Assets.xcassets/AppIcon.appiconset/icon_512pt@2x.png",
       "category": "Developer",
       "versions": [
         {
@@ -66,11 +66,11 @@
       "category": "Utilities",
       "versions": [
         {
-          "version": "1.3.2 (build 494)",
-          "date": "2023-05-20T23:52:42Z",
-          "downloadURL": "https://github.com/ish-app/ish/releases/download/builds/494/iSH.ipa",
-          "size": 4232682,
-          "localizedDescription": "Upstream release note: fixes diagnostics in the Files provider."
+          "version": "Build 813",
+          "date": "2026-08-22T06:20:14Z",
+          "downloadURL": "https://github.com/ish-app/ish/releases/download/builds/813/iSH.ipa",
+          "size": 4602446,
+          "localizedDescription": "Official upstream build published on 22 August 2026. Review the iSH project release notes before using this build."
         }
       ]
     }

@@ -37,7 +37,7 @@ private struct SideStickSourceApp: Decodable, Identifiable, Sendable {
 
     enum CodingKeys: String, CodingKey {
         case name, bundleIdentifier, developerName, subtitle, localizedDescription
-        case iconURL, category, screenshots, versions
+        case iconURL, category, screenshots, screenshotURLs, versions
     }
 
     init(from decoder: Decoder) throws {
@@ -49,7 +49,7 @@ private struct SideStickSourceApp: Decodable, Identifiable, Sendable {
         localizedDescription = try? c.decode(String.self, forKey: .localizedDescription)
         iconURL = try? c.decode(String.self, forKey: .iconURL)
         category = try? c.decode(String.self, forKey: .category)
-        screenshots = (try? c.decode([String].self, forKey: .screenshots)) ?? []
+        screenshots = (try? c.decode([String].self, forKey: .screenshotURLs)) ?? (try? c.decode([String].self, forKey: .screenshots)) ?? []
         versions = (try? c.decode([SideStickSourceVersion].self, forKey: .versions)) ?? []
     }
 }
@@ -200,6 +200,7 @@ struct FrozenLiveSourcesView: View {
     @State private var searchText = ""
     @State private var debouncedSearch = ""
     @State private var categoryFilter = "All categories"
+    @State private var sourceFilter = "All sources"
     @State private var showAddSource = false
     @State private var newSourceURL = ""
     @State private var feedback: String?
@@ -227,13 +228,14 @@ struct FrozenLiveSourcesView: View {
         let query = debouncedSearch.trimmingCharacters(in: .whitespacesAndNewlines)
         return apps.filter { item in
             let app = item.app
+            let matchesSource = sourceFilter == "All sources" || item.sourceURL == sourceFilter
             let matchesText = query.isEmpty
                 || app.name.localizedCaseInsensitiveContains(query)
                 || (app.subtitle ?? "").localizedCaseInsensitiveContains(query)
                 || (app.developerName ?? "").localizedCaseInsensitiveContains(query)
                 || (app.bundleIdentifier ?? "").localizedCaseInsensitiveContains(query)
                 || item.sourceName.localizedCaseInsensitiveContains(query)
-            return matchesText && (categoryFilter == "All categories"
+            return matchesSource && matchesText && (categoryFilter == "All categories"
                 || (app.category ?? "Other").localizedCaseInsensitiveCompare(categoryFilter) == .orderedSame)
         }.sorted { $0.app.name.localizedCaseInsensitiveCompare($1.app.name) == .orderedAscending }
     }
@@ -265,6 +267,16 @@ struct FrozenLiveSourcesView: View {
                             }.buttonStyle(.plain).disabled(refreshing)
                         }
                         FrozenWorkspaceSearchField(placeholder: "Search apps, developers or bundle IDs", text: $searchText)
+                        if sourceURLs.count > 1 {
+                            Picker("Source", selection: $sourceFilter) {
+                                Text("All sources").tag("All sources")
+                                ForEach(sourceURLs, id: \.self) { rawURL in
+                                    Text(manifests[rawURL]?.name ?? URL(string: rawURL)?.host ?? rawURL).tag(rawURL)
+                                }
+                            }
+                            .pickerStyle(.menu).tint(.white)
+                            .padding(10).background(.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 12))
+                        }
                         if !categories.isEmpty {
                             Picker("Category", selection: $categoryFilter) {
                                 Text("All categories").tag("All categories")
@@ -282,7 +294,7 @@ struct FrozenLiveSourcesView: View {
                                         .font(.system(size: 11, weight: .medium)).foregroundStyle(.white.opacity(0.55))
                                     Button("Retry / clear filters") {
                                         if apps.isEmpty { Task { await refreshSources() } }
-                                        else { searchText = ""; debouncedSearch = ""; categoryFilter = "All categories" }
+                                        else { searchText = ""; debouncedSearch = ""; categoryFilter = "All categories"; sourceFilter = "All sources" }
                                     }.buttonStyle(.plain).foregroundStyle(Theme.accent2).font(.system(size: 11, weight: .bold))
                                 }
                             }
@@ -461,6 +473,7 @@ struct FrozenLiveSourcesView: View {
     private func removeSource(_ rawURL: String) {
         withAnimation(reduceMotion ? nil : .easeOut(duration: 0.2)) {
             customSourceURLs.removeAll { $0 == rawURL }
+            if sourceFilter == rawURL { sourceFilter = "All sources" }
             manifests.removeValue(forKey: rawURL)
             sourceErrors.removeValue(forKey: rawURL)
         }
@@ -649,21 +662,20 @@ private struct SideStickSourceAppDetailView: View {
                 throw SideStickSourceDownloadError.bundleMismatch(expected: expected, actual: metadata.bundleID)
             }
 
-            let directory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-                .appendingPathComponent("FrozenApps Library", isDirectory: true)
-            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
             let safeBase = "\(reference.app.name) \(version.version)"
                 .components(separatedBy: CharacterSet(charactersIn: "/\\:?%*|\"<>"))
                 .joined(separator: "-")
                 .trimmingCharacters(in: .whitespacesAndNewlines)
-            var destination = directory.appendingPathComponent(safeBase.isEmpty ? "Imported App" : safeBase).appendingPathExtension("ipa")
-            var suffix = 2
-            while FileManager.default.fileExists(atPath: destination.path) {
-                destination = directory.appendingPathComponent("\(safeBase) (\(suffix))").appendingPathExtension("ipa")
-                suffix += 1
-            }
-            try FileManager.default.copyItem(at: temporaryURL, to: destination)
-            statusMessage = "Downloaded and validated \(destination.lastPathComponent) (\(metadata.name), v\(metadata.version)). Open IPA Library to load it into Signer."
+            let tempDirectory = FileManager.default.temporaryDirectory
+                .appendingPathComponent("SideStick-Source-\(UUID().uuidString)", isDirectory: true)
+            try FileManager.default.createDirectory(at: tempDirectory, withIntermediateDirectories: true)
+            defer { try? FileManager.default.removeItem(at: tempDirectory) }
+            let stagedIPA = tempDirectory
+                .appendingPathComponent(safeBase.isEmpty ? "Imported App" : safeBase)
+                .appendingPathExtension("ipa")
+            try FileManager.default.copyItem(at: temporaryURL, to: stagedIPA)
+            let importedURL = try FrozenLibraryStore.importIPA(from: stagedIPA)
+            statusMessage = "Downloaded and validated \(importedURL.lastPathComponent) (\(metadata.name), v\(metadata.version)). Open IPA Library to load it into Signer."
         } catch {
             errorMessage = error.localizedDescription
         }

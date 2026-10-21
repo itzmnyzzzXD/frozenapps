@@ -23,7 +23,7 @@ private struct FrozenLibraryItem: Identifiable, Equatable {
     }
 }
 
-private enum FrozenLibraryStore {
+enum FrozenLibraryStore {
     enum ImportError: LocalizedError {
         case notIPA
         case invalidArchive
