@@ -4,6 +4,9 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PRODUCTS="$ROOT/build/DerivedData/Build/Products/Release-iphoneos"
 APP="$PRODUCTS/FrozenApps.app"
+ASSETS="$ROOT/Vendor/SideInstaller/ios-app/Assets.xcassets"
+ICON_SET="$ASSETS/AppIcon.appiconset"
+MARK_SET="$ASSETS/SideStickMark.imageset"
 ENGINE="$ROOT/Vendor/SideInstaller/SideInstallerFFI.xcframework"
 SUMMARY="$ROOT/build-validation.txt"
 
@@ -36,6 +39,11 @@ EXPECTED_MIN_OS=$(awk -F: '
 {
   test -d "$APP" || fail "FrozenApps.app was not produced at $APP"
   test -x "$APP/FrozenApps" || fail "App executable is missing or not executable"
+  test -s "$APP/Assets.car" || fail "Compiled asset catalog Assets.car is missing"
+  test -s "$ICON_SET/AppIcon~ios-marketing.png" || fail "The custom 1024px SideStick app icon was not generated"
+  ICON_COUNT=$(find "$ICON_SET" -maxdepth 1 -type f -name 'AppIcon*.png' | wc -l | tr -d '[:space:]')
+  [[ "$ICON_COUNT" -ge 19 ]] || fail "Expected all iPhone/iPad app icon sizes, found $ICON_COUNT PNGs"
+  test -s "$MARK_SET/IMG_2151.jpeg" || fail "The SideStick image mark asset is missing"
 
   APP_ID=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist")
   APP_DISPLAY_NAME=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' "$APP/Info.plist")
@@ -64,7 +72,8 @@ EXPECTED_MIN_OS=$(awk -F: '
 
   APP_SIZE=$(du -sh "$APP" | awk '{print $1}')
   LIB_SIZE=$(du -sh "$DEVICE_LIB" | awk '{print $1}')
-  echo "PASS: app bundle exists"
+  echo "PASS: app bundle and compiled asset catalog exist"
+  echo "PASS: custom IMG_2151 app icon and all $ICON_COUNT icon sizes generated"
   echo "PASS: bundle identifier: $APP_ID"
   echo "PASS: display name: $APP_DISPLAY_NAME"
   echo "PASS: version/build match project.yml: $APP_VERSION ($APP_BUILD)"
