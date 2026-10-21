@@ -39,12 +39,12 @@ enum FrozenLibraryStore {
         }
     }
 
-    static var directory: URL {
+    fileprivate static var directory: URL {
         FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("FrozenApps Library", isDirectory: true)
     }
 
-    static func scan() -> [FrozenLibraryItem] {
+    fileprivate static func scan() -> [FrozenLibraryItem] {
         let manager = FileManager.default
         try? manager.createDirectory(at: directory, withIntermediateDirectories: true)
         let urls = (try? manager.contentsOfDirectory(
@@ -103,7 +103,7 @@ enum FrozenLibraryStore {
         return destination
     }
 
-    static func delete(_ item: FrozenLibraryItem) throws {
+    fileprivate static func delete(_ item: FrozenLibraryItem) throws {
         try FileManager.default.removeItem(at: item.url)
     }
 

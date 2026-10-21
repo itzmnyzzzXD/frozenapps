@@ -729,10 +729,9 @@ enum SideStickNotificationKind: String, CaseIterable, Identifiable {
 
 enum SideStickNotificationService {
     static func registerCategories() {
-        let details = UNNotificationAction(identifier: "SIDESTICK_VIEW_DETAILS", title: "View details", options: [.foreground])
-        let retry = UNNotificationAction(identifier: "SIDESTICK_RETRY", title: "Retry", options: [])
+        let details = UNNotificationAction(identifier: "SIDESTICK_OPEN_APP", title: "Open SideStick", options: [.foreground])
         UNUserNotificationCenter.current().setNotificationCategories([
-            .init(identifier: SideStickNotificationKind.signing.rawValue, actions: [retry, details], intentIdentifiers: []),
+            .init(identifier: SideStickNotificationKind.signing.rawValue, actions: [details], intentIdentifiers: []),
             .init(identifier: SideStickNotificationKind.installation.rawValue, actions: [retry, details], intentIdentifiers: []),
             .init(identifier: SideStickNotificationKind.certificates.rawValue, actions: [details], intentIdentifiers: []),
             .init(identifier: SideStickNotificationKind.pairing.rawValue, actions: [details], intentIdentifiers: []),
@@ -786,6 +785,7 @@ struct FrozenNotificationPreferencesView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var resultMessage: String?
     @State private var didTest = false
+    @AppStorage("sidestick.notifications.expiryLeadDays") private var expiryLeadDays = 30
 
     var body: some View {
         NavigationStack {
@@ -799,6 +799,23 @@ struct FrozenNotificationPreferencesView: View {
                             description: "Choose which SideStick event categories may notify you. Pairing notifications never contain a pairing code, Apple ID, password or verification code.",
                             symbol: "bell.badge.fill"
                         )
+                        FrozenWorkspacePanel {
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text("EXPIRY REMINDER LEAD TIME")
+                                    .font(.system(size: 9, weight: .heavy, design: .rounded))
+                                    .tracking(1.25).foregroundStyle(Theme.accent2)
+                                Text("Choose how early SideStick should warn you about expiring signing material.")
+                                    .font(.system(size: 10, weight: .medium)).foregroundStyle(.white.opacity(0.52))
+                                Picker("Lead time", selection: $expiryLeadDays) {
+                                    Text("1 day").tag(1)
+                                    Text("3 days").tag(3)
+                                    Text("7 days").tag(7)
+                                    Text("14 days").tag(14)
+                                    Text("30 days").tag(30)
+                                }
+                                .pickerStyle(.menu).tint(.white)
+                            }
+                        }
                         FrozenWorkspacePanel {
                             VStack(alignment: .leading, spacing: 15) {
                                 ForEach(SideStickNotificationKind.allCases) { kind in
