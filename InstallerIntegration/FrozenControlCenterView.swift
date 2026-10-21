@@ -116,6 +116,7 @@ private struct FrozenCenterToolCard: View {
 struct FrozenControlCenterView: View {
     @EnvironmentObject private var engine: Engine
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @State private var observedStepStates: [Step: StepState] = [:]
 
     var body: some View {
         NavigationStack {
@@ -220,6 +221,57 @@ struct FrozenControlCenterView: View {
         }
         .preferredColorScheme(.dark)
         .task { SideStickNotificationService.registerCategories() }
+        .onReceive(engine.$stepStates) { states in
+            guard !observedStepStates.isEmpty else {
+                observedStepStates = states
+                return
+            }
+            let oldSigning = observedStepStates[.sign] ?? .pending
+            let oldInstalling = observedStepStates[.install] ?? .pending
+            let newSigning = states[.sign] ?? .pending
+            let newInstalling = states[.install] ?? .pending
+            observedStepStates = states
+
+            // Observe published engine state without modifying its callbacks.
+            // Only queue banners for progress changes occurring in background.
+            guard UIApplication.shared.applicationState != .active else { return }
+
+            if oldSigning != newSigning {
+                let event: (String, String)?
+                switch newSigning {
+                case .active: event = ("Signing started", "SideStick is signing the selected app.")
+                case .done: event = ("Signing succeeded", "The app was signed successfully.")
+                case .failed: event = ("Signing failed", "Open SideStick to review the failure reason.")
+                default: event = nil
+                }
+                if let event {
+                    Task {
+                        await SideStickNotificationService.post(
+                            .signing, title: event.0, body: event.1,
+                            identifier: "sidestick-signing-\\(UUID().uuidString)"
+                        )
+                    }
+                }
+            }
+
+            if oldInstalling != newInstalling {
+                let event: (String, String)?
+                switch newInstalling {
+                case .active: event = ("Installation started", "SideStick is installing the signed app on your device.")
+                case .done: event = ("Installation succeeded", "The app was installed successfully.")
+                case .failed: event = ("Installation failed", "Open SideStick to review the failure reason.")
+                default: event = nil
+                }
+                if let event {
+                    Task {
+                        await SideStickNotificationService.post(
+                            .installation, title: event.0, body: event.1,
+                            identifier: "sidestick-install-\\(UUID().uuidString)"
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -530,6 +582,10 @@ struct FrozenSmartAlertsView: View {
     }
 
     private func scheduleReminders() {
+        guard UserDefaults.standard.object(forKey: "sidestick.notifications.certificates.enabled") as? Bool ?? true else {
+            message = "Certificate and profile notifications are disabled in Notifications."
+            return
+        }
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
             DispatchQueue.main.async {
                 guard granted else {
@@ -545,6 +601,8 @@ struct FrozenSmartAlertsView: View {
                         content.title = "FrozenApps expiry reminder"
                         content.body = "\(title) expires in about \(days) day(s). Open Certificate Health to review it."
                         content.sound = .default
+                        content.categoryIdentifier = "certificates"
+                        content.threadIdentifier = "certificates"
                         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: interval, repeats: false)
                         let request = UNNotificationRequest(identifier: "frozen-expiry-\(title)-\(days)-\(Int(expiry.timeIntervalSince1970))", content: content, trigger: trigger)
                         UNUserNotificationCenter.current().add(request) { _ in }

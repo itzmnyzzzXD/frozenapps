@@ -846,6 +846,16 @@ struct FrozenBatchActionsView: View {
             }
         }
         persistQueue()
+        if !selectedFiles.isEmpty {
+            let passed = queue.count
+            let failed = max(0, reports.count - passed)
+            await SideStickNotificationService.post(
+                .batch,
+                title: "Batch preflight report ready",
+                body: "\(passed) passed · \(failed) failed. Open Batch Actions to review the report.",
+                identifier: "sidestick-batch-preflight"
+            )
+        }
     }
 
     private func inspectFile(_ file: URL) -> String {
