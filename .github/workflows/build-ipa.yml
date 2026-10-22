@@ -198,9 +198,7 @@ jobs:
       # Public binary distribution is the repository owner's responsibility.
       # Upload the artifact only for an explicit version-release publish.
       - name: Upload FrozenApps IPA build artifact
-        if: >-
-          github.event_name == 'push' &&
-          (startsWith(github.ref, 'refs/tags/') || (github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[publish-release]')))
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: SideStick-unsigned-ipa
