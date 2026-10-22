@@ -71,6 +71,7 @@ struct FrozenAppCatalogView: View {
     @Environment(\.openURL) private var openURL
     @AppStorage("frozenApps.catalog.sources.v1") private var savedSources = ""
     @State private var search = ""
+    @State private var debouncedSearch = ""
     @State private var showFilterPanel = false
     @State private var newRepository = ""
     @State private var sources: [FrozenCatalogSource] = FrozenCatalogSource.builtIn
@@ -93,7 +94,7 @@ struct FrozenAppCatalogView: View {
     }
 
     private var visibleSources: [FrozenCatalogSource] {
-        let query = search.trimmingCharacters(in: .whitespacesAndNewlines)
+        let query = debouncedSearch.trimmingCharacters(in: .whitespacesAndNewlines)
         var result = sources.filter {
             query.isEmpty || $0.repository.localizedCaseInsensitiveContains(query)
         }
@@ -187,6 +188,10 @@ struct FrozenAppCatalogView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .navigationBar)
         .task { restoreSources() }
+        .task(id: search) {
+            do { try await Task.sleep(for: .milliseconds(220)) } catch { return }
+            debouncedSearch = search
+        }
         .alert(Text(sourceBeingEdited == nil ? "Add GitHub source" : "Edit GitHub source"), isPresented: $showAddSource) {
             TextField("owner/repository", text: $newRepository).textInputAutocapitalization(.never).autocorrectionDisabled()
             Button("Cancel", role: .cancel) { newRepository = ""; sourceBeingEdited = nil }
@@ -646,7 +651,19 @@ struct FrozenAppCatalogView: View {
                 throw NSError(domain: "FrozenCatalog", code: http.statusCode,
                               userInfo: [NSLocalizedDescriptionKey: http.statusCode == 404 ? "No public latest release was found for this source." : "GitHub returned HTTP \(http.statusCode)."])
             }
-            releases[source.id] = try JSONDecoder().decode(FrozenCatalogRelease.self, from: data)
+            let release = try JSONDecoder().decode(FrozenCatalogRelease.self, from: data)
+            let defaultsKey = "sidestick.catalog.lastSeenRelease.\(source.id)"
+            let previousTag = UserDefaults.standard.string(forKey: defaultsKey)
+            if let previousTag, previousTag != release.tag_name {
+                await SideStickNotificationService.post(
+                    .catalog,
+                    title: "New app release available",
+                    body: "\(source.title) has a new release (\(release.tag_name)). Open SideStick to review its assets.",
+                    identifier: "sidestick-catalog-\(source.id)-\(release.tag_name)"
+                )
+            }
+            UserDefaults.standard.set(release.tag_name, forKey: defaultsKey)
+            releases[source.id] = release
             messages[source.id] = nil
         } catch {
             messages[source.id] = error.localizedDescription
@@ -841,6 +858,16 @@ struct FrozenBatchActionsView: View {
             }
         }
         persistQueue()
+        if !selectedFiles.isEmpty {
+            let passed = queue.count
+            let failed = max(0, reports.count - passed)
+            await SideStickNotificationService.post(
+                .batch,
+                title: "Batch preflight report ready",
+                body: "\(passed) passed · \(failed) failed. Open Batch Actions to review the report.",
+                identifier: "sidestick-batch-preflight"
+            )
+        }
     }
 
     private func inspectFile(_ file: URL) -> String {

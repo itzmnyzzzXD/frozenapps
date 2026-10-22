@@ -116,6 +116,8 @@ private struct FrozenCenterToolCard: View {
 struct FrozenControlCenterView: View {
     @EnvironmentObject private var engine: Engine
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @State private var observedStepStates: [Step: StepState] = [:]
+    @State private var hasObservedPairingCode = false
 
     var body: some View {
         NavigationStack {
@@ -201,6 +203,12 @@ struct FrozenControlCenterView: View {
                             NavigationLink { FrozenBatchActionsView() } label: {
                                 FrozenCenterToolCard(title: "Batch Actions", subtitle: "Multi-IPA preflight & queues", icon: "checklist", tint: .teal)
                             }
+                            NavigationLink { FrozenLiveSourcesView() } label: {
+                                FrozenCenterToolCard(title: "Live App Sources", subtitle: "Import apps.json catalogs", icon: "square.stack.3d.up.fill", tint: .cyan)
+                            }
+                            NavigationLink { FrozenNotificationPreferencesView() } label: {
+                                FrozenCenterToolCard(title: "Notifications", subtitle: "Event categories & delivery", icon: "bell.badge.fill", tint: .orange)
+                            }
                         }
                         Text("Signing, JIT and installation depend on iOS restrictions, device pairing, a compatible helper and valid signing material.")
                             .font(.system(size: 10, weight: .medium)).foregroundStyle(.white.opacity(0.43))
@@ -213,6 +221,72 @@ struct FrozenControlCenterView: View {
             .navigationBarTitleDisplayMode(.inline)
         }
         .preferredColorScheme(.dark)
+        .task { SideStickNotificationService.registerCategories() }
+        .onReceive(engine.$stepStates) { states in
+            guard !observedStepStates.isEmpty else {
+                observedStepStates = states
+                return
+            }
+            let oldSigning = observedStepStates[.sign] ?? .pending
+            let oldInstalling = observedStepStates[.install] ?? .pending
+            let newSigning = states[.sign] ?? .pending
+            let newInstalling = states[.install] ?? .pending
+            observedStepStates = states
+
+            // Observe published engine state without modifying its callbacks.
+            // Only queue banners for progress changes occurring in background.
+            guard UIApplication.shared.applicationState != .active else { return }
+
+            if oldSigning != newSigning {
+                let event: (String, String)?
+                switch newSigning {
+                case .active: event = ("Signing started", "SideStick is signing the selected app.")
+                case .done: event = ("Signing succeeded", "The app was signed successfully.")
+                case .failed: event = ("Signing failed", "Open SideStick to review the failure reason.")
+                default: event = nil
+                }
+                if let event {
+                    Task {
+                        await SideStickNotificationService.post(
+                            .signing, title: event.0, body: event.1,
+                            identifier: "sidestick-signing-\(UUID().uuidString)"
+                        )
+                    }
+                }
+            }
+
+            if oldInstalling != newInstalling {
+                let event: (String, String)?
+                switch newInstalling {
+                case .active: event = ("Installation started", "SideStick is installing the signed app on your device.")
+                case .done: event = ("Installation succeeded", "The app was installed successfully.")
+                case .failed: event = ("Installation failed", "Open SideStick to review the failure reason.")
+                default: event = nil
+                }
+                if let event {
+                    Task {
+                        await SideStickNotificationService.post(
+                            .installation, title: event.0, body: event.1,
+                            identifier: "sidestick-install-\(UUID().uuidString)"
+                        )
+                    }
+                }
+            }
+        }
+        .onReceive(engine.$pairingPIN) { pin in
+            let hasCode = pin != nil
+            let changed = hasCode != hasObservedPairingCode
+            hasObservedPairingCode = hasCode
+            guard changed, UIApplication.shared.applicationState != .active else { return }
+            Task {
+                await SideStickNotificationService.post(
+                    .pairing,
+                    title: hasCode ? "Pairing request received" : "Pairing status updated",
+                    body: "Open SideStick to review pairing status. No pairing code is included in this notification.",
+                    identifier: "sidestick-pairing-\(UUID().uuidString)"
+                )
+            }
+        }
     }
 }
 
@@ -523,6 +597,10 @@ struct FrozenSmartAlertsView: View {
     }
 
     private func scheduleReminders() {
+        guard UserDefaults.standard.object(forKey: "sidestick.notifications.certificates.enabled") as? Bool ?? true else {
+            message = "Certificate and profile notifications are disabled in Notifications."
+            return
+        }
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
             DispatchQueue.main.async {
                 guard granted else {
@@ -530,14 +608,34 @@ struct FrozenSmartAlertsView: View {
                     return
                 }
                 var count = 0
+                let configuredLead = UserDefaults.standard.integer(forKey: "sidestick.notifications.expiryLeadDays")
+                let leadDays = configuredLead > 0 ? configuredLead : 30
                 for (title, expiry) in expiries {
-                    for days in [30, 7, 1] {
+                    if expiry <= Date() {
+                        let content = UNMutableNotificationContent()
+                        content.title = "Certificate or profile expired"
+                        content.body = "\(title) has expired. Open Certificate Health to review it."
+                        content.sound = .default
+                        content.categoryIdentifier = "certificates"
+                        content.threadIdentifier = "certificates"
+                        let request = UNNotificationRequest(
+                            identifier: "sidestick-expired-\(Int(expiry.timeIntervalSince1970))",
+                            content: content,
+                            trigger: nil
+                        )
+                        UNUserNotificationCenter.current().add(request) { _ in }
+                        count += 1
+                        continue
+                    }
+                    for days in Set([leadDays, 7, 1]).sorted(by: >) {
                         let interval = expiry.timeIntervalSinceNow - Double(days) * 86400
                         guard interval > 60 else { continue }
                         let content = UNMutableNotificationContent()
-                        content.title = "FrozenApps expiry reminder"
+                        content.title = "SideStick expiry reminder"
                         content.body = "\(title) expires in about \(days) day(s). Open Certificate Health to review it."
                         content.sound = .default
+                        content.categoryIdentifier = "certificates"
+                        content.threadIdentifier = "certificates"
                         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: interval, repeats: false)
                         let request = UNNotificationRequest(identifier: "frozen-expiry-\(title)-\(days)-\(Int(expiry.timeIntervalSince1970))", content: content, trigger: trigger)
                         UNUserNotificationCenter.current().add(request) { _ in }
