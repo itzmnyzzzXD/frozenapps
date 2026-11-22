@@ -82,7 +82,15 @@ jobs:
           set -euo pipefail
           export DEVELOPER_DIR="$(xcode-select -p)"
           export IPHONEOS_DEPLOYMENT_TARGET=17.4
-          bash Vendor/SideInstaller/build-rust.sh
+          echo "Build environment: $(uname -a)"
+          echo "DEVELOPER_DIR=$DEVELOPER_DIR"
+          echo "HOME=$HOME"
+          command -v rustup
+          command -v cargo
+          rustup show active-toolchain
+          test -f Vendor/SideInstaller/build-rust.sh
+          test -f Vendor/SideInstaller/rust-core/Cargo.toml
+          bash -x Vendor/SideInstaller/build-rust.sh 2>&1 | tee "$GITHUB_WORKSPACE/rust-build.log"
           xcodegen generate
           set -o pipefail
           xcodebuild -project FrozenApps.xcodeproj -scheme FrozenApps \
@@ -223,5 +231,6 @@ jobs:
           path: |
             build.log
             build-validation.txt
+            rust-build.log
           if-no-files-found: warn
           retention-days: 14
