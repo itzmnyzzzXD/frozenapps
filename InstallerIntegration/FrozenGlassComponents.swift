@@ -32,50 +32,60 @@ struct FrozenGlassSurfaceModifier: ViewModifier {
     let tint: Color
     let elevated: Bool
 
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.accessibilityContrast) private var accessibilityContrast
+
     func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
         content
             .background {
-                shape.fill(.regularMaterial)
-                    .overlay {
-                        shape.fill(LinearGradient(
-                            stops: [
-                                .init(color: Color.white.opacity(0.17), location: 0),
-                                .init(color: tint.opacity(0.075), location: 0.28),
-                                .init(color: Color.white.opacity(0.025), location: 0.58),
-                                .init(color: Color.black.opacity(0.16), location: 1)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ))
-                    }
-                    .overlay(alignment: .topLeading) {
-                        shape.fill(LinearGradient(
-                            colors: [Color.white.opacity(0.06), Color.white.opacity(0.018), .clear],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ))
-                    }
+                if reduceTransparency {
+                    shape.fill(Theme.matteRaised)
+                } else {
+                    shape.fill(.regularMaterial)
+                        .overlay {
+                            shape.fill(LinearGradient(
+                                stops: [
+                                    .init(color: Color.white.opacity(0.13), location: 0),
+                                    .init(color: tint.opacity(0.065), location: 0.28),
+                                    .init(color: Color.white.opacity(0.018), location: 0.58),
+                                    .init(color: Color.black.opacity(0.23), location: 1)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ))
+                        }
+                        .overlay(alignment: .topLeading) {
+                            shape.fill(LinearGradient(
+                                colors: [Color.white.opacity(0.05), Color.white.opacity(0.012), .clear],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ))
+                        }
+                }
             }
             .overlay {
                 shape.strokeBorder(LinearGradient(
                     stops: [
-                        .init(color: Color.white.opacity(0.42), location: 0),
-                        .init(color: Color(red: 1.0, green: 0.91, blue: 0.82).opacity(0.20), location: 0.20),
-                        .init(color: tint.opacity(0.17), location: 0.48),
-                        .init(color: Color.white.opacity(0.055), location: 0.78),
-                        .init(color: Color.white.opacity(0.22), location: 1)
+                        .init(color: Color.white.opacity(accessibilityContrast == .increased ? 0.94 : 0.50), location: 0),
+                        .init(color: Theme.metalSilver.opacity(accessibilityContrast == .increased ? 0.72 : 0.18), location: 0.24),
+                        .init(color: tint.opacity(accessibilityContrast == .increased ? 0.60 : 0.15), location: 0.52),
+                        .init(color: Color.white.opacity(accessibilityContrast == .increased ? 0.68 : 0.06), location: 0.80),
+                        .init(color: Color.white.opacity(accessibilityContrast == .increased ? 0.88 : 0.24), location: 1)
                     ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
-                ), lineWidth: 1)
+                ), lineWidth: accessibilityContrast == .increased ? 1.6 : 1)
             }
             .overlay {
-                shape.inset(by: 1).strokeBorder(Color.white.opacity(0.045), lineWidth: 1)
+                shape.inset(by: 1).strokeBorder(
+                    Color.white.opacity(accessibilityContrast == .increased ? 0.18 : 0.035),
+                    lineWidth: 1
+                )
             }
             .shadow(
-                color: Color.black.opacity(elevated ? 0.23 : 0.13),
-                radius: elevated ? 24 : 12,
+                color: Color.black.opacity(elevated ? 0.30 : 0.18),
+                radius: elevated ? 22 : 12,
                 x: 0,
                 y: elevated ? 10 : 5
             )
@@ -83,7 +93,7 @@ struct FrozenGlassSurfaceModifier: ViewModifier {
 }
 
 extension View {
-    func frozenGlassSurface(cornerRadius: CGFloat = 20, tint: Color? = nil, elevated: Bool = false) -> some View {
+    func frozenGlassSurface(cornerRadius: CGFloat = Theme.Radius.medium, tint: Color? = nil, elevated: Bool = false) -> some View {
         modifier(FrozenGlassSurfaceModifier(
             cornerRadius: cornerRadius,
             tint: tint ?? Theme.accent.opacity(0.18),
@@ -106,9 +116,9 @@ struct FrozenWorkspacePanel<Content: View>: View {
 
     var body: some View {
         content
-            .padding(16)
+            .padding(Theme.Space.x4)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .frozenGlassSurface(cornerRadius: cornerRadius, tint: Theme.accent.opacity(0.16), elevated: elevated)
+            .frozenGlassSurface(cornerRadius: cornerRadius, tint: Theme.accent.opacity(0.13), elevated: elevated)
     }
 }
 
@@ -171,4 +181,21 @@ struct FrozenGlassPressStyle: ButtonStyle {
                 value: configuration.isPressed
             )
     }
+}
+
+
+#Preview("Workspace card") {
+    FrozenWorkspacePanel(cornerRadius: Theme.Radius.medium, elevated: true) {
+        VStack(alignment: .leading, spacing: Theme.Space.x2) {
+            Text("Signer readiness")
+                .font(.headline)
+                .foregroundStyle(.white)
+            Text("Pairing, authentication and install state are shown here.")
+                .font(.body)
+                .foregroundStyle(.white.opacity(0.72))
+        }
+    }
+    .padding(24)
+    .background(Theme.matteSurface.ignoresSafeArea())
+    .preferredColorScheme(.dark)
 }
