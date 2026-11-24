@@ -110,6 +110,8 @@ struct FrozenWorkspaceRail: View {
                 Image(systemName: destination.symbol)
                     .font(.system(size: compact ? 18 : 19, weight: isSelected ? .semibold : .regular))
                     .symbolRenderingMode(.hierarchical)
+                    .scaleEffect(isSelected ? 1.15 : 1)
+                    .animation(Theme.Motion.snappy, value: isSelected)
                     .frame(width: 44, height: compact ? 23 : 28)
 
                 if compact {
@@ -135,6 +137,7 @@ struct FrozenWorkspaceRail: View {
             .contentShape(RoundedRectangle(cornerRadius: 15, style: .continuous))
         }
         .buttonStyle(FrozenWorkspaceRadioPressStyle())
+        .hoverEffect(.highlight)
         .accessibilityLabel(destination.title)
         .accessibilityValue(isSelected ? "Selected" : "Not selected")
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
