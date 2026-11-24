@@ -94,11 +94,12 @@ struct FrozenLiquidMetalModifier: ViewModifier {
     @StateObject private var motion = FrozenDeviceMotion.shared
     @State private var isVisible = false
     @State private var lowPowerMode = ProcessInfo.processInfo.isLowPowerModeEnabled
+    @State private var animationStart = Date()
     @State private var ownsShaderSlot = false
     @State private var surfaceID = UUID()
 
     private var shouldAnimate: Bool {
-        live && isVisible && ownsShaderSlot && scenePhase == .active && !lowPowerMode && !reduceMotion
+        live && isVisible && ownsShaderSlot && scenePhase == .active && !lowPowerMode && !reduceMotion && !reduceTransparency
     }
 
     func body(content: Content) -> some View {
@@ -121,7 +122,7 @@ struct FrozenLiquidMetalModifier: ViewModifier {
                             TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: false)) { timeline in
                                 shaderReflection(
                                     size: proxy.size,
-                                    time: timeline.date.timeIntervalSinceReferenceDate,
+                                    time: timeline.date.timeIntervalSince(animationStart),
                                     tilt: motion.tilt
                                 )
                             }
@@ -160,6 +161,7 @@ struct FrozenLiquidMetalModifier: ViewModifier {
             }
             .onChange(of: scenePhase) { _, _ in updateShaderActivity() }
             .onChange(of: reduceMotion) { _, _ in updateShaderActivity() }
+            .onChange(of: reduceTransparency) { _, _ in updateShaderActivity() }
             .onChange(of: live) { _, _ in updateShaderActivity() }
             .onReceive(NotificationCenter.default.publisher(for: .NSProcessInfoPowerStateDidChange)) { _ in
                 lowPowerMode = ProcessInfo.processInfo.isLowPowerModeEnabled
@@ -168,7 +170,7 @@ struct FrozenLiquidMetalModifier: ViewModifier {
     }
 
     private func updateShaderActivity() {
-        let shouldOwnSlot = live && isVisible && scenePhase == .active && !lowPowerMode && !reduceMotion
+        let shouldOwnSlot = live && isVisible && scenePhase == .active && !lowPowerMode && !reduceMotion && !reduceTransparency
 
         if shouldOwnSlot && !ownsShaderSlot {
             ownsShaderSlot = FrozenMetalSurfaceBudget.acquire(surfaceID)
@@ -306,9 +308,8 @@ struct FrozenNeonLiquidButtonStyle: ButtonStyle {
             .onChange(of: configuration.isPressed) { _, pressed in
                 isPressed = pressed
             }
-            .sensoryFeedback(.selection, trigger: configuration.isPressed)
             .contentShape(shape)
-            .accessibilityAddTraits(.isButton)
+            .hoverEffect(.lift)
     }
 }
 
@@ -318,15 +319,15 @@ struct FrozenLiquidMetalToggleStyle: ToggleStyle {
     @Environment(\.accessibilityContrast) private var accessibilityContrast
 
     func makeBody(configuration: Configuration) -> some View {
-        HStack(spacing: Theme.Space.x4) {
-            configuration.label
-                .frame(maxWidth: .infinity, alignment: .leading)
+        Button {
+            withAnimation(reduceMotion ? nil : Theme.Motion.snappy) {
+                configuration.isOn.toggle()
+            }
+        } label: {
+            HStack(spacing: Theme.Space.x4) {
+                configuration.label
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
-            Button {
-                withAnimation(reduceMotion ? nil : Theme.Motion.snappy) {
-                    configuration.isOn.toggle()
-                }
-            } label: {
                 Capsule()
                     .fill(
                         configuration.isOn
@@ -355,14 +356,15 @@ struct FrozenLiquidMetalToggleStyle: ToggleStyle {
                     .frame(width: 54, height: 32)
                     .frame(minWidth: 48, minHeight: 44)
                     .contentShape(Rectangle())
+                    .accessibilityHidden(true)
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Toggle")
-            .accessibilityValue(configuration.isOn ? "On" : "Off")
-            .accessibilityHint("Double-tap to change this setting.")
-            .sensoryFeedback(.selection, trigger: configuration.isOn)
+            .frame(minHeight: 48)
+            .contentShape(Rectangle())
         }
-        .contentShape(Rectangle())
+        .buttonStyle(.plain)
+        .accessibilityValue(configuration.isOn ? "On" : "Off")
+        .accessibilityHint("Double-tap to change this setting.")
+        .sensoryFeedback(.selection, trigger: configuration.isOn)
     }
 }
 
