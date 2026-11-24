@@ -191,6 +191,7 @@ struct FrozenLiquidMetalModifier: ViewModifier {
         )
 
         return shapeFill
+            .fill(.white.opacity(0.58))
             .colorEffect(shader)
             .blendMode(.screen)
             .opacity(reduceTransparency ? 0.94 : 0.82)
