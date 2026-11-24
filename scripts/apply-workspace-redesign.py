@@ -624,4 +624,24 @@ replace_owned(
     }'''
 )
 
+# Native Uiverse-inspired primary action. Keep the original press-reporting
+# binding because ContentView uses it to compress the surrounding progress surface.
+replace_owned(
+    APP / "ContentView.swift",
+    "struct ContentView: View {",
+    ".buttonStyle(PressReportingButtonStyle(isPressed: $installPressed))",
+    ".transition(.surfaceSwap)",
+    ".buttonStyle(FrozenNeonLiquidButtonStyle(isPressed: $installPressed))"
+)
+
+# The completed-run reinstall action uses the same visual language without
+# changing its existing startInstall callback.
+replace_owned(
+    APP / "ContentView.swift",
+    "    private var installButton: some View {",
+    ".buttonStyle(PrimaryButtonStyle())",
+    "    }",
+    ".buttonStyle(FrozenNeonLiquidButtonStyle())"
+)
+
 print("Applied FrozenApps structural workspace redesign.")
