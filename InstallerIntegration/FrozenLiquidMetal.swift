@@ -250,9 +250,17 @@ struct FrozenNeonLiquidButtonStyle: ButtonStyle {
         configuration.label
             .font(Theme.TypeScale.control)
             .foregroundStyle(.white)
-            .frame(maxWidth: .infinity, minHeight: 44)
             .padding(.horizontal, Theme.Space.x6)
             .padding(.vertical, Theme.Space.x3)
+            .background {
+                Capsule()
+                    .fill(Color.black.opacity(accessibilityContrast == .increased ? 0.92 : 0.84))
+                    .overlay {
+                        Capsule().strokeBorder(.white.opacity(0.28), lineWidth: 1)
+                    }
+            }
+            .frame(maxWidth: .infinity, minHeight: 44)
+            .padding(.vertical, Theme.Space.x2)
             .background {
                 GeometryReader { proxy in
                     ZStack {
