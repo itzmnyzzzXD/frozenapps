@@ -53,5 +53,6 @@ static float hash21(float2 point) {
     color *= pulse;
     color = clamp(color, float3(0.0), float3(1.0));
 
-    return half4(half3(color), sourceColor.a * half(0.72));
+    float outputAlpha = float(sourceColor.a) * 0.72;
+    return half4(half3(color * outputAlpha), half(outputAlpha));
 }
