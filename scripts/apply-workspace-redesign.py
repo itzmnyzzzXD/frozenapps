@@ -644,4 +644,19 @@ replace_owned(
     ".buttonStyle(FrozenNeonLiquidButtonStyle())"
 )
 
+# Keep the existing install progress calculation and animated sheen, but give
+# the track a static gunmetal finish so it does not consume a live shader slot.
+replace_owned(
+    APP / "ContentView.swift",
+    "private struct InstallProgressBar: View {",
+    """Capsule()
+                    .fill(Color(.tertiarySystemFill))
+                    .overlay(Capsule().strokeBorder(.white.opacity(0.05), lineWidth: 1))""",
+    "fill(across: full)",
+    r'''Capsule()
+                    .fill(Color.clear)
+                    .frozenLiquidMetal(variant: .gunmetal, cornerRadius: 6, live: false)
+                    .overlay(Capsule().strokeBorder(.white.opacity(0.20), lineWidth: 1))'''
+)
+
 print("Applied FrozenApps structural workspace redesign.")
