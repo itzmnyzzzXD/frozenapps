@@ -199,7 +199,7 @@ struct FrozenWorkspaceCommandBar: View {
                             if selectedID == destination.id {
                                 Label(destination.title, systemImage: destination.symbol)
                             } else {
-                                Label(destination.title, systemImage: destination.symbol)
+                                Text(destination.title)
                             }
                         }
                     }
