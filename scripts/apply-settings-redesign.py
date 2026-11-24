@@ -102,6 +102,7 @@ replace_owned(
                 }
             }
         }
+        .toggleStyle(FrozenLiquidMetalToggleStyle())
     }'''
 )
 
