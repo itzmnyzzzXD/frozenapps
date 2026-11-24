@@ -195,6 +195,18 @@ struct FrozenLiquidMetalModifier: ViewModifier {
         return shapeFill
             .fill(.white.opacity(0.58))
             .colorEffect(shader)
+            // Only the specular layer tilts; the control's text stays level.
+            .offset(x: tilt.width * 2.5, y: tilt.height * 2.5)
+            .rotation3DEffect(
+                .degrees(Double(tilt.height) * 20),
+                axis: (x: 1, y: 0, z: 0),
+                perspective: 0.45
+            )
+            .rotation3DEffect(
+                .degrees(Double(-tilt.width) * 20),
+                axis: (x: 0, y: 1, z: 0),
+                perspective: 0.45
+            )
             .blendMode(.screen)
             .opacity(reduceTransparency ? 0.94 : 0.82)
     }
