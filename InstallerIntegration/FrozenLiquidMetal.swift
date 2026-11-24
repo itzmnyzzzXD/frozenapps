@@ -389,3 +389,24 @@ struct FrozenLiquidMetalToggleStyle: ToggleStyle {
     .background(Theme.matteSurface.ignoresSafeArea())
     .preferredColorScheme(.dark)
 }
+
+
+#Preview("Liquid metal finishes") {
+    VStack(spacing: 18) {
+        RoundedRectangle(cornerRadius: 20, style: .continuous)
+            .fill(Color.clear)
+            .frame(height: 72)
+            .frozenLiquidMetal(variant: .chrome, cornerRadius: 20, live: true)
+        RoundedRectangle(cornerRadius: 20, style: .continuous)
+            .fill(Color.clear)
+            .frame(height: 72)
+            .frozenLiquidMetal(variant: .gunmetal, cornerRadius: 20, live: false)
+        RoundedRectangle(cornerRadius: 20, style: .continuous)
+            .fill(Color.clear)
+            .frame(height: 72)
+            .frozenLiquidMetal(variant: .mercury, cornerRadius: 20, live: false)
+    }
+    .padding(24)
+    .background(Theme.matteSurface.ignoresSafeArea())
+    .preferredColorScheme(.dark)
+}
