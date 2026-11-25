@@ -1,13 +1,12 @@
 import SwiftUI
 
-/// Shared SideStick tokens. The upstream Theme remains the source of the
-/// existing brand colors; these additions centralize the workspace system.
+/// Shared OLED monochrome tokens for the SideStick workspace.
 extension Theme {
-    static let matteSurface = Color(red: 0.025, green: 0.035, blue: 0.065)
-    static let matteRaised = Color(red: 0.055, green: 0.070, blue: 0.105)
-    static let metalViolet = Color(red: 0.43, green: 0.33, blue: 0.82)
-    static let metalSilver = Color(red: 0.78, green: 0.83, blue: 0.92)
-    static let metalInk = Color(red: 0.055, green: 0.070, blue: 0.105)
+    static let matteSurface = Color.black
+    static let matteRaised = Color.black
+    static let metalViolet = Color.white
+    static let metalSilver = Color.white
+    static let metalInk = Color.black
 
     enum Space {
         static let x1: CGFloat = 4
@@ -24,7 +23,6 @@ extension Theme {
         static let large: CGFloat = 28
     }
 
-    /// Dynamic text styles are preferred over fixed point sizes.
     enum TypeScale {
         static let compact = Font.caption2.weight(.medium)
         static let detail = Font.caption.weight(.medium)
@@ -35,7 +33,7 @@ extension Theme {
     enum Elevation {
         static let card = Color.black.opacity(0.22)
         static let floating = Color.black.opacity(0.36)
-        static let focus = accent.opacity(0.34)
+        static let focus = Color.white.opacity(0.72)
     }
 
     enum Motion {
