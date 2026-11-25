@@ -272,7 +272,7 @@ for folder in (APP, ACTIVITY, INTEGRATION):
         )
         monochrome = re.sub(r"\.tint\([^()]*\)", ".tint(.white)", monochrome)
         monochrome = re.sub(
-            r"\.(?:red|orange|yellow|green|mint|teal|cyan|blue|indigo|purple|pink|brown)",
+            r"\.(?:red|orange|yellow|green|mint|teal|cyan|blue|indigo|purple|pink|brown)(?![A-Za-z0-9_])",
             ".white",
             monochrome
         )
