@@ -188,11 +188,25 @@ struct FrozenLiquidMetalModifier: ViewModifier {
     }
 
     private func shaderReflection(size: CGSize, time: TimeInterval, tilt: CGSize) -> some View {
+        // The workspace backdrop uses the LiquidChrome reference settings:
+        // white, speed 0.2, amplitude 0.8, detail 2, thickness 0.3,
+        // interactive, depth 0.8, roughness 0, exposure 2,
+        // ripple strength 1.4 and tilt response 0.65.
+        let isWorkspaceChrome = variant == .chrome
         let shader = ShaderLibrary.default.sideStickLiquidMetal(
             .float(Float(time)),
             .float2(CGPoint(x: tilt.width, y: tilt.height)),
             .float(variant.rawValue),
-            .float2(CGPoint(x: size.width, y: size.height))
+            .float2(CGPoint(x: size.width, y: size.height)),
+            .float(isWorkspaceChrome ? 0.2 : 0.075),   // speed
+            .float(isWorkspaceChrome ? 0.8 : 0.075),   // amplitude
+            .float(2.0),                               // detail
+            .float(isWorkspaceChrome ? 0.3 : 0.18),    // thickness
+            .float(isWorkspaceChrome ? 0.8 : 0.5),     // depth
+            .float(isWorkspaceChrome ? 0.0 : 0.28),    // roughness
+            .float(isWorkspaceChrome ? 2.0 : 1.0),     // exposure
+            .float(isWorkspaceChrome ? 1.4 : 0.25),    // ripple strength
+            .float(isWorkspaceChrome ? 0.65 : 1.0)     // tilt response
         )
 
         return shapeFill

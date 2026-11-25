@@ -130,6 +130,8 @@ def rebrand_literal(match, source):
         return literal
 
     text = literal[1:-1]
+    if text == "Welcome to FrozenApps":
+        return literal
     if "." in text and not any(ch.isspace() for ch in text):
         return literal
 
@@ -237,21 +239,46 @@ for folder in (APP, ACTIVITY, INTEGRATION):
         if branded != source:
             swift_path.write_text(branded, encoding="utf-8")
 
-# Enforce the product's OLED monochrome palette in generated UI source.
-# This runs after all owned UI patches and never changes engine/authentication logic.
-for swift_path in APP.rglob("*.swift"):
-    source = swift_path.read_text(encoding="utf-8")
-    monochrome = source.replace("Theme.accent2", ".white")
-    monochrome = monochrome.replace("Theme.accent", ".white")
-    monochrome = monochrome.replace("Theme.brand", ".black")
-    monochrome = re.sub(r"\.tint\([^()]*\)", ".tint(.white)", monochrome)
-    monochrome = re.sub(
-        r"\.(?:red|orange|yellow|green|mint|teal|cyan|blue|indigo|purple|pink|brown)",
-        ".white",
-        monochrome
-    )
-    if monochrome != source:
-        swift_path.write_text(monochrome, encoding="utf-8")
+# Enforce an OLED black-and-white palette in all app-owned and generated UI.
+# Convert the upstream brand gradient to a grayscale gradient rather than a Color,
+# because the upstream button style intentionally types this token as LinearGradient.
+def grayscale_rgb(match):
+    red, green, blue = (float(match.group(index)) for index in (1, 2, 3))
+    luminance = 0.2126 * red + 0.7152 * green + 0.0722 * blue
+    opacity = match.group(4)
+    if opacity is not None:
+        return f"Color(white: {luminance:.4f}, opacity: {opacity})"
+    return f"Color(white: {luminance:.4f})"
+
+rgb_pattern = (
+    r"Color\\(red:\\s*((?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+)),"
+    r"\\s*green:\\s*((?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+)),"
+    r"\\s*blue:\\s*((?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+))"
+    r"(?:,\\s*opacity:\\s*((?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+)))?\\)"
+)
+for folder in (APP, ACTIVITY, INTEGRATION):
+    if not folder.exists():
+        continue
+    for swift_path in folder.rglob("*.swift"):
+        source = swift_path.read_text(encoding="utf-8")
+        monochrome = source.replace("Theme.accent2", ".white")
+        monochrome = monochrome.replace("Theme.accent", ".white")
+        monochrome = monochrome.replace("Theme.violet", ".white")
+        monochrome = monochrome.replace("Theme.glow", ".white.opacity(0.14)")
+        monochrome = monochrome.replace(
+            "Theme.brand",
+            "LinearGradient(colors: [.white.opacity(0.92), .white.opacity(0.52)], "
+            "startPoint: .topLeading, endPoint: .bottomTrailing)"
+        )
+        monochrome = re.sub(r"\\.tint\\([^()]*\\)", ".tint(.white)", monochrome)
+        monochrome = re.sub(
+            r"\\.(?:red|orange|yellow|green|mint|teal|cyan|blue|indigo|purple|pink|brown)",
+            ".white",
+            monochrome
+        )
+        monochrome = re.sub(rgb_pattern, grayscale_rgb, monochrome)
+        if monochrome != source:
+            swift_path.write_text(monochrome, encoding="utf-8")
 
 # Avoid animating the entire Signer hierarchy for every connection/progress update.
 content_view = APP / "ContentView.swift"

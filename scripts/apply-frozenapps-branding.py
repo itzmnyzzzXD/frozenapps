@@ -658,22 +658,13 @@ replace_section(
             Text("VERIFICATION CODE")
                 .font(.system(size: 9, weight: .heavy, design: .rounded))
                 .tracking(1.4)
-                .foregroundStyle(Theme.accent2)
+                .foregroundStyle(.white.opacity(0.68))
 
-            TextField(L("6-digit code"), text: $code)
-                .keyboardType(.numberPad)
-                .textContentType(.oneTimeCode)
-                .font(.system(size: 26, weight: .bold, design: .rounded).monospacedDigit())
-                .multilineTextAlignment(.center)
-                .textFieldStyle(.plain)
-                .focused($codeFocused)
-                .disabled(pending != nil)
-                .padding(.vertical, 12)
-                .fieldBackground()
-                .onChange(of: code) { _, typed in
-                    let digits = String(typed.filter(\.isNumber).prefix(6))
-                    if digits != typed { code = digits }
-                }
+            FrozenAnimatedOTPInput(
+                code: $code,
+                isFocused: $codeFocused,
+                isDisabled: pending != nil
+            )
 
             Text("Enter the six digits you received. Codes are used for this sign-in attempt only.")
                 .font(.system(size: 11))
@@ -2239,4 +2230,30 @@ if "AppBackground()" in tools_section:
     tools_section = tools_section.replace("AppBackground()", "FrozenWorkspaceBackdrop()")
     tools_source = tools_source[:tools_start] + tools_section + tools_source[next_struct:]
     tools_path.write_text(tools_source, encoding="utf-8")
+
+# Add a short native launch reveal above the existing TOS, account setup and app
+# screens. This is presentation-only and does not alter either onboarding flag.
+replace_once(
+    "ios-app/SideInstallerApp.swift",
+    ```    @AppStorage("hasCompletedAccountSetup") private var hasCompletedAccountSetup = false```,
+    ```    @AppStorage("hasCompletedAccountSetup") private var hasCompletedAccountSetup = false
+    @State private var showLaunchWelcome = true```
+)
+replace_once(
+    "ios-app/SideInstallerApp.swift",
+    ```            }
+            .animation(.smooth(duration: 0.5), value: hasAcceptedTOS)```,
+    ```                if showLaunchWelcome {
+                    FrozenLaunchWelcome {
+                        withAnimation(.easeOut(duration: 0.35)) {
+                            showLaunchWelcome = false
+                        }
+                    }
+                    .transition(.opacity)
+                    .zIndex(2)
+                }
+            }
+            .animation(.smooth(duration: 0.5), value: hasAcceptedTOS)```
+)
+
 print("Applied FrozenApps branding to pinned engine source.")
