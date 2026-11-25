@@ -116,6 +116,7 @@ replace_section(
     @AppStorage("hasCompletedAccountSetup") private var hasCompletedAccountSetup = false
     @EnvironmentObject private var accounts: AccountStore
     @EnvironmentObject private var loc: Localizer
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var email = ""
     @State private var password = ""
@@ -170,7 +171,7 @@ replace_section(
         }
         .preferredColorScheme(.dark)
         .task {
-            try? await Task.sleep(for: .milliseconds(2150))
+            try? await Task.sleep(for: .milliseconds(reduceMotion ? 1200 : 2150))
             focus = .email
         }
     }
