@@ -4,21 +4,14 @@ import SwiftUI
 struct FrozenWorkspaceBackdrop: View {
     var body: some View {
         GeometryReader { proxy in
-            Image("SideStickBackground")
-                .resizable()
-                .scaledToFill()
+            Rectangle()
+                .fill(Color.black)
                 .frame(width: proxy.size.width, height: proxy.size.height)
-                .clipped()
                 .overlay {
-                    LinearGradient(
-                        stops: [
-                            .init(color: Color.black.opacity(0.10), location: 0),
-                            .init(color: Color.black.opacity(0.16), location: 0.46),
-                            .init(color: Color.black.opacity(0.46), location: 1)
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
+                    Rectangle()
+                        .fill(Color.clear)
+                        .frozenLiquidMetal(variant: .chrome, cornerRadius: 0, live: true)
+                        .opacity(0.48)
                 }
         }
         .ignoresSafeArea()
@@ -42,8 +35,8 @@ struct FrozenGlassSurfaceModifier: ViewModifier {
     private var borderGradientStops: [Gradient.Stop] {
         [
             .init(color: Color.white.opacity(isHighContrast ? 0.94 : 0.50), location: 0),
-            .init(color: Theme.metalSilver.opacity(isHighContrast ? 0.72 : 0.18), location: 0.24),
-            .init(color: tint.opacity(isHighContrast ? 0.60 : 0.15), location: 0.52),
+            .init(color: Color.white.opacity(isHighContrast ? 0.72 : 0.18), location: 0.24),
+            .init(color: Color.white.opacity(isHighContrast ? 0.60 : 0.15), location: 0.52),
             .init(color: Color.white.opacity(isHighContrast ? 0.68 : 0.06), location: 0.80),
             .init(color: Color.white.opacity(isHighContrast ? 0.88 : 0.24), location: 1)
         ]
@@ -60,22 +53,14 @@ struct FrozenGlassSurfaceModifier: ViewModifier {
                 if reduceTransparency {
                     shape.fill(Theme.matteRaised)
                 } else {
-                    shape.fill(.regularMaterial)
+                    shape.fill(Color.black)
                         .overlay {
                             shape.fill(LinearGradient(
                                 stops: [
-                                    .init(color: Color.white.opacity(0.13), location: 0),
-                                    .init(color: tint.opacity(0.065), location: 0.28),
-                                    .init(color: Color.white.opacity(0.018), location: 0.58),
-                                    .init(color: Color.black.opacity(0.23), location: 1)
+                                    .init(color: Color.white.opacity(0.045), location: 0),
+                                    .init(color: Color.white.opacity(0.012), location: 0.42),
+                                    .init(color: Color.black, location: 1)
                                 ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ))
-                        }
-                        .overlay(alignment: .topLeading) {
-                            shape.fill(LinearGradient(
-                                colors: [Color.white.opacity(0.05), Color.white.opacity(0.012), .clear],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             ))
@@ -111,7 +96,7 @@ extension View {
     func frozenGlassSurface(cornerRadius: CGFloat = Theme.Radius.medium, tint: Color? = nil, elevated: Bool = false) -> some View {
         modifier(FrozenGlassSurfaceModifier(
             cornerRadius: cornerRadius,
-            tint: tint ?? Theme.accent.opacity(0.18),
+            tint: tint ?? Color.white.opacity(0.06),
             elevated: elevated
         ))
     }
@@ -133,7 +118,7 @@ struct FrozenWorkspacePanel<Content: View>: View {
         content
             .padding(Theme.Space.x4)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .frozenGlassSurface(cornerRadius: cornerRadius, tint: Theme.accent.opacity(0.13), elevated: elevated)
+            .frozenGlassSurface(cornerRadius: cornerRadius, tint: .white.opacity(0.06), elevated: elevated)
     }
 }
 
