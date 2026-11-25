@@ -33,7 +33,25 @@ struct FrozenGlassSurfaceModifier: ViewModifier {
     let elevated: Bool
 
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-    @Environment(\.accessibilityContrast) private var accessibilityContrast
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+
+    private var isHighContrast: Bool {
+        colorSchemeContrast == .increased
+    }
+
+    private var borderGradientStops: [Gradient.Stop] {
+        [
+            .init(color: Color.white.opacity(isHighContrast ? 0.94 : 0.50), location: 0),
+            .init(color: Theme.metalSilver.opacity(isHighContrast ? 0.72 : 0.18), location: 0.24),
+            .init(color: tint.opacity(isHighContrast ? 0.60 : 0.15), location: 0.52),
+            .init(color: Color.white.opacity(isHighContrast ? 0.68 : 0.06), location: 0.80),
+            .init(color: Color.white.opacity(isHighContrast ? 0.88 : 0.24), location: 1)
+        ]
+    }
+
+    private var borderLineWidth: CGFloat {
+        isHighContrast ? 1.6 : 1
+    }
 
     func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
@@ -65,21 +83,18 @@ struct FrozenGlassSurfaceModifier: ViewModifier {
                 }
             }
             .overlay {
-                shape.strokeBorder(LinearGradient(
-                    stops: [
-                        .init(color: Color.white.opacity(accessibilityContrast == .increased ? 0.94 : 0.50), location: 0),
-                        .init(color: Theme.metalSilver.opacity(accessibilityContrast == .increased ? 0.72 : 0.18), location: 0.24),
-                        .init(color: tint.opacity(accessibilityContrast == .increased ? 0.60 : 0.15), location: 0.52),
-                        .init(color: Color.white.opacity(accessibilityContrast == .increased ? 0.68 : 0.06), location: 0.80),
-                        .init(color: Color.white.opacity(accessibilityContrast == .increased ? 0.88 : 0.24), location: 1)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                ), lineWidth: accessibilityContrast == .increased ? 1.6 : 1)
+                shape.strokeBorder(
+                    LinearGradient(
+                        stops: borderGradientStops,
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: borderLineWidth
+                )
             }
             .overlay {
                 shape.inset(by: 1).strokeBorder(
-                    Color.white.opacity(accessibilityContrast == .increased ? 0.18 : 0.035),
+                    Color.white.opacity(isHighContrast ? 0.18 : 0.035),
                     lineWidth: 1
                 )
             }
