@@ -34,11 +34,11 @@ struct FrozenGlassSurfaceModifier: ViewModifier {
 
     private var borderGradientStops: [Gradient.Stop] {
         [
-            .init(color: Color.white.opacity(isHighContrast ? 0.94 : 0.50), location: 0),
-            .init(color: Color.white.opacity(isHighContrast ? 0.72 : 0.18), location: 0.24),
-            .init(color: Color.white.opacity(isHighContrast ? 0.60 : 0.15), location: 0.52),
-            .init(color: Color.white.opacity(isHighContrast ? 0.68 : 0.06), location: 0.80),
-            .init(color: Color.white.opacity(isHighContrast ? 0.88 : 0.24), location: 1)
+            .init(color: Color.white.opacity(isHighContrast ? 1 : 0.48), location: 0),
+            .init(color: Color.white.opacity(isHighContrast ? 0.72 : 0.12), location: 0.24),
+            .init(color: Color.white.opacity(isHighContrast ? 0.48 : 0.12), location: 0.52),
+            .init(color: Color.white.opacity(isHighContrast ? 0.72 : 0.06), location: 0.80),
+            .init(color: Color.white.opacity(isHighContrast ? 1 : 0.24), location: 1)
         ]
     }
 
@@ -57,8 +57,8 @@ struct FrozenGlassSurfaceModifier: ViewModifier {
                         .overlay {
                             shape.fill(LinearGradient(
                                 stops: [
-                                    .init(color: Color.white.opacity(0.045), location: 0),
-                                    .init(color: Color.white.opacity(0.012), location: 0.42),
+                                    .init(color: Color.white.opacity(0.06), location: 0),
+                                    .init(color: Color.white.opacity(0.03), location: 0.42),
                                     .init(color: Color.black, location: 1)
                                 ],
                                 startPoint: .topLeading,
@@ -153,13 +153,13 @@ struct FrozenGlassMenuLabel: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(.regularMaterial, in: Capsule())
+        .background(Capsule().fill(Color.black))
         .overlay {
             Capsule().strokeBorder(LinearGradient(
                 colors: [
                     Color.white.opacity(0.36),
-                    Color(red: 1.0, green: 0.91, blue: 0.82).opacity(0.15),
-                    Theme.accent.opacity(0.13),
+                    Color.white.opacity(0.12),
+                    Color.white.opacity(0.06),
                     Color.white.opacity(0.075)
                 ],
                 startPoint: .topLeading,

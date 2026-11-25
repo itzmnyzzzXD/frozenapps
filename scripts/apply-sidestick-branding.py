@@ -17,29 +17,29 @@ VENDOR = ROOT / "Vendor" / "SideInstaller"
 APP = VENDOR / "ios-app"
 ACTIVITY = VENDOR / "ios-live-activity"
 INTEGRATION = ROOT / "InstallerIntegration"
-SOURCE_BACKGROUND = ROOT / "IMG_2135.jpeg"
 SOURCE_ICON = ROOT / "IMG_2151.jpeg"
 ASSETS = APP / "Assets.xcassets"
-BACKGROUND_SET = ASSETS / "SideStickBackground.imageset"
 MARK_SET = ASSETS / "SideStickMark.imageset"
 ICON_SET = ASSETS / "AppIcon.appiconset"
 
 if not (APP / "Info.plist").is_file():
     raise SystemExit("Generated app Info.plist is missing; prepare the pinned engine first.")
-if not SOURCE_BACKGROUND.is_file():
-    raise SystemExit("IMG_2135.jpeg is missing from the repository root.")
 if not SOURCE_ICON.is_file():
     raise SystemExit("IMG_2151.jpeg is missing from the repository root.")
 if not ASSETS.is_dir():
     raise SystemExit("The upstream app asset catalog is missing.")
 
-# Add the supplied image to the asset catalog used by the app target.
-BACKGROUND_SET.mkdir(parents=True, exist_ok=True)
-shutil.copyfile(SOURCE_BACKGROUND, BACKGROUND_SET / "IMG_2135.jpeg")
-(BACKGROUND_SET / "Contents.json").write_text(json.dumps({
-    "images": [{"filename": "IMG_2135.jpeg", "idiom": "universal", "scale": "1x"}],
-    "info": {"author": "xcode", "version": 1}
-}, indent=2) + "\n", encoding="utf-8")
+def write_solid_color_asset(name, component):
+    color_set = ASSETS / f"{name}.colorset"
+    color_set.mkdir(parents=True, exist_ok=True)
+    components = {"red": component, "green": component, "blue": component, "alpha": "1.000"}
+    (color_set / "Contents.json").write_text(json.dumps({
+        "colors": [{"color": {"color-space": "srgb", "components": components}, "idiom": "universal"}],
+        "info": {"author": "xcode", "version": 1}
+    }, indent=2) + "\n", encoding="utf-8")
+
+write_solid_color_asset("AccentColor", "1.000")
+write_solid_color_asset("LaunchBackground", "0.000")
 
 # Reuse IMG_2151.jpeg as a small in-app brand mark. Keeping it in the existing
 # asset catalog means it is compiled into Assets.car instead of loaded at runtime.
@@ -171,7 +171,7 @@ for folder in (APP, ACTIVITY, INTEGRATION):
                     if engine.isRunning {
                         Image(systemName: "arrow.clockwise")
                     } else {
-                        Image("SideStickMark").resizable().scaledToFit().padding(12)
+                        Image("SideStickMark").grayscale(1).resizable().scaledToFit().grayscale(1).padding(12)
                     }
                 }'''
         )
@@ -183,7 +183,7 @@ for folder in (APP, ACTIVITY, INTEGRATION):
             'Image(systemName: resolvedIcon)',
             '''Group {
                     if resolvedIcon == "SideStickMark" {
-                        Image("SideStickMark").resizable().scaledToFit().padding(9)
+                        Image("SideStickMark").grayscale(1).resizable().scaledToFit().grayscale(1).padding(9)
                     } else {
                         Image(systemName: resolvedIcon)
                     }
@@ -191,12 +191,12 @@ for folder in (APP, ACTIVITY, INTEGRATION):
         )
         branded = branded.replace(
             'Image(systemName: "snowflake")',
-            'Image("SideStickMark").resizable().scaledToFit().padding(9)'
+            'Image("SideStickMark").grayscale(1).resizable().scaledToFit().grayscale(1).padding(9)'
         )
         branded = re.sub(
             r'Label\(([^,\n]+),\s*systemImage:\s*"snowflake"\)',
             lambda match: 'Label { Text(' + match.group(1) + ') } icon: { '
-                'Image("SideStickMark").resizable().scaledToFit().frame(width: 17, height: 17) }',
+                'Image("SideStickMark").grayscale(1).resizable().scaledToFit().grayscale(1).frame(width: 17, height: 17) }',
             branded
         )
         if 'if symbol == "snowflake"' not in branded:
@@ -204,7 +204,7 @@ for folder in (APP, ACTIVITY, INTEGRATION):
                 'Image(systemName: symbol)',
                 '''Group {
                     if symbol == "snowflake" {
-                        Image("SideStickMark").resizable().scaledToFit().frame(width: 17, height: 17)
+                        Image("SideStickMark").grayscale(1).resizable().scaledToFit().grayscale(1).frame(width: 17, height: 17)
                     } else {
                         Image(systemName: symbol)
                     }
@@ -239,16 +239,29 @@ for folder in (APP, ACTIVITY, INTEGRATION):
         if branded != source:
             swift_path.write_text(branded, encoding="utf-8")
 
-# Enforce an OLED black-and-white palette in all app-owned and generated UI.
-# Convert the upstream brand gradient to a grayscale gradient rather than a Color,
-# because the upstream button style intentionally types this token as LinearGradient.
+# Enforce the OLED palette across app-owned and generated SwiftUI source.
+OPACITY_STEPS = (0.03, 0.06, 0.12, 0.24, 0.48, 0.72, 1.0)
+
+def snap_opacity(value):
+    value = max(0.0, min(1.0, float(value)))
+    if value < 0.015:
+        return 0.0
+    return min(OPACITY_STEPS, key=lambda step: abs(step - value))
+
+def opacity_literal(value):
+    snapped = snap_opacity(value)
+    if snapped == 0.0: return "0"
+    if snapped == 1.0: return "1"
+    return f"{snapped:.2f}"
+
 def grayscale_rgb(match):
     red, green, blue = (float(match.group(index)) for index in (1, 2, 3))
-    luminance = 0.2126 * red + 0.7152 * green + 0.0722 * blue
-    opacity = match.group(4)
-    if opacity is not None:
-        return f"Color(white: {luminance:.4f}, opacity: {opacity})"
-    return f"Color(white: {luminance:.4f})"
+    luminance = max(0.0, min(1.0, 0.2126 * red + 0.7152 * green + 0.0722 * blue))
+    source_opacity = float(match.group(4)) if match.group(4) is not None else 1.0
+    opacity = snap_opacity(luminance * source_opacity)
+    if opacity == 0.0: return "Color.black"
+    if opacity == 1.0: return "Color.white"
+    return f"Color.white.opacity({opacity:.2f})"
 
 rgb_pattern = (
     r"Color\(red:\s*((?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)),"
@@ -256,29 +269,122 @@ rgb_pattern = (
     r"\s*blue:\s*((?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+))"
     r"(?:,\s*opacity:\s*((?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)))?\)"
 )
+opacity_pattern = re.compile(r"\.opacity\(\s*((?:0(?:\.[0-9]+)?|1(?:\.0+)?))\s*\)")
+BACKGROUND_COLOR_TYPES = (
+    "systemBackground", "secondarySystemBackground", "tertiarySystemBackground",
+    "systemGroupedBackground", "secondarySystemGroupedBackground",
+    "tertiarySystemGroupedBackground", "groupTableViewBackground"
+)
+FILL_COLOR_TYPES = ("systemFill", "secondarySystemFill", "tertiarySystemFill", "quaternarySystemFill")
+CHROMATIC_UI_COLORS = (
+    "systemBlue", "systemRed", "systemGreen", "systemOrange", "systemYellow",
+    "systemPurple", "systemPink", "systemTeal", "systemCyan", "systemIndigo",
+    "systemMint", "systemBrown"
+)
+
+def normalize_swift(source):
+    monochrome = source
+    monochrome = monochrome.replace("Theme.accent2", ".white")
+    monochrome = monochrome.replace("Theme.accent", ".white")
+    monochrome = monochrome.replace("Theme.violet", ".white")
+    monochrome = monochrome.replace("Theme.glow", ".white.opacity(0.12)")
+    monochrome = monochrome.replace(
+        "Theme.brand",
+        "LinearGradient(colors: [.white.opacity(0.72), .white.opacity(0.24)], "
+        "startPoint: .topLeading, endPoint: .bottomTrailing)"
+    )
+    monochrome = re.sub(r"\.tint\([^()]*\)", ".tint(.white)", monochrome)
+    monochrome = re.sub(
+        r"\.(?:red|orange|yellow|green|mint|teal|cyan|blue|indigo|purple|pink|brown)(?![A-Za-z0-9_])",
+        ".white",
+        monochrome
+    )
+    monochrome = re.sub(rgb_pattern, grayscale_rgb, monochrome)
+
+    for name in BACKGROUND_COLOR_TYPES:
+        monochrome = monochrome.replace(f"Color(.{name})", "Color.black")
+        monochrome = monochrome.replace(f"UIColor.{name}", "UIColor.black")
+    for name in FILL_COLOR_TYPES:
+        monochrome = monochrome.replace(f"Color(.{name})", "Color.white.opacity(0.12)")
+        monochrome = monochrome.replace(f"UIColor.{name}", "UIColor.white.withAlphaComponent(0.12)")
+    for name in CHROMATIC_UI_COLORS:
+        monochrome = monochrome.replace(f"Color(.{name})", "Color.white")
+        monochrome = monochrome.replace(f"UIColor.{name}", "UIColor.white")
+
+    replacements = {
+        "Color(.label)": "Color.white",
+        "Color(.secondaryLabel)": "Color.white.opacity(0.48)",
+        "Color(.tertiaryLabel)": "Color.white.opacity(0.24)",
+        "Color(.quaternaryLabel)": "Color.white.opacity(0.12)",
+        "Color(.placeholderText)": "Color.white.opacity(0.48)",
+        "Color(.separator)": "Color.white.opacity(0.12)",
+        "Color(.opaqueSeparator)": "Color.white.opacity(0.24)",
+        "Color(uiColor: .systemBackground)": "Color.black",
+        "Color(uiColor: .secondarySystemBackground)": "Color.black",
+        "Color(uiColor: .secondaryLabel)": "Color.white.opacity(0.48)",
+        "Color(uiColor: .tertiaryLabel)": "Color.white.opacity(0.24)",
+        "Color.gray": "Color.white.opacity(0.48)",
+        "Color.accentColor": "Color.white",
+        "UIColor.tintColor": "UIColor.white",
+    }
+    for old, new in replacements.items():
+        monochrome = monochrome.replace(old, new)
+    monochrome = re.sub(r"\bUIColor\.systemGray(?:[2-6])?\b",
+                        "UIColor.white.withAlphaComponent(0.48)", monochrome)
+
+    for material in ("ultraThinMaterial", "thinMaterial", "regularMaterial", "thickMaterial", "bar"):
+        monochrome = re.sub(rf"\.{material}\b", "Color.black", monochrome)
+    monochrome = monochrome.replace(
+        ".glassEffect(.regular, in: Capsule())",
+        ".background(Capsule().fill(Color.black))"
+    )
+    monochrome = re.sub(
+        r"(\.(?:foregroundStyle|foregroundColor)\s*\([^()\n]*?)\.secondary\b",
+        r"\1.white.opacity(0.48)", monochrome
+    )
+    monochrome = re.sub(
+        r"(\.(?:foregroundStyle|foregroundColor)\s*\([^()\n]*?)\.tertiary\b",
+        r"\1.white.opacity(0.24)", monochrome
+    )
+    monochrome = re.sub(
+        r"(\.(?:foregroundStyle|foregroundColor)\s*\([^()\n]*?)\.primary\b",
+        r"\1.white", monochrome
+    )
+    return opacity_pattern.sub(
+        lambda match: f".opacity({opacity_literal(match.group(1))})",
+        monochrome
+    )
+
+swift_paths = set()
 for folder in (APP, ACTIVITY, INTEGRATION):
-    if not folder.exists():
-        continue
-    for swift_path in folder.rglob("*.swift"):
-        source = swift_path.read_text(encoding="utf-8")
-        monochrome = source.replace("Theme.accent2", ".white")
-        monochrome = monochrome.replace("Theme.accent", ".white")
-        monochrome = monochrome.replace("Theme.violet", ".white")
-        monochrome = monochrome.replace("Theme.glow", ".white.opacity(0.14)")
-        monochrome = monochrome.replace(
-            "Theme.brand",
-            "LinearGradient(colors: [.white.opacity(0.92), .white.opacity(0.52)], "
-            "startPoint: .topLeading, endPoint: .bottomTrailing)"
-        )
-        monochrome = re.sub(r"\.tint\([^()]*\)", ".tint(.white)", monochrome)
-        monochrome = re.sub(
-            r"\.(?:red|orange|yellow|green|mint|teal|cyan|blue|indigo|purple|pink|brown)(?![A-Za-z0-9_])",
-            ".white",
-            monochrome
-        )
-        monochrome = re.sub(rgb_pattern, grayscale_rgb, monochrome)
-        if monochrome != source:
-            swift_path.write_text(monochrome, encoding="utf-8")
+    if folder.exists():
+        swift_paths.update(folder.rglob("*.swift"))
+theme_path = ROOT / "SideStickTheme.swift"
+if theme_path.is_file():
+    swift_paths.add(theme_path)
+
+for swift_path in sorted(swift_paths):
+    source = swift_path.read_text(encoding="utf-8")
+    monochrome = normalize_swift(source)
+    if swift_path.name == "Theme.swift":
+        start = monochrome.find("struct AppBackground: View {")
+        end = monochrome.find("// MARK: - Cards", start)
+        if start >= 0 and end > start:
+            monochrome = (
+                monochrome[:start]
+                + "struct AppBackground: View {\n"
+                  "    var body: some View {\n"
+                  "        Color.black.ignoresSafeArea()\n"
+                  "    }\n"
+                  "}\n\n"
+                + monochrome[end:]
+            )
+    monochrome = monochrome.replace(
+        'Image("SideStickMark")',
+        'Image("SideStickMark").grayscale(1)'
+    )
+    if monochrome != source:
+        swift_path.write_text(monochrome, encoding="utf-8")
 
 # Avoid animating the entire Signer hierarchy for every connection/progress update.
 content_view = APP / "ContentView.swift"
@@ -298,6 +404,10 @@ info_path = APP / "Info.plist"
 info = plistlib.loads(info_path.read_bytes())
 info["CFBundleDisplayName"] = "SideStick"
 info["CFBundleName"] = "SideStick"
+info["UIUserInterfaceStyle"] = "Dark"
+launch_screen = info.get("UILaunchScreen", {})
+launch_screen["UIColorName"] = "LaunchBackground"
+info["UILaunchScreen"] = launch_screen
 info["NSLocalNetworkUsageDescription"] = (
     "SideStick uses the local network for device pairing, app installation, "
     "and optional discovery of nearby HTTP services."
