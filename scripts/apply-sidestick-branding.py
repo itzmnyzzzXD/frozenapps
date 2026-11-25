@@ -251,10 +251,10 @@ def grayscale_rgb(match):
     return f"Color(white: {luminance:.4f})"
 
 rgb_pattern = (
-    r"Color\\(red:\\s*((?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+)),"
-    r"\\s*green:\\s*((?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+)),"
-    r"\\s*blue:\\s*((?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+))"
-    r"(?:,\\s*opacity:\\s*((?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+)))?\\)"
+    r"Color\(red:\s*((?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)),"
+    r"\s*green:\s*((?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)),"
+    r"\s*blue:\s*((?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+))"
+    r"(?:,\s*opacity:\s*((?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)))?\)"
 )
 for folder in (APP, ACTIVITY, INTEGRATION):
     if not folder.exists():
@@ -270,9 +270,9 @@ for folder in (APP, ACTIVITY, INTEGRATION):
             "LinearGradient(colors: [.white.opacity(0.92), .white.opacity(0.52)], "
             "startPoint: .topLeading, endPoint: .bottomTrailing)"
         )
-        monochrome = re.sub(r"\\.tint\\([^()]*\\)", ".tint(.white)", monochrome)
+        monochrome = re.sub(r"\.tint\([^()]*\)", ".tint(.white)", monochrome)
         monochrome = re.sub(
-            r"\\.(?:red|orange|yellow|green|mint|teal|cyan|blue|indigo|purple|pink|brown)",
+            r"\.(?:red|orange|yellow|green|mint|teal|cyan|blue|indigo|purple|pink|brown)",
             ".white",
             monochrome
         )

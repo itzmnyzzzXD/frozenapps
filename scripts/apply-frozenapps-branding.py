@@ -2235,15 +2235,15 @@ if "AppBackground()" in tools_section:
 # screens. This is presentation-only and does not alter either onboarding flag.
 replace_once(
     "ios-app/SideInstallerApp.swift",
-    ```    @AppStorage("hasCompletedAccountSetup") private var hasCompletedAccountSetup = false```,
-    ```    @AppStorage("hasCompletedAccountSetup") private var hasCompletedAccountSetup = false
-    @State private var showLaunchWelcome = true```
+    '''    @AppStorage("hasCompletedAccountSetup") private var hasCompletedAccountSetup = false''',
+    '''    @AppStorage("hasCompletedAccountSetup") private var hasCompletedAccountSetup = false
+    @State private var showLaunchWelcome = true'''
 )
 replace_once(
     "ios-app/SideInstallerApp.swift",
-    ```            }
-            .animation(.smooth(duration: 0.5), value: hasAcceptedTOS)```,
-    ```                if showLaunchWelcome {
+    '''            }
+            .animation(.smooth(duration: 0.5), value: hasAcceptedTOS)''',
+    '''                if showLaunchWelcome {
                     FrozenLaunchWelcome {
                         withAnimation(.easeOut(duration: 0.35)) {
                             showLaunchWelcome = false
@@ -2253,7 +2253,7 @@ replace_once(
                     .zIndex(2)
                 }
             }
-            .animation(.smooth(duration: 0.5), value: hasAcceptedTOS)```
+            .animation(.smooth(duration: 0.5), value: hasAcceptedTOS)'''
 )
 
 print("Applied FrozenApps branding to pinned engine source.")
