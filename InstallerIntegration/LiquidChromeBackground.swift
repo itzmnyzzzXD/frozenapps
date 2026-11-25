@@ -257,7 +257,9 @@ struct LiquidChromeBackground: UIViewRepresentable {
             self.device = device
             commandQueue = queue
             do {
-                let library = try device.makeDefaultLibrary()
+                guard let library = device.makeDefaultLibrary() else {
+                    throw LiquidChromeRenderError.defaultLibraryUnavailable
+                }
                 simulationPipeline = try makePipeline(device: device, library: library,
                     fragment: "liquidChromeSimulation", pixelFormat: .rg16Float, blends: false)
                 slopePipeline = try makePipeline(device: device, library: library,
@@ -627,5 +629,6 @@ private final class LiquidChromeMetalView: MTKView {
 }
 
 private enum LiquidChromeRenderError: Error {
+    case defaultLibraryUnavailable
     case missingShaderFunction(String)
 }
