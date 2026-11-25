@@ -117,6 +117,7 @@ replace_section(
     @EnvironmentObject private var accounts: AccountStore
     @EnvironmentObject private var loc: Localizer
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    let launchWelcomeIsVisible: Bool
 
     @State private var email = ""
     @State private var password = ""
@@ -170,8 +171,12 @@ replace_section(
             }
         }
         .preferredColorScheme(.dark)
-        .task {
-            try? await Task.sleep(for: .milliseconds(reduceMotion ? 1200 : 2150))
+        .task(id: launchWelcomeIsVisible) {
+            let delay = launchWelcomeIsVisible
+                ? (reduceMotion ? 1200 : 2150)
+                : 650
+            try? await Task.sleep(for: .milliseconds(delay))
+            guard !Task.isCancelled else { return }
             focus = .email
         }
     }
@@ -2255,6 +2260,11 @@ replace_once(
                 }
             }
             .animation(.smooth(duration: 0.5), value: hasAcceptedTOS)'''
+)
+replace_once(
+    "ios-app/SideInstallerApp.swift",
+    '''                    AccountSetupView()''',
+    '''                    AccountSetupView(launchWelcomeIsVisible: showLaunchWelcome)'''
 )
 replace_once(
     "ios-app/SideInstallerApp.swift",
