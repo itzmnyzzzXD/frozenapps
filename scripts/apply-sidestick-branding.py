@@ -244,9 +244,9 @@ for swift_path in APP.rglob("*.swift"):
     monochrome = source.replace("Theme.accent2", ".white")
     monochrome = monochrome.replace("Theme.accent", ".white")
     monochrome = monochrome.replace("Theme.brand", ".black")
-    monochrome = re.sub(r"\\.tint\\([^()]*\\)", ".tint(.white)", monochrome)
+    monochrome = re.sub(r"\.tint\([^()]*\)", ".tint(.white)", monochrome)
     monochrome = re.sub(
-        r"\\.(?:red|orange|yellow|green|mint|teal|cyan|blue|indigo|purple|pink|brown)",
+        r"\.(?:red|orange|yellow|green|mint|teal|cyan|blue|indigo|purple|pink|brown)",
         ".white",
         monochrome
     )
