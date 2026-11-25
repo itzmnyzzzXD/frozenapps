@@ -14,6 +14,11 @@ vertex LiquidChromeVertexOut liquidChromeVertex(uint vertexID [[vertex_id]]) {
 
 constexpr sampler linearClampSampler(coord::normalized, address::clamp_to_edge, filter::linear);
 
+// Convert GLSL's bottom-left normalized texture coordinates to Metal's top-left origin.
+static float2 liquidChromeMetalUV(float2 glUV) {
+    return float2(glUV.x, 1.0 - glUV.y);
+}
+
 struct LiquidChromeSimUniforms { float4 size; float4 stroke; float4 impulse; };
 struct LiquidChromeSlopeUniforms { float4 size; };
 struct LiquidChromeUniforms {
@@ -40,12 +45,12 @@ fragment float4 liquidChromeSimulation(
     float2 texel = 1.0 / size;
     float2 frag = float2(position.x, size.y - position.y);
     float2 uv = frag * texel;
-    float2 state = stateTexture.sample(linearClampSampler, uv).rg;
+    float2 state = stateTexture.sample(linearClampSampler, liquidChromeMetalUV(uv)).rg;
     float2 around =
-        stateTexture.sample(linearClampSampler, uv - float2(texel.x, 0.0)).rg +
-        stateTexture.sample(linearClampSampler, uv + float2(texel.x, 0.0)).rg +
-        stateTexture.sample(linearClampSampler, uv - float2(0.0, texel.y)).rg +
-        stateTexture.sample(linearClampSampler, uv + float2(0.0, texel.y)).rg -
+        stateTexture.sample(linearClampSampler, liquidChromeMetalUV(uv - float2(texel.x, 0.0))).rg +
+        stateTexture.sample(linearClampSampler, liquidChromeMetalUV(uv + float2(texel.x, 0.0))).rg +
+        stateTexture.sample(linearClampSampler, liquidChromeMetalUV(uv - float2(0.0, texel.y))).rg +
+        stateTexture.sample(linearClampSampler, liquidChromeMetalUV(uv + float2(0.0, texel.y))).rg -
         4.0 * state;
     float next = state.r + (state.r - state.g) * 0.982
         + 0.3 * around.r + 0.08 * (around.r - around.g);
@@ -87,10 +92,10 @@ static float2 liquidChromeSlopeAt(float2 uv, texture2d<float> slopeTexture, floa
     float2 g1 = w2 + w3;
     float2 h0 = (i - 0.5 + w1 / g0) / slopeSize;
     float2 h1 = (i + 1.5 + w3 / g1) / slopeSize;
-    float2 a = slopeTexture.sample(linearClampSampler, float2(h0.x, h0.y)).rg;
-    float2 b = slopeTexture.sample(linearClampSampler, float2(h1.x, h0.y)).rg;
-    float2 c = slopeTexture.sample(linearClampSampler, float2(h0.x, h1.y)).rg;
-    float2 d = slopeTexture.sample(linearClampSampler, float2(h1.x, h1.y)).rg;
+    float2 a = slopeTexture.sample(linearClampSampler, liquidChromeMetalUV(float2(h0.x, h0.y))).rg;
+    float2 b = slopeTexture.sample(linearClampSampler, liquidChromeMetalUV(float2(h1.x, h0.y))).rg;
+    float2 c = slopeTexture.sample(linearClampSampler, liquidChromeMetalUV(float2(h0.x, h1.y))).rg;
+    float2 d = slopeTexture.sample(linearClampSampler, liquidChromeMetalUV(float2(h1.x, h1.y))).rg;
     return g0.y * (g0.x * a + g1.x * b) + g1.y * (g0.x * c + g1.x * d);
 }
 
@@ -198,7 +203,8 @@ fragment float4 liquidChromeComposite(
     float2 sweep = -k * bevel * (sn + 2.0 * k * cs * cs * th)
         * weight * density * 2.0 / unit * across;
     float2 stepX = dfdx(slope);
-    float2 stepY = dfdy(slope);
+    // MSL screen Y grows down; negate dfdy to preserve GLSL's bottom-left derivative.
+    float2 stepY = -dfdy(slope);
     float2 crease = dot(stepX, stepX) > dot(stepY, stepY) ? stepX : stepY;
     if (dot(crease, crease) > dot(sweep, sweep)) sweep = crease;
     float bend = length(sweep);

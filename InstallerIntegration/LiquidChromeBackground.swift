@@ -92,36 +92,41 @@ final class LiquidChromeInteraction {
 
     func updatePointer(_ location: CGPoint, in size: CGSize, touching: Bool) {
         guard size.width > 0, size.height > 0 else { return }
-        let point = SIMD2<Float>(
+        let normalizedPoint = SIMD2<Float>(
             Float(min(max(location.x / size.width, 0), 1)),
-            Float(1 - min(max(location.y / size.height, 0), 1))
+            Float(min(max(location.y / size.height, 0), 1))
         )
+        // Wave strokes use GLSL grid coordinates (origin at bottom-left).
+        // The idle sway pointer keeps DOM screen coordinates (origin at top-left).
+        let gridPoint = SIMD2<Float>(normalizedPoint.x, 1.0 - normalizedPoint.y)
+        let pointerPoint = normalizedPoint * 2.0 - SIMD2<Float>(repeating: 1.0)
+
         lock.lock()
         defer { lock.unlock() }
 
         if touching && !wasTouching {
             appendStroke(LiquidChromeStroke(
-                start: point, end: point,
+                start: gridPoint, end: gridPoint,
                 strength: -1.6 * LiquidChromeParameters.frozenApps.rippleSize,
                 radius: 6.0 * LiquidChromeParameters.frozenApps.rippleSize
             ))
         } else if let previousPoint, pointerInside {
             let gridWidth = min(512.0, max(16.0, (Float(size.width) / 4.0).rounded()))
             let gridHeight = min(512.0, max(16.0, (Float(size.height) / 4.0).rounded()))
-            let dx = (point.x - previousPoint.x) * gridWidth
-            let dy = (point.y - previousPoint.y) * gridHeight
+            let dx = (gridPoint.x - previousPoint.x) * gridWidth
+            let dy = (gridPoint.y - previousPoint.y) * gridHeight
             let travel = hypot(dx, dy)
             if travel > 0.25 {
                 appendStroke(LiquidChromeStroke(
-                    start: previousPoint, end: point,
+                    start: previousPoint, end: gridPoint,
                     strength: -min(0.45, 0.04 + travel * 0.045)
                         * LiquidChromeParameters.frozenApps.rippleSize,
                     radius: 4.0 * LiquidChromeParameters.frozenApps.rippleSize
                 ))
             }
         }
-        self.previousPoint = point
-        pointer = point * 2.0 - SIMD2<Float>(repeating: 1.0)
+        self.previousPoint = gridPoint
+        pointer = pointerPoint
         pointerInside = true
         wasTouching = touching
     }
