@@ -375,10 +375,12 @@ if theme_path.is_file():
     swift_paths.add(theme_path)
 
 def grayscale_brand_images(source):
+    image_tokens = ('Image("SideStickMark")', "Image(image)")
     lines = source.splitlines()
     index = 0
     while index < len(lines):
-        if 'Image("SideStickMark")' not in lines[index]:
+        token = next((item for item in image_tokens if item in lines[index]), None)
+        if token is None:
             index += 1
             continue
 
@@ -389,14 +391,12 @@ def grayscale_brand_images(source):
         chain = "\n".join(lines[index:end + 1]).replace(".grayscale(1)", "")
         if ".scaledToFit()" in chain:
             chain = chain.replace(".scaledToFit()", ".scaledToFit().grayscale(1)", 1)
+        elif ".scaledToFill()" in chain:
+            chain = chain.replace(".scaledToFill()", ".scaledToFill().grayscale(1)", 1)
         elif ".resizable()" in chain:
             chain = chain.replace(".resizable()", ".resizable().grayscale(1)", 1)
         else:
-            chain = chain.replace(
-                'Image("SideStickMark")',
-                'Image("SideStickMark").grayscale(1)',
-                1
-            )
+            chain = chain.replace(token, token + ".grayscale(1)", 1)
 
         replacement = chain.splitlines()
         lines[index:end + 1] = replacement
