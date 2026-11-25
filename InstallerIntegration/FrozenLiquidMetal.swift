@@ -12,17 +12,11 @@ enum FrozenMetalVariant: Float {
     var staticColors: [Color] {
         switch self {
         case .chrome:
-            [Color(red: 0.29, green: 0.35, blue: 0.45),
-             Color(red: 0.68, green: 0.73, blue: 0.82),
-             Color(red: 0.20, green: 0.25, blue: 0.34)]
+            [Color(white: 0.22), Color(white: 0.72), Color(white: 0.16)]
         case .gunmetal:
-            [Color(red: 0.035, green: 0.05, blue: 0.085),
-             Color(red: 0.12, green: 0.16, blue: 0.23),
-             Color(red: 0.045, green: 0.06, blue: 0.10)]
+            [Color(white: 0.025), Color(white: 0.12), Color(white: 0.045)]
         case .mercury:
-            [Color(red: 0.38, green: 0.44, blue: 0.55),
-             Color(red: 0.86, green: 0.89, blue: 0.94),
-             Color(red: 0.46, green: 0.51, blue: 0.62)]
+            [Color(white: 0.38), Color(white: 0.90), Color(white: 0.46)]
         }
     }
 }
@@ -104,9 +98,9 @@ struct FrozenLiquidMetalModifier: ViewModifier {
 
     private var borderGradientColors: [Color] {
         if accessibilityContrast == .increased {
-            return [.white.opacity(0.94), Theme.accent2.opacity(0.85), .white.opacity(0.70)]
+            return [.white.opacity(0.94), .white.opacity(0.85), .white.opacity(0.70)]
         }
-        return [.white.opacity(0.58), Theme.accent2.opacity(0.38), .white.opacity(0.10)]
+        return [.white.opacity(0.58), .white.opacity(0.38), .white.opacity(0.10)]
     }
 
     private var borderLineWidth: CGFloat {
@@ -226,7 +220,7 @@ struct FrozenLiquidMetalModifier: ViewModifier {
                 LinearGradient(
                     stops: [
                         .init(color: .white.opacity(0.22), location: 0),
-                        .init(color: Theme.accent2.opacity(0.10), location: 0.22),
+                        .init(color: .white.opacity(0.10), location: 0.22),
                         .init(color: .clear, location: 0.48),
                         .init(color: .white.opacity(0.08), location: 0.73),
                         .init(color: .white.opacity(0.18), location: 1)
@@ -274,7 +268,7 @@ private struct FrozenNeonLiquidButtonBackground: View {
     }
 
     private var baseSurface: some View {
-        shape.fill(Color(red: 0.55, green: 0.015, blue: 0.075))
+        shape.fill(Color.black)
     }
 
     private func spectrumGlow(size: CGSize) -> some View {
@@ -304,7 +298,7 @@ private struct FrozenNeonLiquidButtonBackground: View {
         return shape
             .fill(
                 RadialGradient(
-                    colors: [Theme.accent2.opacity(0.72), .clear, Theme.metalViolet.opacity(0.56)],
+                    colors: [.white.opacity(0.42), .clear, .white.opacity(0.22)],
                     center: UnitPoint(x: 0.18, y: 0.08),
                     startRadius: 3,
                     endRadius: radius
@@ -360,7 +354,7 @@ struct FrozenNeonLiquidButtonStyle: ButtonStyle {
                 shape.strokeBorder(.white.opacity(accessibilityContrast == .increased ? 0.95 : 0.68), lineWidth: 1.25)
             }
             .clipShape(shape)
-            .shadow(color: Theme.accent.opacity(isEnabled ? 0.28 : 0.08), radius: 16, x: 0, y: 8)
+            .shadow(color: .black.opacity(isEnabled ? 0.28 : 0.08), radius: 16, x: 0, y: 8)
             .scaleEffect(configuration.isPressed && !reduceMotion ? 0.95 : 1)
             .brightness(configuration.isPressed ? -0.035 : 0)
             .opacity(isEnabled ? 1 : 0.52)
@@ -391,14 +385,14 @@ struct FrozenLiquidMetalToggleStyle: ToggleStyle {
                 Capsule()
                     .fill(
                         configuration.isOn
-                            ? LinearGradient(colors: [Theme.accent, Theme.metalViolet], startPoint: .topLeading, endPoint: .bottomTrailing)
-                            : LinearGradient(colors: [Theme.matteRaised, Theme.matteSurface], startPoint: .topLeading, endPoint: .bottomTrailing)
+                            ? LinearGradient(colors: [.white, .white.opacity(0.78)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                            : LinearGradient(colors: [.black, .black], startPoint: .topLeading, endPoint: .bottomTrailing)
                     )
                     .overlay(alignment: configuration.isOn ? .trailing : .leading) {
                         Circle()
                             .fill(
                                 LinearGradient(
-                                    colors: [.white, Theme.metalSilver, Color(red: 0.57, green: 0.62, blue: 0.72)],
+                                    colors: [.white, .white.opacity(0.82), .white.opacity(0.57)],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 )
