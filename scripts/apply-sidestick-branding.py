@@ -300,6 +300,15 @@ def normalize_swift(source):
         monochrome
     )
     monochrome = re.sub(rgb_pattern, grayscale_rgb, monochrome)
+    monochrome = re.sub(
+        r"Color\\(white:\\s*((?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+))\\)",
+        lambda match: (
+            "Color.black" if snap_opacity(float(match.group(1))) == 0.0
+            else ("Color.white" if snap_opacity(float(match.group(1))) == 1.0
+                  else f"Color.white.opacity({snap_opacity(float(match.group(1))):.2f})")
+        ),
+        monochrome
+    )
 
     for name in BACKGROUND_COLOR_TYPES:
         monochrome = monochrome.replace(f"Color(.{name})", "Color.black")
