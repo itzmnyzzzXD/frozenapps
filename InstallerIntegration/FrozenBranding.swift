@@ -63,8 +63,7 @@ struct FrozenLaunchWelcome: View {
             .task(id: reduceMotion) {
                 // Standard: last word starts at 0.4s, finishes at 0.9s,
                 // then holds for 0.8s. Reduce Motion: 0.3s fade + 0.6s hold.
-                let duration = reduceMotion ? 900 : 1_700
-                try? await Task.sleep(for: .milliseconds(duration))
+                try? await Task.sleep(for: .milliseconds(reduceMotion ? 900 : 1_700))
                 guard !Task.isCancelled else { return }
                 finish()
             }
