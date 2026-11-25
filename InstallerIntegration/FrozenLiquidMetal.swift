@@ -89,7 +89,7 @@ struct FrozenLiquidMetalModifier: ViewModifier {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-    @Environment(\.accessibilityContrast) private var accessibilityContrast
+    @Environment(\.colorSchemeContrast) private var accessibilityContrast
 
     @StateObject private var motion = FrozenDeviceMotion.shared
     @State private var isVisible = false
@@ -100,6 +100,17 @@ struct FrozenLiquidMetalModifier: ViewModifier {
 
     private var shouldAnimate: Bool {
         live && isVisible && ownsShaderSlot && scenePhase == .active && !lowPowerMode && !reduceMotion && !reduceTransparency
+    }
+
+    private var borderGradientColors: [Color] {
+        if accessibilityContrast == .increased {
+            return [.white.opacity(0.94), Theme.accent2.opacity(0.85), .white.opacity(0.70)]
+        }
+        return [.white.opacity(0.58), Theme.accent2.opacity(0.38), .white.opacity(0.10)]
+    }
+
+    private var borderLineWidth: CGFloat {
+        accessibilityContrast == .increased ? 1.6 : 1
     }
 
     func body(content: Content) -> some View {
@@ -139,13 +150,11 @@ struct FrozenLiquidMetalModifier: ViewModifier {
             .overlay {
                 shape.strokeBorder(
                     LinearGradient(
-                        colors: accessibilityContrast == .increased
-                            ? [.white.opacity(0.94), Theme.accent2.opacity(0.85), .white.opacity(0.70)]
-                            : [.white.opacity(0.58), Theme.accent2.opacity(0.38), .white.opacity(0.10)],
+                        colors: borderGradientColors,
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     ),
-                    lineWidth: accessibilityContrast == .increased ? 1.6 : 1
+                    lineWidth: borderLineWidth
                 )
             }
             .clipShape(shape)
@@ -187,9 +196,9 @@ struct FrozenLiquidMetalModifier: ViewModifier {
     private func shaderReflection(size: CGSize, time: TimeInterval, tilt: CGSize) -> some View {
         let shader = ShaderLibrary.default.sideStickLiquidMetal(
             .float(Float(time)),
-            .float2(SIMD2<Float>(Float(tilt.width), Float(tilt.height))),
+            .float2(CGPoint(x: tilt.width, y: tilt.height)),
             .float(variant.rawValue),
-            .float2(SIMD2<Float>(Float(size.width), Float(size.height)))
+            .float2(CGPoint(x: size.width, y: size.height))
         )
 
         return shapeFill
@@ -245,11 +254,79 @@ extension View {
     }
 }
 
+
+/// Extracted layers keep the button's SwiftUI body small enough for the type-checker.
+private struct FrozenNeonLiquidButtonBackground: View {
+    private let shape = RoundedRectangle(cornerRadius: 23, style: .continuous)
+
+    var body: some View {
+        GeometryReader { proxy in
+            let size = proxy.size
+            ZStack {
+                baseSurface
+                spectrumGlow(size: size)
+                accentGlow(size: size)
+                topReflection(size: size)
+            }
+            .frame(width: size.width, height: size.height)
+            .frozenLiquidMetal(variant: .mercury, cornerRadius: 23, live: true)
+        }
+    }
+
+    private var baseSurface: some View {
+        shape.fill(Color(red: 0.55, green: 0.015, blue: 0.075))
+    }
+
+    private func spectrumGlow(size: CGSize) -> some View {
+        let radius = max(size.width, size.height) * 2.6
+        return shape
+            .fill(
+                RadialGradient(
+                    colors: [
+                        .white,
+                        Theme.accent2,
+                        .white,
+                        Theme.accent,
+                        .white,
+                        Theme.metalViolet,
+                        .white
+                    ],
+                    center: UnitPoint(x: 0.65, y: 1.8),
+                    startRadius: 2,
+                    endRadius: radius
+                )
+            )
+            .blendMode(.difference)
+    }
+
+    private func accentGlow(size: CGSize) -> some View {
+        let radius = max(size.width, size.height) * 1.5
+        return shape
+            .fill(
+                RadialGradient(
+                    colors: [Theme.accent2.opacity(0.72), .clear, Theme.metalViolet.opacity(0.56)],
+                    center: UnitPoint(x: 0.18, y: 0.08),
+                    startRadius: 3,
+                    endRadius: radius
+                )
+            )
+            .blendMode(.colorDodge)
+    }
+
+    private func topReflection(size: CGSize) -> some View {
+        Capsule()
+            .fill(.white.opacity(0.24))
+            .frame(width: size.width * 0.78, height: 22)
+            .blur(radius: 7)
+            .offset(y: -size.height * 0.30)
+    }
+}
+
 /// A native SwiftUI reconstruction of the Uiverse neon-liquid button.
 struct FrozenNeonLiquidButtonStyle: ButtonStyle {
     @Binding private var isPressed: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.accessibilityContrast) private var accessibilityContrast
+    @Environment(\.colorSchemeContrast) private var accessibilityContrast
     @Environment(\.isEnabled) private var isEnabled
 
     init(isPressed: Binding<Bool> = .constant(false)) {
@@ -274,44 +351,7 @@ struct FrozenNeonLiquidButtonStyle: ButtonStyle {
             .frame(maxWidth: .infinity, minHeight: 44)
             .padding(.vertical, Theme.Space.x2)
             .background {
-                GeometryReader { proxy in
-                    ZStack {
-                        shape.fill(Color(red: 0.55, green: 0.015, blue: 0.075))
-                        shape.fill(
-                            RadialGradient(
-                                colors: [
-                                    .white,
-                                    Theme.accent2,
-                                    .white,
-                                    Theme.accent,
-                                    .white,
-                                    Theme.metalViolet,
-                                    .white
-                                ],
-                                center: UnitPoint(x: 0.65, y: 1.8),
-                                startRadius: 2,
-                                endRadius: max(proxy.size.width, proxy.size.height) * 2.6
-                            )
-                        )
-                        .blendMode(.difference)
-                        shape.fill(
-                            RadialGradient(
-                                colors: [Theme.accent2.opacity(0.72), .clear, Theme.metalViolet.opacity(0.56)],
-                                center: UnitPoint(x: 0.18, y: 0.08),
-                                startRadius: 3,
-                                endRadius: max(proxy.size.width, proxy.size.height) * 1.5
-                            )
-                        )
-                        .blendMode(.colorDodge)
-                        Capsule()
-                            .fill(.white.opacity(0.24))
-                            .frame(width: proxy.size.width * 0.78, height: 22)
-                            .blur(radius: 7)
-                            .offset(y: -proxy.size.height * 0.30)
-                    }
-                    .frame(width: proxy.size.width, height: proxy.size.height)
-                    .frozenLiquidMetal(variant: .mercury, cornerRadius: 23, live: true)
-                }
+                FrozenNeonLiquidButtonBackground()
             }
             .overlay {
                 shape.fill(Color.black.opacity(accessibilityContrast == .increased ? 0.42 : 0.30))
@@ -336,7 +376,7 @@ struct FrozenNeonLiquidButtonStyle: ButtonStyle {
 /// Compact liquid toggle for workspace preferences; the label remains native.
 struct FrozenLiquidMetalToggleStyle: ToggleStyle {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.accessibilityContrast) private var accessibilityContrast
+    @Environment(\.colorSchemeContrast) private var accessibilityContrast
 
     func makeBody(configuration: Configuration) -> some View {
         Button {
