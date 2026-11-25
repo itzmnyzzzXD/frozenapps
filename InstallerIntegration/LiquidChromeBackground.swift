@@ -88,7 +88,23 @@ final class LiquidChromeInteraction {
     private var pointer = SIMD2<Float>(repeating: 0)
     private var pointerInside = false
     private var wasTouching = false
+    private var reduceMotionEnabled = false
     private var strokes: [LiquidChromeStroke] = []
+
+    /// Reduce Motion is enforced at the input boundary so touches cannot queue
+    /// wave impulses that replay later when the accessibility setting changes.
+    func setReduceMotion(_ enabled: Bool) {
+        lock.lock()
+        defer { lock.unlock() }
+        reduceMotionEnabled = enabled
+        previousPoint = nil
+        pointer = SIMD2<Float>(repeating: 0)
+        pointerInside = false
+        wasTouching = false
+        if enabled {
+            strokes.removeAll(keepingCapacity: true)
+        }
+    }
 
     func updatePointer(_ location: CGPoint, in size: CGSize, touching: Bool) {
         guard size.width > 0, size.height > 0 else { return }
@@ -103,6 +119,14 @@ final class LiquidChromeInteraction {
 
         lock.lock()
         defer { lock.unlock() }
+
+        guard !reduceMotionEnabled else {
+            previousPoint = nil
+            pointer = SIMD2<Float>(repeating: 0)
+            pointerInside = false
+            wasTouching = false
+            return
+        }
 
         if touching && !wasTouching {
             appendStroke(LiquidChromeStroke(
@@ -233,6 +257,7 @@ struct LiquidChromeBackground: UIViewRepresentable {
         private var lowPowerMode = ProcessInfo.processInfo.isLowPowerModeEnabled
         private var thermalState = ProcessInfo.processInfo.thermalState
         private var staticFrameDrawn = false
+        private var needsSimulationReset = false
         private var renderingAvailable = false
         private var observerTokens: [NSObjectProtocol] = []
         private var previousDrawableSize = CGSize.zero
@@ -306,6 +331,10 @@ struct LiquidChromeBackground: UIViewRepresentable {
         func update(sceneActive: Bool, reduceMotion: Bool, reduceTransparency: Bool, increasedContrast: Bool) {
             if self.sceneActive != sceneActive || self.reduceMotion != reduceMotion {
                 staticFrameDrawn = false
+            }
+            if self.reduceMotion != reduceMotion {
+                interaction.setReduceMotion(reduceMotion)
+                needsSimulationReset = true
             }
             self.sceneActive = sceneActive
             self.reduceMotion = reduceMotion
@@ -424,6 +453,10 @@ struct LiquidChromeBackground: UIViewRepresentable {
             }
 
             guard let commandBuffer = commandQueue.makeCommandBuffer() else { return }
+            if needsSimulationReset {
+                encodeSimulationClear(on: commandBuffer)
+                needsSimulationReset = false
+            }
             var simulationSteps = 0
             if !reduceMotion && !lowPowerMode && !view.isPaused {
                 accumulator += dt
@@ -459,7 +492,8 @@ struct LiquidChromeBackground: UIViewRepresentable {
                     5.0 / (3.0 * parameters.thickness),
                     1.0 - pow(1.0 - presence, 3.0), parameters.roughness),
                 exposureRippleLight: SIMD4<Float>(parameters.exposure,
-                    parameters.rippleStrength * 2.2, parameters.lightMode ? 1 : 0, 0),
+                    reduceMotion ? 0 : parameters.rippleStrength * 2.2,
+                    parameters.lightMode ? 1 : 0, 0),
                 tint: SIMD4<Float>(parameters.color.x, parameters.color.y, parameters.color.z, 1),
                 shiftAndSlopeSize: SIMD4<Float>(yaw, pitch, Float(simulationSize.x), Float(simulationSize.y))
             )
@@ -544,6 +578,27 @@ struct LiquidChromeBackground: UIViewRepresentable {
             accumulator = 0
             clearTextures([first, second, slope])
             return true
+        }
+
+        /// Clears both wave buffers and the derived slope before a still frame
+        /// or when returning from Reduce Motion, preventing old ripples from reappearing.
+        private func encodeSimulationClear(on commandBuffer: MTLCommandBuffer) {
+            var textures = stateTextures
+            if let slopeTexture {
+                textures.append(slopeTexture)
+            }
+            for texture in textures {
+                let descriptor = MTLRenderPassDescriptor()
+                let color = descriptor.colorAttachments[0]!
+                color.texture = texture
+                color.loadAction = .clear
+                color.storeAction = .store
+                color.clearColor = MTLClearColorMake(0, 0, 0, 1)
+                guard let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: descriptor) else {
+                    continue
+                }
+                encoder.endEncoding()
+            }
         }
 
         private func clearTextures(_ textures: [MTLTexture]) {
