@@ -29,26 +29,16 @@ static float hash21(float2 point) {
     float specularLine = pow(saturate(1.0 - abs(uv.y - 0.20 - flow * 0.035 - tilt.y * 0.09)), 22.0);
     float edgeReflection = pow(saturate(1.0 - abs(centered.x) * 0.78), 2.0);
 
-    float3 baseColor;
-    float3 reflectedColor;
-    if (variant < 0.5) {
-        baseColor = float3(0.31, 0.37, 0.48);
-        reflectedColor = float3(0.94, 0.97, 1.00);
-    } else if (variant < 1.5) {
-        baseColor = float3(0.075, 0.095, 0.145);
-        reflectedColor = float3(0.39, 0.52, 0.72);
-    } else {
-        baseColor = float3(0.57, 0.62, 0.72);
-        reflectedColor = float3(1.00, 0.98, 0.93);
-    }
-
+    // Grayscale-only liquid metal: luminance is the sole output channel.
     float reflection = 0.18 + chromeBand * 0.40 + secondaryBand * 0.12 + specularLine * 0.35;
     float noiseLift = (fineNoise - 0.5) * 0.035;
-    float3 color = baseColor * (0.72 + flow * 0.12 + noiseLift);
-    color = mix(color, reflectedColor, saturate(reflection * (0.55 + edgeReflection * 0.35)));
-    color += float3(0.17, 0.20, 0.30) * edgeReflection * 0.12;
-    color += float3(0.17, 0.22, 0.34) * saturate(tilt.x * 0.45 + 0.5) * specularLine * 0.12;
-
+    float baseLuminance = variant < 0.5 ? 0.42 : (variant < 1.5 ? 0.10 : 0.68);
+    float reflectedLuminance = variant < 0.5 ? 0.94 : (variant < 1.5 ? 0.48 : 1.0);
+    float luminance = baseLuminance * (0.72 + flow * 0.12 + noiseLift);
+    luminance = mix(luminance, reflectedLuminance, saturate(reflection * (0.55 + edgeReflection * 0.35)));
+    luminance += edgeReflection * 0.025;
+    luminance += saturate(tilt.x * 0.45 + 0.5) * specularLine * 0.025;
+    float3 color = float3(luminance);
     float pulse = 0.94 + 0.06 * sin(time * 1.256637 + flow * 2.0);
     color *= pulse;
     color = clamp(color, float3(0.0), float3(1.0));
