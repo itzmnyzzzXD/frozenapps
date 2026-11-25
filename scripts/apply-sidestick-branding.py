@@ -171,7 +171,7 @@ for folder in (APP, ACTIVITY, INTEGRATION):
                     if engine.isRunning {
                         Image(systemName: "arrow.clockwise")
                     } else {
-                        Image("SideStickMark").grayscale(1).resizable().scaledToFit().grayscale(1).padding(12)
+                        Image("SideStickMark").resizable().scaledToFit().padding(12)
                     }
                 }'''
         )
@@ -183,7 +183,7 @@ for folder in (APP, ACTIVITY, INTEGRATION):
             'Image(systemName: resolvedIcon)',
             '''Group {
                     if resolvedIcon == "SideStickMark" {
-                        Image("SideStickMark").grayscale(1).resizable().scaledToFit().grayscale(1).padding(9)
+                        Image("SideStickMark").resizable().scaledToFit().padding(9)
                     } else {
                         Image(systemName: resolvedIcon)
                     }
@@ -191,12 +191,12 @@ for folder in (APP, ACTIVITY, INTEGRATION):
         )
         branded = branded.replace(
             'Image(systemName: "snowflake")',
-            'Image("SideStickMark").grayscale(1).resizable().scaledToFit().grayscale(1).padding(9)'
+            'Image("SideStickMark").resizable().scaledToFit().padding(9)'
         )
         branded = re.sub(
             r'Label\(([^,\n]+),\s*systemImage:\s*"snowflake"\)',
             lambda match: 'Label { Text(' + match.group(1) + ') } icon: { '
-                'Image("SideStickMark").grayscale(1).resizable().scaledToFit().grayscale(1).frame(width: 17, height: 17) }',
+                'Image("SideStickMark").resizable().scaledToFit().frame(width: 17, height: 17) }',
             branded
         )
         if 'if symbol == "snowflake"' not in branded:
@@ -204,7 +204,7 @@ for folder in (APP, ACTIVITY, INTEGRATION):
                 'Image(systemName: symbol)',
                 '''Group {
                     if symbol == "snowflake" {
-                        Image("SideStickMark").grayscale(1).resizable().scaledToFit().grayscale(1).frame(width: 17, height: 17)
+                        Image("SideStickMark").resizable().scaledToFit().frame(width: 17, height: 17)
                     } else {
                         Image(systemName: symbol)
                     }
@@ -374,6 +374,37 @@ theme_path = ROOT / "SideStickTheme.swift"
 if theme_path.is_file():
     swift_paths.add(theme_path)
 
+def grayscale_brand_images(source):
+    lines = source.splitlines()
+    index = 0
+    while index < len(lines):
+        if 'Image("SideStickMark")' not in lines[index]:
+            index += 1
+            continue
+
+        end = index
+        while end + 1 < len(lines) and lines[end + 1].lstrip().startswith("."):
+            end += 1
+
+        chain = "\n".join(lines[index:end + 1]).replace(".grayscale(1)", "")
+        if ".scaledToFit()" in chain:
+            chain = chain.replace(".scaledToFit()", ".scaledToFit().grayscale(1)", 1)
+        elif ".resizable()" in chain:
+            chain = chain.replace(".resizable()", ".resizable().grayscale(1)", 1)
+        else:
+            chain = chain.replace(
+                'Image("SideStickMark")',
+                'Image("SideStickMark").grayscale(1)',
+                1
+            )
+
+        replacement = chain.splitlines()
+        lines[index:end + 1] = replacement
+        index += len(replacement)
+
+    return "\n".join(lines)
+
+
 for swift_path in sorted(swift_paths):
     source = swift_path.read_text(encoding="utf-8")
     monochrome = normalize_swift(source)
@@ -390,10 +421,7 @@ for swift_path in sorted(swift_paths):
                   "}\n\n"
                 + monochrome[end:]
             )
-    monochrome = monochrome.replace(
-        'Image("SideStickMark")',
-        'Image("SideStickMark").grayscale(1)'
-    )
+    monochrome = grayscale_brand_images(monochrome)
     if monochrome != source:
         swift_path.write_text(monochrome, encoding="utf-8")
 
