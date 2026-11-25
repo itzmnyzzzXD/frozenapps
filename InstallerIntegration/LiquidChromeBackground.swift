@@ -61,6 +61,26 @@ private struct LiquidChromeInputFrame {
     var pointerInside: Bool
 }
 
+/// SIMD4 fields keep every MSL uniform member naturally aligned to 16 bytes.
+private struct LiquidChromeSimUniforms {
+    var size: SIMD4<Float>
+    var stroke: SIMD4<Float>
+    var impulse: SIMD4<Float>
+}
+
+private struct LiquidChromeSlopeUniforms {
+    var size: SIMD4<Float>
+}
+
+private struct LiquidChromeUniforms {
+    var resolutionUnitTime: SIMD4<Float>
+    var amplitudeFrequencyDepth: SIMD4<Float>
+    var detailSharpnessPresenceRoughness: SIMD4<Float>
+    var exposureRippleLight: SIMD4<Float>
+    var tint: SIMD4<Float>
+    var shiftAndSlopeSize: SIMD4<Float>
+}
+
 final class LiquidChromeInteraction {
     private let lock = NSLock()
     private var previousPoint: SIMD2<Float>?
@@ -113,13 +133,13 @@ final class LiquidChromeInteraction {
         lock.unlock()
     }
 
-    func currentFrame() -> LiquidChromeInputFrame {
+    fileprivate func currentFrame() -> LiquidChromeInputFrame {
         lock.lock()
         defer { lock.unlock() }
         return LiquidChromeInputFrame(pointer: pointer, pointerInside: pointerInside)
     }
 
-    func takeStroke() -> LiquidChromeStroke? {
+    fileprivate func takeStroke() -> LiquidChromeStroke? {
         lock.lock()
         defer { lock.unlock() }
         guard !strokes.isEmpty else { return nil }
