@@ -170,7 +170,7 @@ replace_section(
         }
         .preferredColorScheme(.dark)
         .task {
-            try? await Task.sleep(for: .milliseconds(650))
+            try? await Task.sleep(for: .milliseconds(2150))
             focus = .email
         }
     }
