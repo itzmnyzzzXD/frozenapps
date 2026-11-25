@@ -12,11 +12,11 @@ enum FrozenMetalVariant: Float {
     var staticColors: [Color] {
         switch self {
         case .chrome:
-            [Color.white.opacity(0.24), Color.white.opacity(0.72), Color.white.opacity(0.12)]
+            [Color(white: 0.22), Color(white: 0.72), Color(white: 0.16)]
         case .gunmetal:
-            [Color.white.opacity(0.03), Color.white.opacity(0.12), Color.white.opacity(0.03)]
+            [Color(white: 0.025), Color(white: 0.12), Color(white: 0.045)]
         case .mercury:
-            [Color.white.opacity(0.48), Color.white, Color.white.opacity(0.48)]
+            [Color(white: 0.38), Color(white: 0.90), Color(white: 0.46)]
         }
     }
 }

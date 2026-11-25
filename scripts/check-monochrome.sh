@@ -43,8 +43,11 @@ if theme.is_file(): source_files.append(theme)
 for path in sorted(set(source_files)):
     checked += 1
     for number, line in enumerate(path.read_text(encoding="utf-8",errors="replace").splitlines(),1):
+        # Ignore comments for the hex test: documented historic values are not rendered.
+        code_line = re.sub(r"//.*$", "", line)
         for label, pattern in checks:
-            for match in pattern.finditer(line):
+            candidate = code_line if label == "non-monochrome hex" else line
+            for match in pattern.finditer(candidate):
                 if label == "non-monochrome hex" and match.group(1).upper() in {"000000","FFFFFF"}: continue
                 fail(path,number,label,line)
 

@@ -15,24 +15,12 @@ extension Theme {
         static let x4: CGFloat = 16
         static let x6: CGFloat = 24
         static let x8: CGFloat = 32
-        static let x12: CGFloat = 48
     }
 
     enum Radius {
-        static let small: CGFloat = 6
-        static let medium: CGFloat = 8
-        static let large: CGFloat = 12
-        static let xlarge: CGFloat = 16
-    }
-
-    enum Opacity {
-        static let full: Double = 1
-        static let strong: Double = 0.72
-        static let medium: Double = 0.48
-        static let subdued: Double = 0.24
-        static let faint: Double = 0.12
-        static let hairline: Double = 0.06
-        static let barely: Double = 0.03
+        static let small: CGFloat = 12
+        static let medium: CGFloat = 20
+        static let large: CGFloat = 28
     }
 
     enum TypeScale {
@@ -43,8 +31,8 @@ extension Theme {
     }
 
     enum Elevation {
-        static let card = Color.black.opacity(0.24)
-        static let floating = Color.black.opacity(0.48)
+        static let card = Color.black.opacity(0.22)
+        static let floating = Color.black.opacity(0.36)
         static let focus = Color.white.opacity(0.72)
     }
 

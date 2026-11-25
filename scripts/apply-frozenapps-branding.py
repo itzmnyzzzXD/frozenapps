@@ -2270,9 +2270,7 @@ replace_once(
     "ios-app/SideInstallerApp.swift",
     '''            .animation(.smooth(duration: 0.5), value: hasCompletedAccountSetup)''',
     '''            .animation(.smooth(duration: 0.5), value: hasCompletedAccountSetup)
-            .tint(.white)
-            .preferredColorScheme(.dark)
-            .background(Color.black.ignoresSafeArea())'''
+            .tint(.white)'''
 )
 
 print("Applied FrozenApps branding to pinned engine source.")

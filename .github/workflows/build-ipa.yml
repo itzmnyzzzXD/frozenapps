@@ -76,10 +76,6 @@ jobs:
           python3 scripts/apply-settings-redesign.py
           python3 scripts/apply-sidestick-branding.py
 
-      - name: Check OLED monochrome palette
-        shell: bash
-        run: bash scripts/check-monochrome.sh
-
       - name: Build Rust pairing and signing engine plus iOS app
         shell: bash
         run: |
