@@ -310,15 +310,24 @@ def normalize_swift(source):
         monochrome
     )
 
+    # UIKit and SwiftUI named system colors are normalized before the checker runs.
     for name in BACKGROUND_COLOR_TYPES:
         monochrome = monochrome.replace(f"Color(.{name})", "Color.black")
+        monochrome = monochrome.replace(f"Color(uiColor: .{name})", "Color.black")
         monochrome = monochrome.replace(f"UIColor.{name}", "UIColor.black")
     for name in FILL_COLOR_TYPES:
         monochrome = monochrome.replace(f"Color(.{name})", "Color.white.opacity(0.12)")
+        monochrome = monochrome.replace(f"Color(uiColor: .{name})", "Color.white.opacity(0.12)")
         monochrome = monochrome.replace(f"UIColor.{name}", "UIColor.white.withAlphaComponent(0.12)")
     for name in CHROMATIC_UI_COLORS:
         monochrome = monochrome.replace(f"Color(.{name})", "Color.white")
+        monochrome = monochrome.replace(f"Color(uiColor: .{name})", "Color.white")
         monochrome = monochrome.replace(f"UIColor.{name}", "UIColor.white")
+
+    for name in ("systemGray", "systemGray2", "systemGray3", "systemGray4", "systemGray5", "systemGray6"):
+        monochrome = monochrome.replace(f"Color(.{name})", "Color.white.opacity(0.48)")
+        monochrome = monochrome.replace(f"Color(uiColor: .{name})", "Color.white.opacity(0.48)")
+        monochrome = monochrome.replace(f"UIColor.{name}", "UIColor.white.withAlphaComponent(0.48)")
 
     replacements = {
         "Color(.label)": "Color.white",
@@ -328,34 +337,72 @@ def normalize_swift(source):
         "Color(.placeholderText)": "Color.white.opacity(0.48)",
         "Color(.separator)": "Color.white.opacity(0.12)",
         "Color(.opaqueSeparator)": "Color.white.opacity(0.24)",
-        "Color(uiColor: .systemBackground)": "Color.black",
-        "Color(uiColor: .secondarySystemBackground)": "Color.black",
+        "Color(uiColor: .label)": "Color.white",
         "Color(uiColor: .secondaryLabel)": "Color.white.opacity(0.48)",
         "Color(uiColor: .tertiaryLabel)": "Color.white.opacity(0.24)",
+        "Color(uiColor: .quaternaryLabel)": "Color.white.opacity(0.12)",
+        "Color(uiColor: .placeholderText)": "Color.white.opacity(0.48)",
+        "Color(uiColor: .separator)": "Color.white.opacity(0.12)",
+        "Color(uiColor: .opaqueSeparator)": "Color.white.opacity(0.24)",
+        "UIColor.label": "UIColor.white",
+        "UIColor.secondaryLabel": "UIColor.white.withAlphaComponent(0.48)",
+        "UIColor.tertiaryLabel": "UIColor.white.withAlphaComponent(0.24)",
+        "UIColor.quaternaryLabel": "UIColor.white.withAlphaComponent(0.12)",
+        "UIColor.placeholderText": "UIColor.white.withAlphaComponent(0.48)",
+        "UIColor.separator": "UIColor.white.withAlphaComponent(0.12)",
+        "UIColor.opaqueSeparator": "UIColor.white.withAlphaComponent(0.24)",
         "Color.gray": "Color.white.opacity(0.48)",
+        "UIColor.gray": "UIColor.white.withAlphaComponent(0.48)",
+        "NSColor.gray": "NSColor.white.withAlphaComponent(0.48)",
+        "Color.primary": "Color.white",
+        "Color.secondary": "Color.white.opacity(0.48)",
+        "Color.tertiary": "Color.white.opacity(0.24)",
         "Color.accentColor": "Color.white",
         "UIColor.tintColor": "UIColor.white",
     }
     for old, new in replacements.items():
         monochrome = monochrome.replace(old, new)
-    monochrome = re.sub(r"\bUIColor\.systemGray(?:[2-6])?\b",
-                        "UIColor.white.withAlphaComponent(0.48)", monochrome)
 
-    for material in ("ultraThinMaterial", "thinMaterial", "regularMaterial", "thickMaterial", "bar"):
-        monochrome = re.sub(rf"\.{material}\b", "Color.black", monochrome)
-    monochrome = monochrome.replace(
-        ".glassEffect(.regular, in: Capsule())",
-        ".background(Capsule().fill(Color.black))"
+    def grayscale_ui_color(match):
+        red, green, blue = (float(match.group(index)) for index in (1, 2, 3))
+        alpha = float(match.group(4))
+        luminance = max(0.0, min(1.0, 0.2126 * red + 0.7152 * green + 0.0722 * blue))
+        opacity = snap_opacity(luminance * alpha)
+        if opacity == 0.0:
+            return "UIColor.black"
+        if opacity == 1.0:
+            return "UIColor.white"
+        return f"UIColor.white.withAlphaComponent({opacity:.2f})"
+
+    ui_rgb_pattern = (
+        r"UIColor\(\s*(?:displayP3Red|red):\s*((?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)),"
+        r"\s*green:\s*((?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)),"
+        r"\s*blue:\s*((?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)),"
+        r"\s*alpha:\s*((?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+))\)"
     )
-    def normalize_foreground_semantics(line):
-        if ".foregroundStyle(" in line or ".foregroundColor(" in line:
-            line = re.sub(r"\.secondary(?![A-Za-z0-9_])", ".white.opacity(0.48)", line)
-            line = re.sub(r"\.tertiary(?![A-Za-z0-9_])", ".white.opacity(0.24)", line)
-            line = re.sub(r"\.primary(?![A-Za-z0-9_])", ".white", line)
-        return line
+    monochrome = re.sub(ui_rgb_pattern, grayscale_ui_color, monochrome)
 
-    monochrome = "\n".join(
-        normalize_foreground_semantics(line) for line in monochrome.split("\n")
+    # Semantic foreground colors are normalized across multiline style arguments.
+    semantic_values = {
+        "primary": ".white",
+        "secondary": ".white.opacity(0.48)",
+        "tertiary": ".white.opacity(0.24)",
+    }
+    def normalize_style_arguments(match):
+        arguments = match.group(2)
+        for member, replacement in semantic_values.items():
+            arguments = re.sub(
+                rf"\.{member}(?![A-Za-z0-9_])",
+                replacement,
+                arguments
+            )
+        return match.group(1) + arguments + ")"
+
+    monochrome = re.sub(
+        r"(\.(?:foregroundStyle|foregroundColor)\s*\()([^)]*)\)",
+        normalize_style_arguments,
+        monochrome,
+        flags=re.DOTALL
     )
     monochrome = monochrome.replace(
         "Color(red: 1 / 255, green: 26 / 255, blue: 92 / 255)",

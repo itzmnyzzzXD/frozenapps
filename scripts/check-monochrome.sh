@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+
 python3 - "$ROOT" <<'PY'
 from pathlib import Path
-import json, plistlib, re, sys
+import json
+import plistlib
+import re
+import sys
 
 root = Path(sys.argv[1])
 app = root / "Vendor" / "SideInstaller" / "ios-app"
@@ -11,85 +15,146 @@ activity = root / "Vendor" / "SideInstaller" / "ios-live-activity"
 integration = root / "InstallerIntegration"
 theme = root / "SideStickTheme.swift"
 violations = []
-checked = 0
+checked_sources = 0
+checked_colorsets = 0
 
 scan = [integration]
 if app.is_dir():
     scan.extend([app, activity])
 else:
-    print("WARN: Vendor submodule unavailable; only checked app-owned integration sources.")
+    print("WARN: Vendor submodule unavailable; generated app checks will run in CI after checkout.")
 
 checks = [
-    ("named chromatic color", re.compile(r"(?<![A-Za-z0-9_])\.(?:blue|purple|red|green|orange|pink|cyan|yellow|indigo|teal|mint|brown)(?![A-Za-z0-9_])")),
-    ("semantic gray foreground", re.compile(r"\.(?:foregroundStyle|foregroundColor)\([^\n]*\.(?:secondary|tertiary)\b")),
-    ("system gray", re.compile(r"\bColor\.gray\b|\bUIColor\.systemGray(?:[2-6])?\b|\bColor\s*\(\s*white:")),
-    ("system UI color", re.compile(r"UIColor\.(?:system(?:Blue|Red|Green|Orange|Yellow|Purple|Pink|Teal|Cyan|Indigo|Mint|Brown)|secondarySystem|tertiarySystem|quaternarySystem|label\b|secondaryLabel\b|tertiaryLabel\b)")),
-    ("system material", re.compile(r"\.(?:ultraThinMaterial|thinMaterial|regularMaterial|thickMaterial|bar)\b|\.glassEffect\(")),
-    ("RGB color constructor", re.compile(r"\bColor\s*\(\s*(?:red:|hue:)|\bUIColor\s*\(\s*(?:red:|hue:)")),
-    ("non-monochrome hex", re.compile(r"#([0-9A-Fa-f]{3,8})\b")),
+    (
+        "named chromatic color",
+        re.compile(r"(?<![A-Za-z0-9_])\.(?:blue|purple|red|green|orange|pink|cyan|yellow|indigo|teal|mint|brown)(?![A-Za-z0-9_])")
+    ),
+    (
+        "system gray or dynamic semantic color",
+        re.compile(r"\b(?:Color|UIColor|NSColor)\.gray\b|\bUIColor\.systemGray(?:[2-6])?\b|\bColor\s*\(\s*white:|\bUIColor\s*\(\s*white:|\bColor\.(?:primary|secondary|tertiary)\b")
+    ),
+    (
+        "UIKit system color",
+        re.compile(r"\bUIColor\.(?:system[A-Z][A-Za-z0-9]*|secondarySystem[A-Z][A-Za-z0-9]*|tertiarySystem[A-Z][A-Za-z0-9]*|quaternarySystem[A-Z][A-Za-z0-9]*|label\b|secondaryLabel\b|tertiaryLabel\b|quaternaryLabel\b|placeholderText\b|separator\b|opaqueSeparator\b|tintColor\b)")
+    ),
+    (
+        "SwiftUI system color asset",
+        re.compile(r"\bColor\s*\(\s*(?:uiColor:\s*)?\.(?:system[A-Z][A-Za-z0-9]*|secondarySystem[A-Z][A-Za-z0-9]*|tertiarySystem[A-Z][A-Za-z0-9]*|quaternarySystem[A-Z][A-Za-z0-9]*|label\b|secondaryLabel\b|tertiaryLabel\b|quaternaryLabel\b|placeholderText\b|separator\b|opaqueSeparator\b)")
+    ),
+    (
+        "semantic foreground color",
+        re.compile(r"\.(?:foregroundStyle|foregroundColor)\s*\([^)]*\.(?:primary|secondary|tertiary)\b", re.DOTALL)
+    ),
+    (
+        "system material",
+        re.compile(r"\.(?:ultraThinMaterial|thinMaterial|regularMaterial|thickMaterial|bar)\b|\.glassEffect\(")
+    ),
+    (
+        "RGB/HSB/white color constructor",
+        re.compile(r"\b(?:Color|UIColor|NSColor|CGColor)\s*\([^)\n]*(?:red:|hue:|displayP3Red:|white:)")
+    ),
+    (
+        "non-monochrome hex",
+        re.compile(r"#([0-9A-Fa-f]{3,8})\b")
+    ),
+    (
+        "light appearance override",
+        re.compile(r"\.preferredColorScheme\s*\(\s*\.light\s*\)")
+    ),
 ]
 
 def fail(path, line, label, value):
-    try: name = path.relative_to(root)
-    except ValueError: name = str(path)
+    try:
+        name = path.relative_to(root)
+    except ValueError:
+        name = str(path)
     violations.append(f"{name}:{line}: {label}: {value.strip()}")
 
-source_files=[]
+source_files = []
 for folder in scan:
     if folder.is_dir():
         source_files += list(folder.rglob("*.swift")) + list(folder.rglob("*.metal"))
-if theme.is_file(): source_files.append(theme)
+if theme.is_file():
+    source_files.append(theme)
 
 for path in sorted(set(source_files)):
-    checked += 1
-    for number, line in enumerate(path.read_text(encoding="utf-8",errors="replace").splitlines(),1):
-        # Ignore comments for the hex test: documented historic values are not rendered.
+    checked_sources += 1
+    source = path.read_text(encoding="utf-8", errors="replace")
+    source = re.sub(r"/\*.*?\*/", "", source, flags=re.DOTALL)
+    for number, line in enumerate(source.splitlines(), 1):
         code_line = re.sub(r"//.*$", "", line)
         for label, pattern in checks:
-            candidate = code_line if label == "non-monochrome hex" else line
+            candidate = code_line if label in ("non-monochrome hex", "light appearance override") else line
             for match in pattern.finditer(candidate):
-                if label == "non-monochrome hex" and match.group(1).upper() in {"000000","FFFFFF"}: continue
-                fail(path,number,label,line)
+                if label == "non-monochrome hex" and match.group(1).upper() in {"000000", "FFFFFF"}:
+                    continue
+                fail(path, number, label, line)
 
-catalog=app/"Assets.xcassets"
+catalog = app / "Assets.xcassets"
 if catalog.is_dir():
-    for manifest in catalog.rglob("*.colorset/Contents.json"):
-        try: data=json.loads(manifest.read_text())
+    for manifest in sorted(catalog.rglob("*.colorset/Contents.json")):
+        checked_colorsets += 1
+        try:
+            data = json.loads(manifest.read_text(encoding="utf-8"))
         except Exception as error:
-            fail(manifest,1,"invalid colorset",str(error)); continue
-        for item in data.get("colors",[]):
-            components=item.get("color",{}).get("components",{})
-            try: values=[float(components[k]) for k in ("red","green","blue")]
+            fail(manifest, 1, "invalid colorset", str(error))
+            continue
+        for item in data.get("colors", []):
+            components = item.get("color", {}).get("components", {})
+            try:
+                values = [float(components[key]) for key in ("red", "green", "blue")]
             except Exception:
-                fail(manifest,1,"non-sRGB colorset",repr(components)); continue
-            if not (all(x==0 for x in values) or all(x==1 for x in values)):
-                fail(manifest,1,"chromatic/gray colorset",repr(components))
-    for name in ("AccentColor","LaunchBackground"):
-        if not (catalog/f"{name}.colorset"/"Contents.json").is_file():
-            fail(catalog,1,"required colorset missing",name)
+                fail(manifest, 1, "non-sRGB colorset", repr(components))
+                continue
+            if not (all(value == 0.0 for value in values) or all(value == 1.0 for value in values)):
+                fail(manifest, 1, "chromatic/gray colorset", repr(components))
 
-info=app/"Info.plist"
+    required_colors = {
+        "AccentColor": (1.0, 1.0, 1.0),
+        "LaunchBackground": (0.0, 0.0, 0.0),
+    }
+    for name, expected in required_colors.items():
+        manifest = catalog / f"{name}.colorset" / "Contents.json"
+        if not manifest.is_file():
+            fail(catalog, 1, "required colorset missing", name)
+            continue
+        try:
+            data = json.loads(manifest.read_text(encoding="utf-8"))
+            color = data["colors"][0]["color"]["components"]
+            actual = tuple(float(color[channel]) for channel in ("red", "green", "blue"))
+            if actual != expected:
+                fail(manifest, 1, f"{name} must be {'white' if expected[0] else 'black'}", repr(actual))
+        except Exception as error:
+            fail(manifest, 1, "invalid required colorset", str(error))
+
+info = app / "Info.plist"
 if info.is_file():
     try:
-        plist=plistlib.loads(info.read_bytes())
-        if plist.get("UIUserInterfaceStyle")!="Dark": fail(info,1,"UIUserInterfaceStyle must be Dark",repr(plist.get("UIUserInterfaceStyle")))
-        if plist.get("UILaunchScreen",{}).get("UIColorName")!="LaunchBackground":
-            fail(info,1,"launch screen must use LaunchBackground",repr(plist.get("UILaunchScreen")))
-    except Exception as error: fail(info,1,"invalid Info.plist",str(error))
+        plist = plistlib.loads(info.read_bytes())
+        if plist.get("UIUserInterfaceStyle") != "Dark":
+            fail(info, 1, "UIUserInterfaceStyle must be Dark", repr(plist.get("UIUserInterfaceStyle")))
+        if plist.get("UILaunchScreen", {}).get("UIColorName") != "LaunchBackground":
+            fail(info, 1, "launch screen must use LaunchBackground", repr(plist.get("UILaunchScreen")))
+    except Exception as error:
+        fail(info, 1, "invalid Info.plist", str(error))
 
-root_app=app/"SideInstallerApp.swift"
+root_app = app / "SideInstallerApp.swift"
 if root_app.is_file():
-    content=root_app.read_text(errors="replace")
-    for token in (".preferredColorScheme(.dark)",".tint(.white)","Color.black.ignoresSafeArea()"):
-        if token not in content: fail(root_app,1,"missing root appearance invariant",token)
+    content = root_app.read_text(encoding="utf-8", errors="replace")
+    for token in (".preferredColorScheme(.dark)", ".tint(.white)", "Color.black.ignoresSafeArea()"):
+        if token not in content:
+            fail(root_app, 1, "missing root appearance invariant", token)
 
 if violations:
-    print(f"FAIL: {len(violations)} monochrome violation(s) in {checked} source files.")
-    for item in violations: print(" - "+item)
+    print(f"FAIL: {len(violations)} monochrome violation(s) in {checked_sources} Swift/Metal files and {checked_colorsets} colorsets.")
+    for violation in violations:
+        print(" - " + violation)
     sys.exit(1)
-print(f"PASS: {checked} Swift/Metal files scanned; zero monochrome leaks.")
+
+print(f"PASS: {checked_sources} Swift/Metal files scanned; zero chromatic source violations.")
+print(f"PASS: {checked_colorsets} colorsets scanned; every color is pure black or white.")
 if app.is_dir():
-    print("PASS: AccentColor white; launch background black; app appearance forced dark.")
+    print("PASS: AccentColor white; LaunchBackground black; Info.plist forced dark.")
     print("PASS: root tint white; root window black; preferred color scheme dark.")
 else:
     print("PARTIAL: generated Vendor source checks execute in CI after submodule checkout.")
