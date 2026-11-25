@@ -237,6 +237,22 @@ for folder in (APP, ACTIVITY, INTEGRATION):
         if branded != source:
             swift_path.write_text(branded, encoding="utf-8")
 
+# Enforce the product's OLED monochrome palette in generated UI source.
+# This runs after all owned UI patches and never changes engine/authentication logic.
+for swift_path in APP.rglob("*.swift"):
+    source = swift_path.read_text(encoding="utf-8")
+    monochrome = source.replace("Theme.accent2", ".white")
+    monochrome = monochrome.replace("Theme.accent", ".white")
+    monochrome = monochrome.replace("Theme.brand", ".black")
+    monochrome = re.sub(r"\\.tint\\([^()]*\\)", ".tint(.white)", monochrome)
+    monochrome = re.sub(
+        r"\\.(?:red|orange|yellow|green|mint|teal|cyan|blue|indigo|purple|pink|brown)",
+        ".white",
+        monochrome
+    )
+    if monochrome != source:
+        swift_path.write_text(monochrome, encoding="utf-8")
+
 # Avoid animating the entire Signer hierarchy for every connection/progress update.
 content_view = APP / "ContentView.swift"
 if content_view.is_file():
