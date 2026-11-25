@@ -24,7 +24,7 @@ struct FrozenAnimatedOTPInput: View {
     }
 
     private var activeIndex: Int {
-        min(digits.count, 5)
+        min(digits.count, 6)
     }
 
     var body: some View {
@@ -33,6 +33,7 @@ struct FrozenAnimatedOTPInput: View {
                 slot(at: index)
             }
         }
+        .accessibilityHidden(true)
         .overlay {
             TextField("", text: $code)
                 .keyboardType(.numberPad)
