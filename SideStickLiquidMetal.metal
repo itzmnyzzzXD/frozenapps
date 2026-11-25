@@ -71,10 +71,10 @@ fragment float4 liquidChromeSlope(
     float2 texel = 1.0 / size;
     float2 frag = float2(position.x, size.y - position.y);
     float2 uv = frag * texel;
-    float left = stateTexture.sample(linearClampSampler, uv - float2(texel.x, 0.0)).r;
-    float right = stateTexture.sample(linearClampSampler, uv + float2(texel.x, 0.0)).r;
-    float down = stateTexture.sample(linearClampSampler, uv - float2(0.0, texel.y)).r;
-    float up = stateTexture.sample(linearClampSampler, uv + float2(0.0, texel.y)).r;
+    float left = stateTexture.sample(linearClampSampler, liquidChromeMetalUV(uv - float2(texel.x, 0.0))).r;
+    float right = stateTexture.sample(linearClampSampler, liquidChromeMetalUV(uv + float2(texel.x, 0.0))).r;
+    float down = stateTexture.sample(linearClampSampler, liquidChromeMetalUV(uv - float2(0.0, texel.y))).r;
+    float up = stateTexture.sample(linearClampSampler, liquidChromeMetalUV(uv + float2(0.0, texel.y))).r;
     return float4((right - left) * 0.5, (up - down) * 0.5, 0.0, 1.0);
 }
 
