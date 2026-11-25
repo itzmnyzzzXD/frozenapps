@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-OUTPUT="\${TMPDIR:-/tmp}/FrozenApps-LiquidChrome.air"
+OUTPUT="/tmp/FrozenApps-LiquidChrome.air"
 cd "$ROOT"
 xcrun --sdk iphoneos metal -c SideStickLiquidMetal.metal -o "$OUTPUT"
 test -s "$OUTPUT"
