@@ -1,21 +1,9 @@
 import SwiftUI
 
-/// Cached wallpaper plus one inexpensive tint pass replace the old full-screen blur stack.
+/// Screen-level AppBackground compatibility layer. The shared root MTKView renders behind it.
 struct FrozenWorkspaceBackdrop: View {
     var body: some View {
-        GeometryReader { proxy in
-            Rectangle()
-                .fill(Color.black)
-                .frame(width: proxy.size.width, height: proxy.size.height)
-                .overlay {
-                    Rectangle()
-                        .fill(Color.clear)
-                        .frozenLiquidMetal(variant: .chrome, cornerRadius: 0, live: true)
-                        .opacity(0.48)
-                }
-        }
-        .ignoresSafeArea()
-        .accessibilityHidden(true)
+        Color.clear.ignoresSafeArea().accessibilityHidden(true)
     }
 }
 

@@ -24,3 +24,22 @@ Source: https://uiverse.io/3bdel3ziz-T/curly-duck-62
 Creator: 3bdel3ziz-T (3bdel3zizT)  
 Licence: MIT License, Copyright (c) 3bdel3ziz-T (3bdel3zizT)  
 Recreated natively in SwiftUI as the SideStick workspace radio navigation; the original HTML and Tailwind markup are not included.
+
+
+## React Bits — LiquidChrome background
+
+Author: David Haz  
+Project: https://github.com/DavidHDev/react-bits  
+Component reference: https://reactbits.dev/backgrounds/liquid-chrome  
+License: MIT + Commons Clause v1.0 (see the upstream LICENSE.md).
+
+FrozenApps includes an app-integrated native SwiftUI/MetalKit implementation. It is distributed only as part of this application and is not offered as a standalone component, port, UI library, template or background pack. No React or JavaScript source is bundled.
+
+## ForgeUI animation references
+
+Author: Aman Shakya  
+Project: https://github.com/AmanShakya0018/forgeui  
+References: https://forgeui.in/components/animated-form, https://forgeui.in/components/animated-otp, https://forgeui.in/components/progress-stack, https://forgeui.in/components/stats-card, https://forgeui.in/components/text-reveal  
+License: ForgeUI's repository license permits production-app use but prohibits redistributing the original code or derivatives as a UI library, component collection, template, starter or similar product.
+
+The ForgeUI references will be implemented as clean-room native SwiftUI interactions. No ForgeUI React/TypeScript source is copied into FrozenApps; these interfaces remain app-integrated rather than separately distributed components.

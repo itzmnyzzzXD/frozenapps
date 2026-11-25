@@ -1,254 +1,51 @@
-// From Uiverse.io by dexter-st - https://uiverse.io/dexter-st/breezy-zebra-94
-// MIT License, Copyright (c) dexter-st
 import SwiftUI
-import CoreMotion
-import Combine
 
 enum FrozenMetalVariant: Float {
     case chrome = 0
     case gunmetal = 1
     case mercury = 2
-
     var staticColors: [Color] {
         switch self {
-        case .chrome:
-            [Color(white: 0.22), Color(white: 0.72), Color(white: 0.16)]
-        case .gunmetal:
-            [Color(white: 0.025), Color(white: 0.12), Color(white: 0.045)]
-        case .mercury:
-            [Color(white: 0.38), Color(white: 0.90), Color(white: 0.46)]
+        case .chrome: [.black, .white.opacity(0.24), .black]
+        case .gunmetal: [.black, .white.opacity(0.12), .black]
+        case .mercury: [.black, .white.opacity(0.48), .black]
         }
     }
 }
 
-@MainActor
-private enum FrozenMetalSurfaceBudget {
-    private static var activeIDs = Set<UUID>()
-    private static let maximumLiveSurfaces = 3
-
-    static func acquire(_ id: UUID) -> Bool {
-        if activeIDs.contains(id) { return true }
-        guard activeIDs.count < maximumLiveSurfaces else { return false }
-        activeIDs.insert(id)
-        return true
-    }
-
-    static func release(_ id: UUID) {
-        activeIDs.remove(id)
-    }
-}
-
-@MainActor
-final class FrozenDeviceMotion: ObservableObject {
-    static let shared = FrozenDeviceMotion()
-
-    @Published private(set) var tilt: CGSize = .zero
-
-    private let manager = CMMotionManager()
-    private var activeClients = 0
-
-    private init() {}
-
-    func acquire() {
-        activeClients += 1
-        guard activeClients == 1, manager.isDeviceMotionAvailable else { return }
-
-        manager.deviceMotionUpdateInterval = 1.0 / 20.0
-        manager.startDeviceMotionUpdates(to: .main) { [weak self] motion, _ in
-            guard let motion else { return }
-            let nextTilt = CGSize(
-                width: CGFloat(max(-0.38, min(0.38, motion.attitude.roll))),
-                height: CGFloat(max(-0.38, min(0.38, motion.attitude.pitch)))
-            )
-            Task { @MainActor [weak self] in
-                self?.tilt = nextTilt
-            }
-        }
-    }
-
-    func release() {
-        activeClients = max(0, activeClients - 1)
-        guard activeClients == 0 else { return }
-        manager.stopDeviceMotionUpdates()
-        tilt = .zero
-    }
-}
-
-@MainActor
 struct FrozenLiquidMetalModifier: ViewModifier {
     let variant: FrozenMetalVariant
     let cornerRadius: CGFloat
     let live: Bool
-
-    @Environment(\.scenePhase) private var scenePhase
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.colorSchemeContrast) private var accessibilityContrast
 
-    @StateObject private var motion = FrozenDeviceMotion.shared
-    @State private var isVisible = false
-    @State private var lowPowerMode = ProcessInfo.processInfo.isLowPowerModeEnabled
-    @State private var animationStart = Date()
-    @State private var ownsShaderSlot = false
-    @State private var surfaceID = UUID()
-
-    private var shouldAnimate: Bool {
-        live && isVisible && ownsShaderSlot && scenePhase == .active && !lowPowerMode && !reduceMotion && !reduceTransparency
-    }
-
-    private var borderGradientColors: [Color] {
-        if accessibilityContrast == .increased {
-            return [.white.opacity(0.94), .white.opacity(0.85), .white.opacity(0.70)]
-        }
-        return [.white.opacity(0.58), .white.opacity(0.38), .white.opacity(0.10)]
-    }
-
-    private var borderLineWidth: CGFloat {
-        accessibilityContrast == .increased ? 1.6 : 1
-    }
-
     func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-
         content
-            .background {
-                shape.fill(
-                    LinearGradient(
-                        colors: variant.staticColors,
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-            }
             .overlay {
-                GeometryReader { proxy in
-                    Group {
-                        if shouldAnimate {
-                            TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: false)) { timeline in
-                                shaderReflection(
-                                    size: proxy.size,
-                                    time: timeline.date.timeIntervalSince(animationStart),
-                                    tilt: motion.tilt
-                                )
-                            }
-                        } else {
-                            staticReflection
-                        }
-                    }
-                    .frame(width: proxy.size.width, height: proxy.size.height)
-                    .clipShape(shape)
-                }
-                .allowsHitTesting(false)
-                .accessibilityHidden(true)
-            }
-            .overlay {
-                shape.strokeBorder(
-                    LinearGradient(
-                        colors: borderGradientColors,
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: borderLineWidth
-                )
-            }
-            .clipShape(shape)
-            .shadow(color: Theme.Elevation.floating, radius: 18, x: 0, y: 9)
-            .onAppear {
-                isVisible = true
-                lowPowerMode = ProcessInfo.processInfo.isLowPowerModeEnabled
-                updateShaderActivity()
-            }
-            .onDisappear {
-                isVisible = false
-                updateShaderActivity()
-            }
-            .onChange(of: scenePhase) { _, _ in updateShaderActivity() }
-            .onChange(of: reduceMotion) { _, _ in updateShaderActivity() }
-            .onChange(of: reduceTransparency) { _, _ in updateShaderActivity() }
-            .onChange(of: live) { _, _ in updateShaderActivity() }
-            .onReceive(NotificationCenter.default.publisher(for: .NSProcessInfoPowerStateDidChange)) { _ in
-                lowPowerMode = ProcessInfo.processInfo.isLowPowerModeEnabled
-                updateShaderActivity()
-            }
-    }
-
-    private func updateShaderActivity() {
-        let shouldOwnSlot = live && isVisible && scenePhase == .active && !lowPowerMode && !reduceMotion && !reduceTransparency
-
-        if shouldOwnSlot && !ownsShaderSlot {
-            ownsShaderSlot = FrozenMetalSurfaceBudget.acquire(surfaceID)
-            if ownsShaderSlot {
-                motion.acquire()
-            }
-        } else if !shouldOwnSlot && ownsShaderSlot {
-            motion.release()
-            FrozenMetalSurfaceBudget.release(surfaceID)
-            ownsShaderSlot = false
-        }
-    }
-
-    private func shaderReflection(size: CGSize, time: TimeInterval, tilt: CGSize) -> some View {
-        // The workspace backdrop uses the LiquidChrome reference settings:
-        // white, speed 0.2, amplitude 0.8, detail 2, thickness 0.3,
-        // interactive, depth 0.8, roughness 0, exposure 2,
-        // ripple strength 1.4 and tilt response 0.65.
-        let isWorkspaceChrome = variant == .chrome
-        let shader = ShaderLibrary.default.sideStickLiquidMetal(
-            .float(Float(time)),
-            .float2(CGPoint(x: tilt.width, y: tilt.height)),
-            .float(variant.rawValue),
-            .float2(CGPoint(x: size.width, y: size.height)),
-            .float(isWorkspaceChrome ? 0.2 : 0.075),   // speed
-            .float(isWorkspaceChrome ? 0.8 : 0.075),   // amplitude
-            .float(2.0),                               // detail
-            .float(isWorkspaceChrome ? 0.3 : 0.18),    // thickness
-            .float(isWorkspaceChrome ? 0.8 : 0.5),     // depth
-            .float(isWorkspaceChrome ? 0.0 : 0.28),    // roughness
-            .float(isWorkspaceChrome ? 2.0 : 1.0),     // exposure
-            .float(isWorkspaceChrome ? 1.4 : 0.25),    // ripple strength
-            .float(isWorkspaceChrome ? 0.65 : 1.0)     // tilt response
-        )
-
-        return shapeFill
-            .fill(.white.opacity(0.58))
-            .colorEffect(shader)
-            // Only the specular layer tilts; the control's text stays level.
-            .offset(x: tilt.width * 2.5, y: tilt.height * 2.5)
-            .rotation3DEffect(
-                .degrees(Double(tilt.height) * 20),
-                axis: (x: 1, y: 0, z: 0),
-                perspective: 0.45
-            )
-            .rotation3DEffect(
-                .degrees(Double(-tilt.width) * 20),
-                axis: (x: 0, y: 1, z: 0),
-                perspective: 0.45
-            )
-            .blendMode(.screen)
-            .opacity(reduceTransparency ? 0.94 : 0.82)
-    }
-
-    private var staticReflection: some View {
-        shapeFill
-            .fill(
-                LinearGradient(
+                shape.fill(LinearGradient(
                     stops: [
-                        .init(color: .white.opacity(0.22), location: 0),
-                        .init(color: .white.opacity(0.10), location: 0.22),
-                        .init(color: .clear, location: 0.48),
-                        .init(color: .white.opacity(0.08), location: 0.73),
-                        .init(color: .white.opacity(0.18), location: 1)
+                        .init(color: .white.opacity(0.18), location: 0),
+                        .init(color: .white.opacity(0.06), location: 0.22),
+                        .init(color: .clear, location: 0.50),
+                        .init(color: .white.opacity(0.035), location: 0.78),
+                        .init(color: .white.opacity(0.12), location: 1)
                     ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
+                ))
+                .blendMode(.screen)
+                .opacity(reduceTransparency ? 0.24 : (live ? 0.48 : 0.32))
+                .allowsHitTesting(false)
+            }
+            .overlay {
+                shape.strokeBorder(
+                    .white.opacity(accessibilityContrast == .increased ? 0.82 : 0.20),
+                    lineWidth: accessibilityContrast == .increased ? 1.5 : 1
                 )
-            )
-            .blendMode(.screen)
-            .opacity(accessibilityContrast == .increased ? 0.95 : 0.72)
-    }
-
-    private var shapeFill: RoundedRectangle {
-        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            }
+            .clipShape(shape)
     }
 }
 
@@ -261,7 +58,6 @@ extension View {
         modifier(FrozenLiquidMetalModifier(variant: variant, cornerRadius: cornerRadius, live: live))
     }
 }
-
 
 /// Extracted layers keep the button's SwiftUI body small enough for the type-checker.
 private struct FrozenNeonLiquidButtonBackground: View {

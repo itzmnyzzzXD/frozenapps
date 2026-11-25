@@ -2237,13 +2237,27 @@ if "AppBackground()" in tools_section:
     tools_source = tools_source[:tools_start] + tools_section + tools_source[next_struct:]
     tools_path.write_text(tools_source, encoding="utf-8")
 
+# Mount one shared LiquidChrome MTKView behind all launch and workspace views.
+replace_once(
+    "ios-app/SideInstallerApp.swift",
+    '''            ZStack {
+                if hasAcceptedTOS && hasCompletedAccountSetup {''',
+    '''            GeometryReader { rootGeometry in
+                ZStack {
+                    LiquidChromeBackground(interaction: liquidChromeInput)
+                        .ignoresSafeArea()
+                        .allowsHitTesting(false)
+                    if hasAcceptedTOS && hasCompletedAccountSetup {'''
+)
+
 # Add a short native launch reveal above the existing TOS, account setup and app
 # screens. This is presentation-only and does not alter either onboarding flag.
 replace_once(
     "ios-app/SideInstallerApp.swift",
     '''    @AppStorage("hasCompletedAccountSetup") private var hasCompletedAccountSetup = false''',
     '''    @AppStorage("hasCompletedAccountSetup") private var hasCompletedAccountSetup = false
-    @State private var showLaunchWelcome = true'''
+    @State private var showLaunchWelcome = true
+    @State private var liquidChromeInput = LiquidChromeInteraction()'''
 )
 replace_once(
     "ios-app/SideInstallerApp.swift",
@@ -2257,6 +2271,22 @@ replace_once(
                     }
                     .transition(.opacity)
                     .zIndex(2)
+                }
+                }
+                .simultaneousGesture(
+                    DragGesture(minimumDistance: 0)
+                        .onChanged { value in
+                            liquidChromeInput.updatePointer(value.location, in: rootGeometry.size, touching: true)
+                        }
+                        .onEnded { _ in liquidChromeInput.endPointer() }
+                )
+                .onContinuousHover { phase in
+                    switch phase {
+                    case .active(let location):
+                        liquidChromeInput.updatePointer(location, in: rootGeometry.size, touching: false)
+                    case .ended:
+                        liquidChromeInput.endPointer()
+                    }
                 }
             }
             .animation(.smooth(duration: 0.5), value: hasAcceptedTOS)'''
