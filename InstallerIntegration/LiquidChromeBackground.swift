@@ -1,6 +1,7 @@
 import SwiftUI
 import MetalKit
 import UIKit
+import QuartzCore
 import simd
 
 struct LiquidChromeParameters {
