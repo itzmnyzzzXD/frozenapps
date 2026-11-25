@@ -349,13 +349,13 @@ def normalize_swift(source):
     )
     def normalize_foreground_semantics(line):
         if ".foregroundStyle(" in line or ".foregroundColor(" in line:
-            line = re.sub(r"\\.secondary(?![A-Za-z0-9_])", ".white.opacity(0.48)", line)
-            line = re.sub(r"\\.tertiary(?![A-Za-z0-9_])", ".white.opacity(0.24)", line)
-            line = re.sub(r"\\.primary(?![A-Za-z0-9_])", ".white", line)
+            line = re.sub(r"\.secondary(?![A-Za-z0-9_])", ".white.opacity(0.48)", line)
+            line = re.sub(r"\.tertiary(?![A-Za-z0-9_])", ".white.opacity(0.24)", line)
+            line = re.sub(r"\.primary(?![A-Za-z0-9_])", ".white", line)
         return line
 
-    monochrome = "\\n".join(
-        normalize_foreground_semantics(line) for line in monochrome.split("\\n")
+    monochrome = "\n".join(
+        normalize_foreground_semantics(line) for line in monochrome.split("\n")
     )
     monochrome = monochrome.replace(
         "Color(red: 1 / 255, green: 26 / 255, blue: 92 / 255)",
