@@ -486,8 +486,13 @@ struct LiquidChromeBackground: UIViewRepresentable {
             let points = view.bounds.size
             guard points.width > 0, points.height > 0, let device else { return false }
             let scale = view.window?.screen.scale ?? view.contentScaleFactor
-            var ratio = min(scale, CGFloat(parameters.maxDevicePixelRatio),
-                sqrt(CGFloat(parameters.pixelBudget) / (points.width * points.height)))
+            var ratio = min(
+                scale,
+                min(
+                    CGFloat(parameters.maxDevicePixelRatio),
+                    sqrt(CGFloat(parameters.pixelBudget) / (points.width * points.height))
+                )
+            )
             if lowPowerMode { ratio = min(ratio, 1.0) }
             ratio = max(ratio, 0.5)
 
