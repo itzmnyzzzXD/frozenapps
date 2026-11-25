@@ -382,6 +382,14 @@ def normalize_swift(source):
     )
     monochrome = re.sub(ui_rgb_pattern, grayscale_ui_color, monochrome)
 
+    # Material surfaces become solid OLED black; never rewrite ".bar" inside SF Symbol names.
+    for material in ("ultraThinMaterial", "thinMaterial", "regularMaterial", "thickMaterial"):
+        monochrome = re.sub(rf"\.{material}\b", "Color.black", monochrome)
+    monochrome = monochrome.replace(
+        ".glassEffect(.regular, in: Capsule())",
+        ".background(Capsule().fill(Color.black))"
+    )
+
     # Semantic foreground colors are normalized across multiline style arguments.
     semantic_values = {
         "primary": ".white",

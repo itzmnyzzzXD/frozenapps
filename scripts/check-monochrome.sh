@@ -47,7 +47,7 @@ checks = [
     ),
     (
         "system material",
-        re.compile(r"\.(?:ultraThinMaterial|thinMaterial|regularMaterial|thickMaterial|bar)\b|\.glassEffect\(")
+        re.compile(r"\.(?:ultraThinMaterial|thinMaterial|regularMaterial|thickMaterial)\b|\.glassEffect\(")
     ),
     (
         "RGB/HSB/white color constructor",
