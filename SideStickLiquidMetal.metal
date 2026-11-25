@@ -32,7 +32,6 @@ static float liquidChromeSegment(float2 p, float2 a, float2 b) {
 }
 
 fragment float4 liquidChromeSimulation(
-    LiquidChromeVertexOut input [[stage_in]],
     float4 position [[position]],
     texture2d<float> stateTexture [[texture(0)]],
     constant LiquidChromeSimUniforms& u [[buffer(0)]]
@@ -59,7 +58,6 @@ fragment float4 liquidChromeSimulation(
 }
 
 fragment float4 liquidChromeSlope(
-    LiquidChromeVertexOut input [[stage_in]],
     float4 position [[position]],
     texture2d<float> stateTexture [[texture(0)]],
     constant LiquidChromeSlopeUniforms& u [[buffer(0)]]
@@ -158,7 +156,6 @@ static float3 liquidChromeACES(float3 x) {
 }
 
 fragment float4 liquidChromeComposite(
-    LiquidChromeVertexOut input [[stage_in]],
     float4 position [[position]],
     texture2d<float> slopeTexture [[texture(0)]],
     constant LiquidChromeUniforms& u [[buffer(0)]]
