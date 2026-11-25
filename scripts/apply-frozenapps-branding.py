@@ -2265,7 +2265,7 @@ replace_once(
             .animation(.smooth(duration: 0.5), value: hasAcceptedTOS)''',
     '''                if showLaunchWelcome {
                     FrozenLaunchWelcome {
-                        withAnimation(.easeOut(duration: 0.35)) {
+                        withAnimation(.easeOut(duration: 0.4)) {
                             showLaunchWelcome = false
                         }
                     }
