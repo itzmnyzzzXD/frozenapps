@@ -122,10 +122,17 @@ replace_section(
     @State private var email = ""
     @State private var password = ""
     @State private var passwordVisible = false
+    @State private var isSaving = false
     @FocusState private var focus: AccountField?
 
+    private var emailLooksValid: Bool {
+        let value = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let at = value.firstIndex(of: "@") else { return false }
+        return at != value.startIndex && value[at...].contains(".")
+    }
+
     private var canSave: Bool {
-        !email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !password.isEmpty
+        emailLooksValid && !password.isEmpty && !isSaving
     }
 
     var body: some View {
@@ -271,6 +278,23 @@ replace_section(
                     .onSubmit { focus = .password }
             }
             .fieldBackground()
+            .overlay {
+                RoundedRectangle(cornerRadius: 15, style: .continuous)
+                    .strokeBorder(
+                        focus == .email ? Color(hue: 0.37, saturation: 0.82, brightness: 0.88) : .white.opacity(0),
+                        lineWidth: 1.2
+                    )
+                    .allowsHitTesting(false)
+            }
+            .animation(.spring(response: 0.28, dampingFraction: 0.78), value: focus == .email)
+
+            if !email.isEmpty && !emailLooksValid {
+                Label("Enter a valid Apple Account email address.", systemImage: "exclamationmark.circle")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(Color(hue: 0.37, saturation: 0.72, brightness: 0.88))
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .padding(.leading, 4)
+            }
 
             HStack(spacing: 11) {
                 Image(systemName: "lock")
@@ -307,6 +331,15 @@ replace_section(
                 .accessibilityLabel(passwordVisible ? "Hide password" : "Show password")
             }
             .fieldBackground()
+            .overlay {
+                RoundedRectangle(cornerRadius: 15, style: .continuous)
+                    .strokeBorder(
+                        focus == .password ? Color(hue: 0.37, saturation: 0.82, brightness: 0.88) : .white.opacity(0),
+                        lineWidth: 1.2
+                    )
+                    .allowsHitTesting(false)
+            }
+            .animation(.spring(response: 0.28, dampingFraction: 0.78), value: focus == .password)
 
             Rectangle()
                 .fill(.white.opacity(0.08))
@@ -343,15 +376,30 @@ replace_section(
     private var actions: some View {
         VStack(spacing: 13) {
             Button {
-                accounts.save(appleID: email, password: password)
-                hasCompletedAccountSetup = true
+                guard canSave else { return }
+                Task { @MainActor in
+                    withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
+                        isSaving = true
+                    }
+                    await Task.yield()
+                    accounts.save(appleID: email, password: password)
+                    isSaving = false
+                    hasCompletedAccountSetup = true
+                }
             } label: {
                 HStack(spacing: 10) {
-                    Text("Continue to FrozenApps")
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                    if isSaving {
+                        ProgressView()
+                            .tint(.black)
+                            .scaleEffect(0.82)
+                    } else {
+                        Text("Continue to FrozenApps")
+                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                    }
                     Spacer()
-                    Image(systemName: "arrow.right")
+                    Image(systemName: isSaving ? "lock.fill" : "arrow.right")
                         .font(.system(size: 13, weight: .bold))
+                        .contentTransition(.symbolEffect(.replace))
                 }
                 .padding(.horizontal, 18)
             }
