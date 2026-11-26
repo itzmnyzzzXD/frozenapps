@@ -799,8 +799,7 @@ root_view_path = APP / "RootView.swift"
 if not root_view_path.is_file():
     raise SystemExit("RootView.swift is missing; cannot attach the install progress popup.")
 root_source = root_view_path.read_text(encoding="utf-8")
-popup_hook = '''        .onChange(of: page) { _, page in Backdrop.settle(on: page.wash) }
-'''
+popup_anchor = "        .popupStack(entries, onBackdropTap: backdropTap) {"
 popup_overlay = '''        .overlay(alignment: .top) {
             Group {
                 if engine.isRunning {
@@ -815,8 +814,13 @@ popup_overlay = '''        .overlay(alignment: .top) {
         }
 '''
 if "FrozenInstallProgressPopup()" not in root_source:
-    if root_source.count(popup_hook) != 1:
-        raise SystemExit("Expected one RootView install-banner anchor; refusing to patch an unknown layout.")
-    root_view_path.write_text(root_source.replace(popup_hook, popup_hook + popup_overlay, 1), encoding="utf-8")
+    if root_source.count(popup_anchor) != 1:
+        raise SystemExit("Expected one RootView popup-stack anchor; refusing to patch an unknown layout.")
+    root_source = root_source.replace(
+        popup_anchor,
+        popup_overlay + popup_anchor,
+        1
+    )
+    root_view_path.write_text(root_source, encoding="utf-8")
 
 print("Applied SideStick branding, custom icon assets, and focused render optimizations.")
