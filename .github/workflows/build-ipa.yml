@@ -92,6 +92,7 @@ jobs:
           bash scripts/check-monochrome.sh
           python3 scripts/check-liquidchrome-contract.py
           python3 scripts/check-icon-usage.py
+          python3 scripts/check-screen-coverage.py
           bash scripts/compile-liquidchrome-metal.sh
 
       - name: Generate Xcode project for incremental builds

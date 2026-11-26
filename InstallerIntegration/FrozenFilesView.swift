@@ -330,16 +330,17 @@ struct FrozenFilesView: View {
                             importProgress = Double(index + 1) / Double(max(total, 1))
                         }
                     }
+                    let importResult = (count: imported, failures: failures)
                     await MainActor.run {
                         isImporting = false
                         importProgress = 1
                         importStatus = ""
                         refresh()
-                        if failures.isEmpty {
-                            message = "Imported \(imported) IPA file(s). They are saved separately from the Signer working copy."
+                        if importResult.failures.isEmpty {
+                            message = "Imported \(importResult.count) IPA file(s). They are saved separately from the Signer working copy."
                         } else {
-                            let prefix = imported > 0 ? "Imported \(imported). " : ""
-                            importError = prefix + failures.joined(separator: "\n")
+                            let prefix = importResult.count > 0 ? "Imported \(importResult.count). " : ""
+                            importError = prefix + importResult.failures.joined(separator: "\n")
                         }
                     }
                 }
