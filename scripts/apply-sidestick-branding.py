@@ -575,15 +575,8 @@ struct FrozenInstallProgressPopup: View {
         return engine.installedSourceName
     }
 
-    /// Read the icon from the signed app bundle. This works for built-in
-    /// sources and arbitrary imported IPAs without adding an extraction library.
-    private var iconSource: InstallSource {
-        guard engine.installSource == .custom else { return engine.installSource }
-        return engine.customIPABuild ?? .custom
-    }
-
-    /// Prefer the actual icon inside the signed IPA bundle. Before signing finishes,
-    /// use the selected built-in package icon already shipped with the app.
+    /// Read the icon directly from the signed app bundle when it becomes available.
+    /// This keeps custom and built-in installs accurate without remote icon dependencies.
     private var appIcon: UIImage? {
         if let appPath = engine.signedAppPath,
            let appBundle = Bundle(path: appPath) {
@@ -626,9 +619,6 @@ struct FrozenInstallProgressPopup: View {
             }
         }
 
-        if let assetName = iconSource.iconImage {
-            return UIImage(named: assetName)
-        }
         return nil
     }
 
@@ -666,7 +656,7 @@ struct FrozenInstallProgressPopup: View {
                         .resizable()
                         .scaledToFill()
                 } else {
-                    Image(systemName: iconSource.iconSymbol)
+                    Image(systemName: "app.fill")
                         .font(.system(size: 25, weight: .medium))
                         .foregroundStyle(Color.white.opacity(0.82))
                 }
