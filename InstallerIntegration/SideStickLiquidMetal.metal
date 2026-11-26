@@ -208,7 +208,11 @@ fragment float4 liquidChromeComposite(
     float2 crease = dot(stepX, stepX) > dot(stepY, stepY) ? stepX : stepY;
     if (dot(crease, crease) > dot(sweep, sweep)) sweep = crease;
     float bend = length(sweep);
-    float alpha = smoothstep(0.0, 0.1, length(slope));
+    float alphaThreshold = u.tint.w > 0.5 ? 0.055 : 0.1;
+    float alpha = smoothstep(0.0, alphaThreshold, length(slope));
+    if (u.exposureRippleLight.w > 0.5) {
+        alpha = 1.0;
+    }
     float3 f0 = mix(float3(1.0), u.tint.xyz, smoothstep(0.05, 0.6, length(slope))) * 0.92;
     float3 view = normalize(float3(uv * 0.08, -1.0));
     float blur = u.detailSharpnessPresenceRoughness.w * 0.35;
@@ -229,5 +233,6 @@ fragment float4 liquidChromeComposite(
     color = clamp(color, 0.0, 1.0);
     float luminance = dot(color, float3(0.2126, 0.7152, 0.0722));
     float3 grayscale = float3(luminance);
-    return float4(grayscale * alpha, alpha);
+    float outputAlpha = u.exposureRippleLight.w > 0.5 ? 1.0 : alpha;
+    return float4(grayscale * outputAlpha, outputAlpha);
 }

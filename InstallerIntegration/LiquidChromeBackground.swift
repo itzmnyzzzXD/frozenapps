@@ -242,7 +242,7 @@ struct LiquidChromeBackground: UIViewRepresentable {
         private var slopeTexture: MTLTexture?
         private var simulationSize = SIMD2<Int>(repeating: 0)
         private var currentStateIndex = 0
-        private var time = Double.random(in: 0...40)
+        private var time = 0.0
         private var lastFrameTime: CFTimeInterval = 0
         private var accumulator: Float = 0
         private var presence: Float
@@ -252,6 +252,7 @@ struct LiquidChromeBackground: UIViewRepresentable {
         private var pitchVelocity: Float = 0
         private var sceneActive = true
         private var reduceMotion = false
+        private var interactionSuppressed = false
         private var reduceTransparency = false
         private var increasedContrast = false
         private var lowPowerMode = ProcessInfo.processInfo.isLowPowerModeEnabled
@@ -266,6 +267,9 @@ struct LiquidChromeBackground: UIViewRepresentable {
             self.interaction = interaction
             self.presence = LiquidChromeParameters.frozenApps.intro ? 0 : 1
             super.init()
+            interactionSuppressed = reduceMotion || lowPowerMode
+            interaction.setReduceMotion(interactionSuppressed)
+            needsSimulationReset = interactionSuppressed
             observeSystemChanges()
         }
 
@@ -329,13 +333,25 @@ struct LiquidChromeBackground: UIViewRepresentable {
         }
 
         func update(sceneActive: Bool, reduceMotion: Bool, reduceTransparency: Bool, increasedContrast: Bool) {
-            if self.sceneActive != sceneActive || self.reduceMotion != reduceMotion {
+            let currentLowPowerMode = ProcessInfo.processInfo.isLowPowerModeEnabled
+            let suppressInteraction = reduceMotion || currentLowPowerMode
+            let accessibilityChanged = self.reduceTransparency != reduceTransparency
+                || self.increasedContrast != increasedContrast
+
+            if self.sceneActive != sceneActive || self.reduceMotion != reduceMotion || accessibilityChanged {
                 staticFrameDrawn = false
             }
-            if self.reduceMotion != reduceMotion {
-                interaction.setReduceMotion(reduceMotion)
+            if interactionSuppressed != suppressInteraction {
+                interaction.setReduceMotion(suppressInteraction)
+                interactionSuppressed = suppressInteraction
                 needsSimulationReset = true
             }
+            if self.reduceMotion != reduceMotion || lowPowerMode != currentLowPowerMode {
+                needsSimulationReset = true
+                staticFrameDrawn = false
+            }
+
+            lowPowerMode = currentLowPowerMode
             self.sceneActive = sceneActive
             self.reduceMotion = reduceMotion
             self.reduceTransparency = reduceTransparency
@@ -347,9 +363,13 @@ struct LiquidChromeBackground: UIViewRepresentable {
             observerTokens.append(center.addObserver(
                 forName: .NSProcessInfoPowerStateDidChange, object: nil, queue: .main
             ) { [weak self] _ in
-                self?.lowPowerMode = ProcessInfo.processInfo.isLowPowerModeEnabled
-                self?.staticFrameDrawn = false
-                self?.refreshPlaybackPolicy()
+                guard let self else { return }
+                self.lowPowerMode = ProcessInfo.processInfo.isLowPowerModeEnabled
+                self.interactionSuppressed = self.reduceMotion || self.lowPowerMode
+                self.interaction.setReduceMotion(self.interactionSuppressed)
+                self.needsSimulationReset = true
+                self.staticFrameDrawn = false
+                self.refreshPlaybackPolicy()
             })
             observerTokens.append(center.addObserver(
                 forName: ProcessInfo.thermalStateDidChangeNotification, object: nil, queue: .main
@@ -492,9 +512,10 @@ struct LiquidChromeBackground: UIViewRepresentable {
                     5.0 / (3.0 * parameters.thickness),
                     1.0 - pow(1.0 - presence, 3.0), parameters.roughness),
                 exposureRippleLight: SIMD4<Float>(parameters.exposure,
-                    reduceMotion ? 0 : parameters.rippleStrength * 2.2,
-                    parameters.lightMode ? 1 : 0, 0),
-                tint: SIMD4<Float>(parameters.color.x, parameters.color.y, parameters.color.z, 1),
+                    (reduceMotion || lowPowerMode) ? 0 : parameters.rippleStrength * 2.2,
+                    parameters.lightMode ? 1 : 0, reduceTransparency ? 1 : 0),
+                tint: SIMD4<Float>(parameters.color.x, parameters.color.y, parameters.color.z,
+                    increasedContrast ? 1 : 0),
                 shiftAndSlopeSize: SIMD4<Float>(yaw, pitch, Float(simulationSize.x), Float(simulationSize.y))
             )
             withUnsafeBytes(of: &uniforms) { bytes in
