@@ -60,12 +60,22 @@ jobs:
           else
             export PATH="$(brew --prefix rustup)/bin:$HOME/.cargo/bin:$PATH"
           fi
-          export PATH="$HOME/.cargo/bin:$PATH"
+          RUSTUP_BIN_DIR="$(dirname "$(command -v rustup)")"
+          export PATH="$RUSTUP_BIN_DIR:$HOME/.cargo/bin:$PATH"
+          echo "$RUSTUP_BIN_DIR" >> "$GITHUB_PATH"
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          echo "Rust toolchain path: $RUSTUP_BIN_DIR"
           command -v rustup
           command -v cargo
           rustup --version
+          cargo --version
+          rustc --version
           rustup target add aarch64-apple-ios aarch64-apple-ios-sim
-          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          rustup target list --installed
+          cargo metadata --locked --manifest-path Vendor/SideInstaller/rust-core/Cargo.toml --format-version 1 --no-deps >/dev/null
+          test -f Vendor/SideInstaller/build-rust.sh
+          test -f Vendor/SideInstaller/rust-core/Cargo.lock
+          echo "PASS: Rust CLI, iOS targets, Cargo manifest and lockfile preflight"
           if ! command -v xcodegen >/dev/null 2>&1; then
             brew install xcodegen
           fi
@@ -100,7 +110,17 @@ jobs:
           set -euo pipefail
           export DEVELOPER_DIR="$(xcode-select -p)"
           export IPHONEOS_DEPLOYMENT_TARGET=17.4
-          bash Vendor/SideInstaller/build-rust.sh
+          export PATH="$(dirname "$(command -v rustup)"):$HOME/.cargo/bin:$PATH"
+          echo "Build toolchain:"
+          command -v cargo
+          cargo --version
+          command -v rustc
+          rustc --version
+          test -f Vendor/SideInstaller/build-rust.sh
+          test -f Vendor/SideInstaller/rust-core/Cargo.toml
+          test -f Vendor/SideInstaller/rust-core/Cargo.lock
+          echo "Rust build script: $(pwd)/Vendor/SideInstaller/build-rust.sh"
+          bash -x Vendor/SideInstaller/build-rust.sh
           set -o pipefail
           xcodebuild -project FrozenApps.xcodeproj -scheme FrozenApps \
             -configuration Release -sdk iphoneos \
