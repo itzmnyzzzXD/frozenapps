@@ -161,9 +161,9 @@ def numeric(value):
 
 def snap(value):
     value = max(0.0, min(1.0, value))
-    if value < 0.025:
+    if value < 0.015:
         return 0.0
-    levels = (0.06, 0.12, 0.24, 0.48, 0.72, 1.0)
+    levels = (0.03, 0.06, 0.12, 0.24, 0.48, 0.72, 1.0)
     return min(levels, key=lambda level: abs(level - value))
 
 def gray_color(red, green, blue, alpha=1.0):
@@ -231,6 +231,50 @@ def normalize_swift(source):
     source = source.replace("Color(.tertiaryLabel)", "Color.white.opacity(0.24)")
     source = source.replace("Color(.separator)", "Color.white.opacity(0.12)")
     source = source.replace("Color(.placeholderText)", "Color.white.opacity(0.48)")
+
+    # System materials are forbidden: render solid OLED black instead.
+    for token in ("ultraThinMaterial", "thinMaterial", "regularMaterial", "thickMaterial",
+                  "ultraThickMaterial", "material"):
+        source = source.replace(f".{token}", "Color.black")
+
+    # Replace inferred system text styles and gray tokens with white-opacity hierarchy.
+    source = re.sub(r"(?<![A-Za-z0-9_])\\.primary(?![A-Za-z0-9_])", "Color.white", source)
+    source = re.sub(r"(?<![A-Za-z0-9_])\\.secondary(?![A-Za-z0-9_])", "Color.white.opacity(0.48)", source)
+    source = re.sub(r"(?<![A-Za-z0-9_])\\.tertiary(?![A-Za-z0-9_])", "Color.white.opacity(0.24)", source)
+    source = re.sub(r"(?<![A-Za-z0-9_])\\.gray(?![A-Za-z0-9_])", "Color.white.opacity(0.48)", source)
+
+    # Color(white:) and UIColor(white:) are expressed as white plus opacity.
+    white_color = re.compile(r"Color\\(\\s*white:\\s*(" + num + r")(?:\\s*,\\s*opacity:\\s*(" + num + r"))?\\s*\\)")
+    def replace_white_color(match):
+        value = numeric(match.group(1))
+        alpha = numeric(match.group(2)) if match.group(2) else 1.0
+        level = snap(value * alpha)
+        if level == 0.0: return "Color.black"
+        if level == 1.0: return "Color.white"
+        return f"Color.white.opacity({level:.2f})"
+    source = white_color.sub(replace_white_color, source)
+
+    white_ui = re.compile(r"UIColor\\(\\s*white:\\s*(" + num + r")\\s*,\\s*alpha:\\s*(" + num + r")\\s*\\)")
+    def replace_white_ui(match):
+        level = snap(numeric(match.group(1)) * numeric(match.group(2)))
+        if level == 0.0: return "UIColor.black"
+        if level == 1.0: return "UIColor.white"
+        return f"UIColor.white.withAlphaComponent({level:.2f})"
+    source = white_ui.sub(replace_white_ui, source)
+
+    # Quantize static opacity literals; dynamic progress values remain untouched.
+    def normalize_opacity(match):
+        argument = match.group(1)
+        def normalize_literal(number_match):
+            value = float(number_match.group(0))
+            if value < 0 or value > 1:
+                return number_match.group(0)
+            level = snap(value)
+            return "0.0" if level == 0 else ("1.0" if level == 1 else f"{level:.2f}")
+        argument = re.sub(r"(?<![A-Za-z0-9_.])(?:0?\\.\\d+|0|1(?:\\.0+)?)(?![A-Za-z0-9_.])",
+                          normalize_literal, argument)
+        return ".opacity(" + argument + ")"
+    source = re.sub(r"\\.opacity\\(([^()]*)\\)", normalize_opacity, source)
     source = source.replace(".tint(Theme.accent)", ".tint(.white)")
     source = source.replace(".tint(Theme.accent2)", ".tint(.white)")
     source = source.replace(".preferredColorScheme(.light)", ".preferredColorScheme(.dark)")
@@ -291,9 +335,14 @@ for manifest in assets.rglob("*.colorset/Contents.json"):
             channels = [float(components[key]) for key in ("red", "green", "blue")]
         except Exception:
             continue
-        level = snap(0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2])
-        gray = f"{level:.3f}"
-        components["red"] = components["green"] = components["blue"] = gray
+        original_alpha = float(components.get("alpha", "1.000"))
+        level = snap((0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2]) * original_alpha)
+        if level == 0.0:
+            components["red"] = components["green"] = components["blue"] = "0.000"
+            components["alpha"] = "1.000"
+        else:
+            components["red"] = components["green"] = components["blue"] = "1.000"
+            components["alpha"] = f"{level:.3f}"
         item["color"]["color-space"] = "srgb"
     manifest.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 

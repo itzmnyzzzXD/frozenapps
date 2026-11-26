@@ -35,21 +35,21 @@ struct FrozenWorkspaceDock: View {
         .frame(maxWidth: .infinity)
         .background {
             Capsule(style: .continuous)
-                .fill(.ultraThinMaterial)
-                .overlay { Capsule(style: .continuous).fill(Color.black.opacity(0.70)) }
+                .fill(Color.black)
+                .overlay { Capsule(style: .continuous).fill(Color.black.opacity(0.72)) }
         }
         .overlay {
             Capsule(style: .continuous)
                 .strokeBorder(
                     LinearGradient(
-                        colors: [.white.opacity(0.28), .white.opacity(0.08), .white.opacity(0.18)],
+                        colors: [.white.opacity(0.24), .white.opacity(0.06), .white.opacity(0.12)],
                         startPoint: .topLeading, endPoint: .bottomTrailing
                     ), lineWidth: 1
                 )
         }
-        .shadow(color: .black.opacity(0.38), radius: 22, x: 0, y: 10)
+        
         .overlay(alignment: .top) {
-            Capsule().fill(.white.opacity(0.22))
+            Capsule().fill(.white.opacity(0.24))
                 .frame(height: 1).padding(.horizontal, 24).padding(.top, 1)
                 .allowsHitTesting(false)
         }
@@ -72,18 +72,18 @@ struct FrozenWorkspaceDock: View {
                         .transition(.opacity.combined(with: .scale(scale: 0.88)))
                 }
             }
-            .foregroundStyle(selected ? Color.white : Color.white.opacity(0.66))
+            .foregroundStyle(selected ? Color.white : Color.white.opacity(0.72))
             .frame(maxWidth: .infinity).frame(minWidth: 44, minHeight: 46)
             .padding(.horizontal, selected ? 9 : 3)
             .background {
                 if selected {
                     Capsule(style: .continuous)
-                        .fill(Color.white.opacity(0.13))
+                        .fill(Color.white.opacity(0.12))
                         .matchedGeometryEffect(id: "frozen-workspace-selection", in: selectionNamespace)
                         .overlay {
-                            Capsule(style: .continuous).strokeBorder(.white.opacity(0.23), lineWidth: 1)
+                            Capsule(style: .continuous).strokeBorder(.white.opacity(0.24), lineWidth: 1)
                         }
-                        .shadow(color: .white.opacity(0.06), radius: 9, x: 0, y: 1)
+                        
                 }
             }
             .contentShape(Capsule())
@@ -138,7 +138,7 @@ struct FrozenWorkspacePageHeader: View {
                 Text(eyebrow.uppercased())
                     .font(.system(size: 9, weight: .heavy, design: .rounded))
                     .tracking(1.45)
-                    .foregroundStyle(.white.opacity(0.52))
+                    .foregroundStyle(.white.opacity(0.48))
                 Text(title)
                     .font(.system(size: 27, weight: .bold, design: .rounded))
                     .tracking(-0.7)
@@ -146,18 +146,18 @@ struct FrozenWorkspacePageHeader: View {
                 Text(description)
                     .font(.system(size: 12, weight: .medium))
                     .lineSpacing(3)
-                    .foregroundStyle(.white.opacity(0.62))
+                    .foregroundStyle(.white.opacity(0.72))
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 4)
             Image(systemName: symbol)
                 .font(.system(size: 19, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.9))
+                .foregroundStyle(.white.opacity(1.0))
                 .frame(width: 48, height: 48)
-                .background(.white.opacity(0.09), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+                .background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
                 .overlay {
                     RoundedRectangle(cornerRadius: 15, style: .continuous)
-                        .strokeBorder(.white.opacity(0.16), lineWidth: 1)
+                        .strokeBorder(.white.opacity(0.12), lineWidth: 1)
                 }
         }
         .padding(.horizontal, 2)
@@ -175,7 +175,7 @@ struct FrozenWorkspaceSearchField: View {
         HStack(spacing: 10) {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.55))
+                .foregroundStyle(.white.opacity(0.48))
             TextField(placeholder, text: $text)
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(.white)
@@ -191,7 +191,7 @@ struct FrozenWorkspaceSearchField: View {
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 14))
-                        .foregroundStyle(.white.opacity(0.52))
+                        .foregroundStyle(.white.opacity(0.48))
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Clear search")
@@ -199,10 +199,10 @@ struct FrozenWorkspaceSearchField: View {
         }
         .padding(.horizontal, 14)
         .frame(minHeight: 48)
-        .background(.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+        .background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 15, style: .continuous)
-                .strokeBorder(.white.opacity(isFocused ? 0.32 : 0.13), lineWidth: 1)
+                .strokeBorder(.white.opacity(isFocused ? 0.24 : 0.12), lineWidth: 1)
         }
         .animation(.easeOut(duration: 0.16), value: isFocused)
     }
@@ -223,12 +223,12 @@ struct FrozenWorkspaceFilterChoice: View {
                         .foregroundStyle(.white)
                     Text(subtitle)
                         .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.53))
+                        .foregroundStyle(.white.opacity(0.48))
                 }
                 Spacer(minLength: 4)
                 Image(systemName: selected ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(.white.opacity(selected ? 0.95 : 0.32))
+                    .foregroundStyle(.white.opacity(selected ? 1.0 : 0.24))
             }
             .padding(.horizontal, 11)
             .padding(.vertical, 10)
@@ -236,10 +236,10 @@ struct FrozenWorkspaceFilterChoice: View {
             .background {
                 if selected {
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(.white.opacity(0.085))
+                        .fill(.white.opacity(0.06))
                         .overlay {
                             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .strokeBorder(.white.opacity(0.15), lineWidth: 1)
+                                .strokeBorder(.white.opacity(0.12), lineWidth: 1)
                         }
                 }
             }
