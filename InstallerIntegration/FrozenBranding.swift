@@ -71,7 +71,7 @@ struct FrozenLaunchWelcome: View {
             .accessibilityLabel("Welcome to FrozenApps")
             .accessibilityAddTraits(.isButton)
             .accessibilityHint("Tap to continue")
-            .accessibilityAction(.activate, finish)
+            .accessibilityAction { finish() }
     }
 
     private func finish() {
