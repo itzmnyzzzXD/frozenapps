@@ -394,7 +394,8 @@ def normalize_swift(source):
         "tertiary": ".white.opacity(0.24)",
     }
     def normalize_style_arguments(match):
-        arguments = match.group(2)        for member, replacement in semantic_values.items():
+        arguments = match.group(2)
+        for member, replacement in semantic_values.items():
             arguments = re.sub(
                 rf"\.{member}(?![A-Za-z0-9_])",
                 replacement,
@@ -463,7 +464,8 @@ for swift_path in sorted(swift_paths):
         start = monochrome.find("struct AppBackground: View {")
         end = monochrome.find("// MARK: - Cards", start)
         if start >= 0 and end > start:
-            monochrome = (                monochrome[:start]
+            monochrome = (
+                monochrome[:start]
                 + "struct AppBackground: View {\n"
                   "    var body: some View {\n"
                   "        Color.black.ignoresSafeArea()\n"
