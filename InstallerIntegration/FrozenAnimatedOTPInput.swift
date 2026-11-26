@@ -125,3 +125,65 @@ struct FrozenAnimatedOTPInput: View {
         .accessibilityHidden(true)
     }
 }
+
+/// Lightweight native replacement for the reference particle sphere; no external renderer or package.
+struct FrozenOTPSecurityOrb: View {
+    @Environment(\\.accessibilityReduceMotion) private var reduceMotion
+    @State private var rotation = 0.0
+
+    private let green = Color(hue: 0.37, saturation: 0.82, brightness: 0.88)
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [green.opacity(0.24), green.opacity(0.06), .clear],
+                        center: .center,
+                        startRadius: 8,
+                        endRadius: 58
+                    )
+                )
+                .padding(-10)
+
+            Circle()
+                .strokeBorder(.white.opacity(0.16), style: StrokeStyle(lineWidth: 1, dash: [2, 5]))
+                .rotationEffect(.degrees(rotation * 0.55))
+
+            Ellipse()
+                .stroke(green.opacity(0.78), lineWidth: 1.15)
+                .frame(width: 92, height: 35)
+                .rotation3DEffect(.degrees(62), axis: (x: 1, y: 0, z: 0))
+                .rotationEffect(.degrees(rotation))
+
+            Ellipse()
+                .stroke(.white.opacity(0.32), lineWidth: 0.8)
+                .frame(width: 92, height: 35)
+                .rotation3DEffect(.degrees(-62), axis: (x: 1, y: 0, z: 0))
+                .rotationEffect(.degrees(-rotation * 0.72))
+
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [.white, green, green.opacity(0.18)],
+                        center: .init(x: 0.34, y: 0.28),
+                        startRadius: 1,
+                        endRadius: 29
+                    )
+                )
+                .frame(width: 52, height: 52)
+                .overlay {
+                    Circle().strokeBorder(.white.opacity(0.72), lineWidth: 0.8)
+                }
+                .shadow(color: green.opacity(0.5), radius: 16)
+        }
+        .frame(width: 112, height: 112)
+        .accessibilityHidden(true)
+        .onAppear {
+            guard !reduceMotion else { return }
+            withAnimation(.linear(duration: 32).repeatForever(autoreverses: false)) {
+                rotation = 360
+            }
+        }
+    }
+}
