@@ -19,19 +19,19 @@ if (app / "Assets.xcassets/SideStickBackground.imageset").exists():
     fail("legacy wallpaper is still packaged")
 
 swift_files = list(app.rglob("*.swift")) + list(integration.rglob("*.swift"))
-material_pattern = re.compile(r"(?<![A-Za-z0-9_])\\.(?:ultraThinMaterial|thinMaterial|regularMaterial|thickMaterial|ultraThickMaterial|material)(?![A-Za-z0-9_])")
-color_pattern = re.compile(r"(?<![A-Za-z0-9_])\\.(?:blue|purple|red|green|orange|pink|cyan|yellow|indigo|teal|mint|brown|gray|secondary|tertiary)(?![A-Za-z0-9_])")
-system_pattern = re.compile(r"\\bUIColor\\.system[A-Za-z0-9_]*|\\bColor\\(\\s*(?:uiColor:\\s*)?\\.system[A-Za-z0-9_]*")
-constructor_pattern = re.compile(r"Color\\(\\s*(?:red:|white:)|UIColor\\(\\s*(?:(?:displayP3)?Red:|white:)", re.IGNORECASE)
-hex_pattern = re.compile(r"#[0-9A-Fa-f]{3,8}\\b")
+material_pattern = re.compile(r"(?<![A-Za-z0-9_])\.(?:ultraThinMaterial|thinMaterial|regularMaterial|thickMaterial|ultraThickMaterial|material)(?![A-Za-z0-9_])")
+color_pattern = re.compile(r"(?<![A-Za-z0-9_])\.(?:blue|purple|red|green|orange|pink|cyan|yellow|indigo|teal|mint|brown|gray|secondary|tertiary)(?![A-Za-z0-9_])")
+system_pattern = re.compile(r"\bUIColor\.system[A-Za-z0-9_]*|\bColor\(\s*(?:uiColor:\s*)?\.system[A-Za-z0-9_]*")
+constructor_pattern = re.compile(r"Color\(\s*(?:red:|white:)|UIColor\(\s*(?:(?:displayP3)?Red:|white:)", re.IGNORECASE)
+hex_pattern = re.compile(r"#[0-9A-Fa-f]{3,8}\b")
 allowed_hex = {"#000000", "#FFFFFF"}
 allowed_opacity = {0.0, 0.03, 0.06, 0.12, 0.24, 0.48, 0.72, 1.0}
-opacity_pattern = re.compile(r"\\.opacity\\(([^()]*)\\)")
-number_pattern = re.compile(r"(?<![A-Za-z0-9_.])(?:0?\\.\\d+|0|1(?:\\.0+)?)(?![A-Za-z0-9_.])")
+opacity_pattern = re.compile(r"\.opacity\(([^()]*)\)")
+number_pattern = re.compile(r"(?<![A-Za-z0-9_.])(?:0?\.\d+|0|1(?:\.0+)?)(?![A-Za-z0-9_.])")
 
 for path in swift_files:
     source = path.read_text(encoding="utf-8", errors="replace")
-    source = re.sub(r"/\\*.*?\\*/", "", source, flags=re.S)
+    source = re.sub(r"/\*.*?\*/", "", source, flags=re.S)
     source = re.sub(r"//.*$", "", source, flags=re.M)
     relative = path.relative_to(root)
     for pattern, label in (
@@ -42,18 +42,18 @@ for path in swift_files:
     ):
         match = pattern.search(source)
         if match:
-            line = source.count("\\n", 0, match.start()) + 1
+            line = source.count("\n", 0, match.start()) + 1
             fail(f"{label} at {relative}:{line}")
     for match in hex_pattern.finditer(source):
         value = match.group(0).upper()
         if value not in allowed_hex:
-            line = source.count("\\n", 0, match.start()) + 1
+            line = source.count("\n", 0, match.start()) + 1
             fail(f"non-monochrome hex {value} at {relative}:{line}")
     for call in opacity_pattern.finditer(source):
         for number in number_pattern.finditer(call.group(1)):
             value = float(number.group(0))
             if 0 <= value <= 1 and min(allowed_opacity, key=lambda x: abs(x-value)) != value:
-                line = source.count("\\n", 0, call.start()) + 1
+                line = source.count("\n", 0, call.start()) + 1
                 fail(f"opacity {value:g} is outside allowed steps at {relative}:{line}")
 
 root_app_path = app / "SideInstallerApp.swift"

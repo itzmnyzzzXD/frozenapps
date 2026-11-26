@@ -238,13 +238,13 @@ def normalize_swift(source):
         source = source.replace(f".{token}", "Color.black")
 
     # Replace inferred system text styles and gray tokens with white-opacity hierarchy.
-    source = re.sub(r"(?<![A-Za-z0-9_])\\.primary(?![A-Za-z0-9_])", "Color.white", source)
-    source = re.sub(r"(?<![A-Za-z0-9_])\\.secondary(?![A-Za-z0-9_])", "Color.white.opacity(0.48)", source)
-    source = re.sub(r"(?<![A-Za-z0-9_])\\.tertiary(?![A-Za-z0-9_])", "Color.white.opacity(0.24)", source)
-    source = re.sub(r"(?<![A-Za-z0-9_])\\.gray(?![A-Za-z0-9_])", "Color.white.opacity(0.48)", source)
+    source = re.sub(r"(?<![A-Za-z0-9_])\.primary(?![A-Za-z0-9_])", "Color.white", source)
+    source = re.sub(r"(?<![A-Za-z0-9_])\.secondary(?![A-Za-z0-9_])", "Color.white.opacity(0.48)", source)
+    source = re.sub(r"(?<![A-Za-z0-9_])\.tertiary(?![A-Za-z0-9_])", "Color.white.opacity(0.24)", source)
+    source = re.sub(r"(?<![A-Za-z0-9_])\.gray(?![A-Za-z0-9_])", "Color.white.opacity(0.48)", source)
 
     # Color(white:) and UIColor(white:) are expressed as white plus opacity.
-    white_color = re.compile(r"Color\\(\\s*white:\\s*(" + num + r")(?:\\s*,\\s*opacity:\\s*(" + num + r"))?\\s*\\)")
+    white_color = re.compile(r"Color\(\s*white:\s*(" + num + r")(?:\s*,\s*opacity:\s*(" + num + r"))?\s*\)")
     def replace_white_color(match):
         value = numeric(match.group(1))
         alpha = numeric(match.group(2)) if match.group(2) else 1.0
@@ -254,7 +254,7 @@ def normalize_swift(source):
         return f"Color.white.opacity({level:.2f})"
     source = white_color.sub(replace_white_color, source)
 
-    white_ui = re.compile(r"UIColor\\(\\s*white:\\s*(" + num + r")\\s*,\\s*alpha:\\s*(" + num + r")\\s*\\)")
+    white_ui = re.compile(r"UIColor\(\s*white:\s*(" + num + r")\s*,\s*alpha:\s*(" + num + r")\s*\)")
     def replace_white_ui(match):
         level = snap(numeric(match.group(1)) * numeric(match.group(2)))
         if level == 0.0: return "UIColor.black"
@@ -271,10 +271,10 @@ def normalize_swift(source):
                 return number_match.group(0)
             level = snap(value)
             return "0.0" if level == 0 else ("1.0" if level == 1 else f"{level:.2f}")
-        argument = re.sub(r"(?<![A-Za-z0-9_.])(?:0?\\.\\d+|0|1(?:\\.0+)?)(?![A-Za-z0-9_.])",
+        argument = re.sub(r"(?<![A-Za-z0-9_.])(?:0?\.\d+|0|1(?:\.0+)?)(?![A-Za-z0-9_.])",
                           normalize_literal, argument)
         return ".opacity(" + argument + ")"
-    source = re.sub(r"\\.opacity\\(([^()]*)\\)", normalize_opacity, source)
+    source = re.sub(r"\.opacity\(([^()]*)\)", normalize_opacity, source)
     source = source.replace(".tint(Theme.accent)", ".tint(.white)")
     source = source.replace(".tint(Theme.accent2)", ".tint(.white)")
     source = source.replace(".preferredColorScheme(.light)", ".preferredColorScheme(.dark)")
