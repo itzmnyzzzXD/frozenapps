@@ -30,7 +30,7 @@ components = {
     "FrozenCertificateHealthView.swift": ["FrozenProfileReader.matches", "Expiry is not revocation"],
     "FrozenControlCenterView.swift": ["FrozenCenterToolCard", "NavigationLink", "engine.stepStates"],
     "FrozenDeviceCenterView.swift": ["NWPathMonitor", "NOT VERIFIED"],
-    "FrozenFilesView.swift": ["FrozenLibraryStore.importIPA", "importProgress", "CryptoKit"],
+    "FrozenFilesView.swift": ["FrozenLibraryStore.importIPA", "importProgress", "importError"],
     "FrozenJITView.swift": ["connectAndDiscover", "refreshApps", "eligible"],
     "FrozenNetworkView.swift": ["FrozenNetworkDiagnostics", "startDiscovery", "stopDiscovery"],
     "FrozenSignerInstallCatalogView.swift": ["FrozenSignerCatalogApp.all", "downloadAndImport"],
@@ -50,7 +50,7 @@ if workspace.count(".init(id:") != 6:
 account_patcher = read("scripts/apply-liquidchrome-redesign.py")
 require(account_patcher, "focusedField: focus", "account form focus binding")
 require(account_patcher, "statusMessage: prompt.lastError", "OTP error-state binding")
-require(account_patcher, "engine.answerTwoFactor", "preserve original two-factor answer path")
+require(root_view, "engine.answerTwoFactor(.code(code))", "preserve original two-factor answer path")
 
 root_source = read(APP / "SideInstallerApp.swift")
 require(root_source, "LiquidChromeBackground(interaction: liquidChromeInput)", "shared app-root Metal renderer")
@@ -67,7 +67,7 @@ if failures:
         print("FAIL: " + failure)
     raise SystemExit(f"FAIL: {len(failures)} screen coverage issue(s).")
 
-print("PASS: 15 native UI components/screens have required structural and state bindings.")
+print("PASS: 16 native UI components/screens have required structural and state bindings.")
 print("PASS: account focus, OTP AutoFill/error/Engine callback, and real install stats/progress are wired.")
 print("PASS: six dock destinations preserved; legacy rail and command bar are absent.")
 print("NOTE: source checks do not replace physical-device visual or interaction testing.")
