@@ -119,8 +119,22 @@ jobs:
           test -f Vendor/SideInstaller/build-rust.sh
           test -f Vendor/SideInstaller/rust-core/Cargo.toml
           test -f Vendor/SideInstaller/rust-core/Cargo.lock
-          echo "Rust build script: $(pwd)/Vendor/SideInstaller/build-rust.sh"
-          bash -x Vendor/SideInstaller/build-rust.sh
+          echo "Building pinned Rust FFI crate directly; bypassing upstream env loader."
+          export RUSTFLAGS="${RUSTFLAGS:-} --remap-path-prefix=${HOME}=/build"
+          export CFLAGS="${CFLAGS:-} -ffile-prefix-map=${HOME}=/build"
+          export TARGET_CFLAGS="${TARGET_CFLAGS:-} -ffile-prefix-map=${HOME}=/build"
+          RUST_CORE="$GITHUB_WORKSPACE/Vendor/SideInstaller/rust-core"
+          SIDESTORE="$GITHUB_WORKSPACE/Vendor/SideInstaller"
+          cd "$RUST_CORE"
+          cargo build --locked --release --target aarch64-apple-ios
+          cargo build --locked --release --target aarch64-apple-ios-sim
+          cd "$SIDESTORE"
+          rm -rf "$SIDESTORE/SideInstallerFFI.xcframework"
+          xcodebuild -create-xcframework \
+            -library rust-core/target/aarch64-apple-ios/release/libsideinstaller_ffi.a -headers rust-core/include \
+            -library rust-core/target/aarch64-apple-ios-sim/release/libsideinstaller_ffi.a -headers rust-core/include \
+            -output "$SIDESTORE/SideInstallerFFI.xcframework"
+          echo "PASS: device and simulator Rust static libraries packaged into SideInstallerFFI.xcframework."
           set -o pipefail
           xcodebuild -project FrozenApps.xcodeproj -scheme FrozenApps \
             -configuration Release -sdk iphoneos \
