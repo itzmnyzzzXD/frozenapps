@@ -22,82 +22,172 @@ private enum FrozenWorkspaceDestinations {
 
 /// Six destination controls styled as one native radio group.
 /// The six existing destinations are retained; no navigation case is removed.
+/// Native six-destination liquid-glass tab bar.
+/// Keeps the existing SwiftUI page selection and accessibility semantics intact.
 struct FrozenWorkspaceRail: View {
     let selectedID: String
     let compact: Bool
     let onSelect: (String) -> Void
 
     @Namespace private var selectionNamespace
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         Group {
             if compact {
-                HStack(spacing: 3) {
-                    ForEach(FrozenWorkspaceDestinations.all) { destination in
-                        railButton(destination)
-                    }
-                }
-                .padding(Theme.Space.x2)
-                .frame(maxWidth: .infinity)
-                .background {
-                    RoundedRectangle(cornerRadius: 25, style: .continuous)
-                        .fill(Color.clear)
-                        .frozenLiquidMetal(variant: .gunmetal, cornerRadius: 25, live: false)
-                }
-                .overlay {
-                    RoundedRectangle(cornerRadius: 25, style: .continuous)
-                        .strokeBorder(.white.opacity(0.25), lineWidth: 1)
-                }
+                liquidGlassTabBar
             } else {
-                VStack(spacing: 9) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 15, style: .continuous)
-                            .fill(.white.opacity(0.10))
-                        Image(systemName: "snowflake")
-                            .font(.system(size: 19, weight: .semibold))
-                            .foregroundStyle(.white)
-                    }
-                    .frame(width: 44, height: 44)
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 15, style: .continuous)
-                            .strokeBorder(.white.opacity(0.32), lineWidth: 1)
-                    }
-                    .accessibilityHidden(true)
-
-                    Rectangle()
-                        .fill(.white.opacity(0.20))
-                        .frame(width: 24, height: 1)
-                        .padding(.vertical, 3)
-                        .accessibilityHidden(true)
-
-                    ForEach(FrozenWorkspaceDestinations.all) { destination in
-                        railButton(destination)
-                    }
-
-                    Spacer(minLength: 4)
-
-                    Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.2.1")
-                        .font(.caption2.weight(.semibold).monospacedDigit())
-                        .foregroundStyle(.white.opacity(0.48))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                        .accessibilityLabel("Version")
-                }
-                .padding(9)
-                .frame(width: 68)
-                .background {
-                    RoundedRectangle(cornerRadius: 29, style: .continuous)
-                        .fill(Color.clear)
-                        .frozenLiquidMetal(variant: .gunmetal, cornerRadius: 29, live: false)
-                }
-                .overlay {
-                    RoundedRectangle(cornerRadius: 29, style: .continuous)
-                        .strokeBorder(.white.opacity(0.25), lineWidth: 1)
-                }
+                verticalWorkspaceRail
             }
         }
-        .animation(Theme.Motion.smooth, value: selectedID)
+        .animation(
+            reduceMotion ? nil : .spring(response: 0.52, dampingFraction: 0.78),
+            value: selectedID
+        )
         .sensoryFeedback(.selection, trigger: selectedID)
+    }
+
+    /// The horizontal floating bar follows the supplied Liquid Glass reference:
+    /// a dark capsule, moving refractive selection lens, raised icon and active label.
+    private var liquidGlassTabBar: some View {
+        HStack(spacing: 3) {
+            ForEach(FrozenWorkspaceDestinations.all) { destination in
+                tabButton(destination)
+            }
+        }
+        .padding(6)
+        .frame(maxWidth: .infinity)
+        .background {
+            Capsule()
+                .fill(Color.clear)
+                .frozenLiquidMetal(variant: .gunmetal, cornerRadius: 32, live: false)
+        }
+        .overlay {
+            Capsule()
+                .strokeBorder(.white.opacity(0.24), lineWidth: 1)
+        }
+        .overlay(alignment: .top) {
+            Capsule()
+                .fill(
+                    LinearGradient(
+                        colors: [.white.opacity(0.34), .white.opacity(0.08), .clear],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .frame(height: 1)
+                .padding(.horizontal, 24)
+                .padding(.top, 1)
+                .allowsHitTesting(false)
+        }
+        .shadow(color: .black.opacity(0.34), radius: 22, x: 0, y: 10)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Workspace tabs")
+    }
+
+    private var verticalWorkspaceRail: some View {
+        VStack(spacing: 9) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 15, style: .continuous)
+                    .fill(.white.opacity(0.10))
+                Image(systemName: "snowflake")
+                    .font(.system(size: 19, weight: .semibold))
+                    .foregroundStyle(.white)
+            }
+            .frame(width: 44, height: 44)
+            .overlay {
+                RoundedRectangle(cornerRadius: 15, style: .continuous)
+                    .strokeBorder(.white.opacity(0.32), lineWidth: 1)
+            }
+            .accessibilityHidden(true)
+
+            Rectangle()
+                .fill(.white.opacity(0.20))
+                .frame(width: 24, height: 1)
+                .padding(.vertical, 3)
+                .accessibilityHidden(true)
+
+            ForEach(FrozenWorkspaceDestinations.all) { destination in
+                railButton(destination)
+            }
+
+            Spacer(minLength: 4)
+
+            Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.2.1")
+                .font(.caption2.weight(.semibold).monospacedDigit())
+                .foregroundStyle(.white.opacity(0.48))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .accessibilityLabel("Version")
+        }
+        .padding(9)
+        .frame(width: 68)
+        .background {
+            RoundedRectangle(cornerRadius: 29, style: .continuous)
+                .fill(Color.clear)
+                .frozenLiquidMetal(variant: .gunmetal, cornerRadius: 29, live: false)
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 29, style: .continuous)
+                .strokeBorder(.white.opacity(0.25), lineWidth: 1)
+        }
+    }
+
+    private func tabButton(_ destination: FrozenWorkspaceDestination) -> some View {
+        let isSelected = selectedID == destination.id
+
+        return Button {
+            onSelect(destination.id)
+        } label: {
+            VStack(spacing: 3) {
+                Image(systemName: destination.symbol)
+                    .font(.system(size: 18, weight: isSelected ? .semibold : .medium))
+                    .symbolRenderingMode(.hierarchical)
+                    .scaleEffect(isSelected ? 1.10 : 1)
+                    .offset(y: isSelected ? -2 : 1)
+                    .frame(height: 23)
+
+                Text(destination.compactTitle.uppercased())
+                    .font(.system(size: 8, weight: .heavy, design: .rounded))
+                    .tracking(0.45)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.68)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 10)
+                    .opacity(isSelected ? 1 : 0)
+                    .offset(y: isSelected ? 0 : 3)
+            }
+            .foregroundStyle(isSelected ? Color.white : Color.white.opacity(0.62))
+            .frame(maxWidth: .infinity)
+            .frame(minHeight: 56)
+            .padding(.horizontal, 2)
+            .background {
+                if isSelected {
+                    RoundedRectangle(cornerRadius: 19, style: .continuous)
+                        .fill(Color.clear)
+                        .matchedGeometryEffect(id: "liquid-workspace-selection-lens", in: selectionNamespace)
+                        .frozenLiquidMetal(variant: .chrome, cornerRadius: 19, live: true)
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 19, style: .continuous)
+                                .strokeBorder(.white.opacity(0.30), lineWidth: 1)
+                        }
+                        .overlay(alignment: .top) {
+                            Capsule()
+                                .fill(.white.opacity(0.42))
+                                .frame(height: 1)
+                                .padding(.horizontal, 13)
+                                .padding(.top, 1)
+                        }
+                        .shadow(color: .white.opacity(0.10), radius: 11, x: 0, y: 2)
+                }
+            }
+            .contentShape(RoundedRectangle(cornerRadius: 19, style: .continuous))
+        }
+        .buttonStyle(FrozenWorkspaceRadioPressStyle())
+        .frame(maxWidth: .infinity)
+        .accessibilityLabel(destination.title)
+        .accessibilityValue(isSelected ? "Selected" : "Not selected")
+        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
 
     private func railButton(_ destination: FrozenWorkspaceDestination) -> some View {
@@ -106,32 +196,29 @@ struct FrozenWorkspaceRail: View {
         return Button {
             onSelect(destination.id)
         } label: {
-            VStack(spacing: compact ? 3 : 0) {
+            VStack(spacing: 0) {
                 Image(systemName: destination.symbol)
-                    .font(.system(size: compact ? 18 : 19, weight: isSelected ? .semibold : .regular))
+                    .font(.system(size: 19, weight: isSelected ? .semibold : .regular))
                     .symbolRenderingMode(.hierarchical)
                     .scaleEffect(isSelected ? 1.15 : 1)
-                    .animation(Theme.Motion.snappy, value: isSelected)
-                    .frame(width: 44, height: compact ? 23 : 28)
+                    .frame(width: 44, height: 28)
 
-                if compact {
-                    Text(destination.compactTitle)
-                        .font(.caption2.weight(isSelected ? .bold : .medium))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.72)
-                        .frame(maxWidth: .infinity)
-                }
+                Text(destination.compactTitle)
+                    .font(.caption2.weight(isSelected ? .bold : .medium))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.72)
+                    .frame(maxWidth: .infinity)
+                    .opacity(0)
+                    .frame(height: 0)
             }
-            .foregroundStyle(isSelected ? Theme.accent2 : Color.white.opacity(0.66))
-            .frame(maxWidth: compact ? .infinity : nil)
+            .foregroundStyle(isSelected ? Color.white : Color.white.opacity(0.66))
             .frame(minWidth: 44, minHeight: 48)
-            .padding(.horizontal, compact ? 1 : 0)
             .background {
                 if isSelected {
-                    RoundedRectangle(cornerRadius: compact ? 15 : 14, style: .continuous)
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
                         .fill(Color.clear)
                         .matchedGeometryEffect(id: "selected-workspace-radio", in: selectionNamespace)
-                        .frozenLiquidMetal(variant: .chrome, cornerRadius: compact ? 15 : 14, live: true)
+                        .frozenLiquidMetal(variant: .chrome, cornerRadius: 14, live: true)
                 }
             }
             .contentShape(RoundedRectangle(cornerRadius: 15, style: .continuous))
