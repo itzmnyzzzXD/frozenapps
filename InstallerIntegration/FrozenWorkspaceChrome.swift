@@ -166,7 +166,7 @@ struct FrozenWorkspaceRail: View {
                     RoundedRectangle(cornerRadius: 19, style: .continuous)
                         .fill(Color.clear)
                         .matchedGeometryEffect(id: "liquid-workspace-selection-lens", in: selectionNamespace)
-                        .frozenLiquidMetal(variant: .chrome, cornerRadius: 19, live: true)
+                        .frozenLiquidMetal(variant: .chrome, cornerRadius: 19, live: !reduceMotion)
                         .overlay {
                             RoundedRectangle(cornerRadius: 19, style: .continuous)
                                 .strokeBorder(.white.opacity(0.30), lineWidth: 1)
@@ -218,7 +218,7 @@ struct FrozenWorkspaceRail: View {
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
                         .fill(Color.clear)
                         .matchedGeometryEffect(id: "selected-workspace-radio", in: selectionNamespace)
-                        .frozenLiquidMetal(variant: .chrome, cornerRadius: 14, live: true)
+                        .frozenLiquidMetal(variant: .chrome, cornerRadius: 14, live: !reduceMotion)
                 }
             }
             .contentShape(RoundedRectangle(cornerRadius: 15, style: .continuous))
