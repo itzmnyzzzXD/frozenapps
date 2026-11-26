@@ -1,4 +1,4 @@
-name: Build and validate SideStick
+name: Build and validate SideStick OLED
 
 on:
   push:
