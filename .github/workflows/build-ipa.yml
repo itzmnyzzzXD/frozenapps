@@ -52,10 +52,13 @@ jobs:
           xcodebuild -version
           swift --version
           python3 --version
-          if ! command -v cargo >/dev/null 2>&1; then
+          if [[ ! -f "$HOME/.cargo/env" ]]; then
             curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
           fi
           source "$HOME/.cargo/env"
+          export PATH="$HOME/.cargo/bin:$PATH"
+          command -v cargo
+          rustup --version
           rustup target add aarch64-apple-ios aarch64-apple-ios-sim
           echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
           if ! command -v xcodegen >/dev/null 2>&1; then
