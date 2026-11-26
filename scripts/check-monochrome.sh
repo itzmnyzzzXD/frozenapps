@@ -102,10 +102,17 @@ if catalog.is_dir():
         for item in data.get("colors", []):
             components = item.get("color", {}).get("components", {})
             try:
-                values = [float(components[key]) for key in ("red", "green", "blue")]
+                values = tuple(float(components[key]) for key in ("red", "green", "blue"))
             except Exception:
                 fail(manifest, 1, "non-sRGB colorset", repr(components))
                 continue
+
+            # The only chromatic exception is the shared, explicitly named status accent.
+            if manifest.parent.name == "SignalGreen.colorset":
+                if values != (0.160, 0.910, 0.470):
+                    fail(manifest, 1, "SignalGreen must match approved green accent", repr(values))
+                continue
+
             if not (all(value == 0.0 for value in values) or all(value == 1.0 for value in values)):
                 fail(manifest, 1, "chromatic/gray colorset", repr(components))
 
@@ -126,6 +133,19 @@ if catalog.is_dir():
                 fail(manifest, 1, f"{name} must be {'white' if expected[0] else 'black'}", repr(actual))
         except Exception as error:
             fail(manifest, 1, "invalid required colorset", str(error))
+
+    signal_green_manifest = catalog / "SignalGreen.colorset" / "Contents.json"
+    if not signal_green_manifest.is_file():
+        fail(catalog, 1, "required green accent colorset missing", "SignalGreen")
+    else:
+        try:
+            data = json.loads(signal_green_manifest.read_text(encoding="utf-8"))
+            color = data["colors"][0]["color"]["components"]
+            actual = tuple(float(color[channel]) for channel in ("red", "green", "blue"))
+            if actual != (0.160, 0.910, 0.470):
+                fail(signal_green_manifest, 1, "SignalGreen must match approved green accent", repr(actual))
+        except Exception as error:
+            fail(signal_green_manifest, 1, "invalid SignalGreen colorset", str(error))
 
 info = app / "Info.plist"
 if info.is_file():
@@ -152,7 +172,7 @@ if violations:
     sys.exit(1)
 
 print(f"PASS: {checked_sources} Swift/Metal files scanned; zero chromatic source violations.")
-print(f"PASS: {checked_colorsets} colorsets scanned; every color is pure black or white.")
+print(f"PASS: {checked_colorsets} colorsets scanned; colors are OLED black/white, with only the approved SignalGreen accent.")
 if app.is_dir():
     print("PASS: AccentColor white; LaunchBackground black; Info.plist forced dark.")
     print("PASS: root tint white; root window black; preferred color scheme dark.")
