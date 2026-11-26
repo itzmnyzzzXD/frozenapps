@@ -135,6 +135,9 @@ jobs:
             -library rust-core/target/aarch64-apple-ios-sim/release/libsideinstaller_ffi.a -headers rust-core/include \
             -output "$SIDESTORE/SideInstallerFFI.xcframework"
           echo "PASS: device and simulator Rust static libraries packaged into SideInstallerFFI.xcframework."
+          cd "$GITHUB_WORKSPACE"
+          test -d FrozenApps.xcodeproj
+          echo "PASS: Xcode project found at $GITHUB_WORKSPACE/FrozenApps.xcodeproj"
           set -o pipefail
           xcodebuild -project FrozenApps.xcodeproj -scheme FrozenApps \
             -configuration Release -sdk iphoneos \
