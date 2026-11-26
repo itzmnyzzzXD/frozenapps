@@ -128,7 +128,7 @@ struct FrozenAnimatedOTPInput: View {
 
 /// Lightweight native replacement for the reference particle sphere; no external renderer or package.
 struct FrozenOTPSecurityOrb: View {
-    @Environment(\\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var rotation = 0.0
 
     private let green = Color(hue: 0.37, saturation: 0.82, brightness: 0.88)
