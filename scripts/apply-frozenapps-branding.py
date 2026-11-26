@@ -116,14 +116,23 @@ replace_section(
     @AppStorage("hasCompletedAccountSetup") private var hasCompletedAccountSetup = false
     @EnvironmentObject private var accounts: AccountStore
     @EnvironmentObject private var loc: Localizer
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    let launchWelcomeIsVisible: Bool
 
     @State private var email = ""
     @State private var password = ""
     @State private var passwordVisible = false
+    @State private var isSaving = false
     @FocusState private var focus: AccountField?
 
+    private var emailLooksValid: Bool {
+        let value = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let at = value.firstIndex(of: "@") else { return false }
+        return at != value.startIndex && value[at...].contains(".")
+    }
+
     private var canSave: Bool {
-        !email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !password.isEmpty
+        emailLooksValid && !password.isEmpty && !isSaving
     }
 
     var body: some View {
@@ -169,8 +178,12 @@ replace_section(
             }
         }
         .preferredColorScheme(.dark)
-        .task {
-            try? await Task.sleep(for: .milliseconds(650))
+        .task(id: launchWelcomeIsVisible) {
+            let delay = launchWelcomeIsVisible
+                ? (reduceMotion ? 1200 : 2150)
+                : 650
+            try? await Task.sleep(for: .milliseconds(delay))
+            guard !Task.isCancelled else { return }
             focus = .email
         }
     }
@@ -265,6 +278,23 @@ replace_section(
                     .onSubmit { focus = .password }
             }
             .fieldBackground()
+            .overlay {
+                RoundedRectangle(cornerRadius: 15, style: .continuous)
+                    .strokeBorder(
+                        focus == .email ? Color("SignalGreen") : .white.opacity(0),
+                        lineWidth: 1.2
+                    )
+                    .allowsHitTesting(false)
+            }
+            .animation(.spring(response: 0.28, dampingFraction: 0.78), value: focus == .email)
+
+            if !email.isEmpty && !emailLooksValid {
+                Label("Enter a valid Apple Account email address.", systemImage: "exclamationmark.circle")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(Color("SignalGreen"))
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .padding(.leading, 4)
+            }
 
             HStack(spacing: 11) {
                 Image(systemName: "lock")
@@ -301,6 +331,15 @@ replace_section(
                 .accessibilityLabel(passwordVisible ? "Hide password" : "Show password")
             }
             .fieldBackground()
+            .overlay {
+                RoundedRectangle(cornerRadius: 15, style: .continuous)
+                    .strokeBorder(
+                        focus == .password ? Color("SignalGreen") : .white.opacity(0),
+                        lineWidth: 1.2
+                    )
+                    .allowsHitTesting(false)
+            }
+            .animation(.spring(response: 0.28, dampingFraction: 0.78), value: focus == .password)
 
             Rectangle()
                 .fill(.white.opacity(0.08))
@@ -337,15 +376,30 @@ replace_section(
     private var actions: some View {
         VStack(spacing: 13) {
             Button {
-                accounts.save(appleID: email, password: password)
-                hasCompletedAccountSetup = true
+                guard canSave else { return }
+                Task { @MainActor in
+                    withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
+                        isSaving = true
+                    }
+                    await Task.yield()
+                    accounts.save(appleID: email, password: password)
+                    isSaving = false
+                    hasCompletedAccountSetup = true
+                }
             } label: {
                 HStack(spacing: 10) {
-                    Text("Continue to FrozenApps")
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                    if isSaving {
+                        ProgressView()
+                            .tint(.black)
+                            .scaleEffect(0.82)
+                    } else {
+                        Text("Continue to FrozenApps")
+                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                    }
                     Spacer()
-                    Image(systemName: "arrow.right")
+                    Image(systemName: isSaving ? "lock.fill" : "arrow.right")
                         .font(.system(size: 13, weight: .bold))
+                        .contentTransition(.symbolEffect(.replace))
                 }
                 .padding(.horizontal, 18)
             }
@@ -619,18 +673,9 @@ replace_section(
 
     private var header: some View {
         VStack(spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .fill(Theme.brand)
-                Circle()
-                    .strokeBorder(.white.opacity(0.22), lineWidth: 1)
-                    .padding(7)
-                Image(systemName: "lock.shield.fill")
-                    .font(.system(size: 31, weight: .semibold))
-                    .foregroundStyle(.white)
-            }
-            .frame(width: 74, height: 74)
-            .shadow(color: Theme.accent.opacity(0.3), radius: 20, x: 0, y: 8)
+            FrozenOTPSecurityOrb()
+                .frame(width: 112, height: 112)
+                .padding(.bottom, 2)
 
             Text("APPLE ACCOUNT · SECURITY")
                 .font(.system(size: 9, weight: .heavy, design: .rounded))
@@ -658,27 +703,24 @@ replace_section(
             Text("VERIFICATION CODE")
                 .font(.system(size: 9, weight: .heavy, design: .rounded))
                 .tracking(1.4)
-                .foregroundStyle(Theme.accent2)
+                .foregroundStyle(.white.opacity(0.68))
 
-            TextField(L("6-digit code"), text: $code)
-                .keyboardType(.numberPad)
-                .textContentType(.oneTimeCode)
-                .font(.system(size: 26, weight: .bold, design: .rounded).monospacedDigit())
-                .multilineTextAlignment(.center)
-                .textFieldStyle(.plain)
-                .focused($codeFocused)
-                .disabled(pending != nil)
-                .padding(.vertical, 12)
-                .fieldBackground()
-                .onChange(of: code) { _, typed in
-                    let digits = String(typed.filter(\.isNumber).prefix(6))
-                    if digits != typed { code = digits }
-                }
+            FrozenAnimatedOTPInput(
+                code: $code,
+                isFocused: $codeFocused,
+                isDisabled: pending != nil
+            )
 
-            Text("Enter the six digits you received. Codes are used for this sign-in attempt only.")
-                .font(.system(size: 11))
-                .foregroundStyle(.white.opacity(0.48))
+            Text(code.count == 6
+                 ? "Six digits entered. Ready to verify with Apple."
+                 : "Enter the six digits you received. Codes are used for this sign-in attempt only.")
+                .font(.system(size: 11, weight: code.count == 6 ? .semibold : .regular))
+                .foregroundStyle(code.count == 6
+                    ? Color("SignalGreen")
+                    : .white.opacity(0.48))
                 .fixedSize(horizontal: false, vertical: true)
+                .contentTransition(.opacity)
+                .animation(.easeOut(duration: 0.2), value: code.count)
         }
         .padding(17)
         .background {
@@ -2239,4 +2281,73 @@ if "AppBackground()" in tools_section:
     tools_section = tools_section.replace("AppBackground()", "FrozenWorkspaceBackdrop()")
     tools_source = tools_source[:tools_start] + tools_section + tools_source[next_struct:]
     tools_path.write_text(tools_source, encoding="utf-8")
+
+# Mount one shared LiquidChrome MTKView behind all launch and workspace views.
+replace_once(
+    "ios-app/SideInstallerApp.swift",
+    '''            ZStack {
+                if hasAcceptedTOS && hasCompletedAccountSetup {''',
+    '''            GeometryReader { rootGeometry in
+                ZStack {
+                    LiquidChromeBackground(interaction: liquidChromeInput)
+                        .ignoresSafeArea()
+                        .allowsHitTesting(false)
+                    if hasAcceptedTOS && hasCompletedAccountSetup {'''
+)
+
+# Add a short native launch reveal above the existing TOS, account setup and app
+# screens. This is presentation-only and does not alter either onboarding flag.
+replace_once(
+    "ios-app/SideInstallerApp.swift",
+    '''    @AppStorage("hasCompletedAccountSetup") private var hasCompletedAccountSetup = false''',
+    '''    @AppStorage("hasCompletedAccountSetup") private var hasCompletedAccountSetup = false
+    @State private var showLaunchWelcome = true
+    @State private var liquidChromeInput = LiquidChromeInteraction()'''
+)
+replace_once(
+    "ios-app/SideInstallerApp.swift",
+    '''            }
+            .animation(.smooth(duration: 0.5), value: hasAcceptedTOS)''',
+    '''                if showLaunchWelcome {
+                    FrozenLaunchWelcome {
+                        withAnimation(.easeOut(duration: 0.4)) {
+                            showLaunchWelcome = false
+                        }
+                    }
+                    .transition(.opacity)
+                    .zIndex(2)
+                }
+                }
+                .simultaneousGesture(
+                    DragGesture(minimumDistance: 0)
+                        .onChanged { value in
+                            liquidChromeInput.updatePointer(value.location, in: rootGeometry.size, touching: true)
+                        }
+                        .onEnded { _ in liquidChromeInput.endPointer() }
+                )
+                .onContinuousHover { phase in
+                    switch phase {
+                    case .active(let location):
+                        liquidChromeInput.updatePointer(location, in: rootGeometry.size, touching: false)
+                    case .ended:
+                        liquidChromeInput.endPointer()
+                    }
+                }
+            }
+            .animation(.smooth(duration: 0.5), value: hasAcceptedTOS)'''
+)
+replace_once(
+    "ios-app/SideInstallerApp.swift",
+    '''                    AccountSetupView()''',
+    '''                    AccountSetupView(launchWelcomeIsVisible: showLaunchWelcome)'''
+)
+replace_once(
+    "ios-app/SideInstallerApp.swift",
+    '''            .animation(.smooth(duration: 0.5), value: hasCompletedAccountSetup)''',
+    '''            .animation(.smooth(duration: 0.5), value: hasCompletedAccountSetup)
+            .tint(.white)
+            .preferredColorScheme(.dark)
+            .background(Color.black.ignoresSafeArea())'''
+)
+
 print("Applied FrozenApps branding to pinned engine source.")

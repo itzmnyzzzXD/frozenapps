@@ -1,28 +1,9 @@
 import SwiftUI
 
-/// Cached wallpaper plus one inexpensive tint pass replace the old full-screen blur stack.
+/// Screen-level AppBackground compatibility layer. The shared root MTKView renders behind it.
 struct FrozenWorkspaceBackdrop: View {
     var body: some View {
-        GeometryReader { proxy in
-            Image("SideStickBackground")
-                .resizable()
-                .scaledToFill()
-                .frame(width: proxy.size.width, height: proxy.size.height)
-                .clipped()
-                .overlay {
-                    LinearGradient(
-                        stops: [
-                            .init(color: Color.black.opacity(0.10), location: 0),
-                            .init(color: Color.black.opacity(0.16), location: 0.46),
-                            .init(color: Color.black.opacity(0.46), location: 1)
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                }
-        }
-        .ignoresSafeArea()
-        .accessibilityHidden(true)
+        Color.clear.ignoresSafeArea().accessibilityHidden(true)
     }
 }
 
@@ -32,50 +13,67 @@ struct FrozenGlassSurfaceModifier: ViewModifier {
     let tint: Color
     let elevated: Bool
 
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+
+    private var isHighContrast: Bool {
+        colorSchemeContrast == .increased
+    }
+
+    private var borderGradientStops: [Gradient.Stop] {
+        [
+            .init(color: Color.white.opacity(isHighContrast ? 1 : 0.48), location: 0),
+            .init(color: Color.white.opacity(isHighContrast ? 0.72 : 0.12), location: 0.24),
+            .init(color: Color.white.opacity(isHighContrast ? 0.48 : 0.12), location: 0.52),
+            .init(color: Color.white.opacity(isHighContrast ? 0.72 : 0.06), location: 0.80),
+            .init(color: Color.white.opacity(isHighContrast ? 1 : 0.24), location: 1)
+        ]
+    }
+
+    private var borderLineWidth: CGFloat {
+        isHighContrast ? 1.6 : 1
+    }
+
     func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
         content
             .background {
-                shape.fill(.regularMaterial)
-                    .overlay {
-                        shape.fill(LinearGradient(
-                            stops: [
-                                .init(color: Color.white.opacity(0.17), location: 0),
-                                .init(color: tint.opacity(0.075), location: 0.28),
-                                .init(color: Color.white.opacity(0.025), location: 0.58),
-                                .init(color: Color.black.opacity(0.16), location: 1)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ))
-                    }
-                    .overlay(alignment: .topLeading) {
-                        shape.fill(LinearGradient(
-                            colors: [Color.white.opacity(0.06), Color.white.opacity(0.018), .clear],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ))
-                    }
+                if reduceTransparency {
+                    shape.fill(Theme.matteRaised)
+                } else {
+                    shape.fill(Color.black)
+                        .overlay {
+                            shape.fill(LinearGradient(
+                                stops: [
+                                    .init(color: Color.white.opacity(0.06), location: 0),
+                                    .init(color: Color.white.opacity(0.03), location: 0.42),
+                                    .init(color: Color.black, location: 1)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ))
+                        }
+                }
             }
             .overlay {
-                shape.strokeBorder(LinearGradient(
-                    stops: [
-                        .init(color: Color.white.opacity(0.42), location: 0),
-                        .init(color: Color(red: 1.0, green: 0.91, blue: 0.82).opacity(0.20), location: 0.20),
-                        .init(color: tint.opacity(0.17), location: 0.48),
-                        .init(color: Color.white.opacity(0.055), location: 0.78),
-                        .init(color: Color.white.opacity(0.22), location: 1)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                ), lineWidth: 1)
+                shape.strokeBorder(
+                    LinearGradient(
+                        stops: borderGradientStops,
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: borderLineWidth
+                )
             }
             .overlay {
-                shape.inset(by: 1).strokeBorder(Color.white.opacity(0.045), lineWidth: 1)
+                shape.inset(by: 1).strokeBorder(
+                    Color.white.opacity(isHighContrast ? 0.18 : 0.035),
+                    lineWidth: 1
+                )
             }
             .shadow(
-                color: Color.black.opacity(elevated ? 0.23 : 0.13),
-                radius: elevated ? 24 : 12,
+                color: Color.black.opacity(elevated ? 0.30 : 0.18),
+                radius: elevated ? 22 : 12,
                 x: 0,
                 y: elevated ? 10 : 5
             )
@@ -83,10 +81,10 @@ struct FrozenGlassSurfaceModifier: ViewModifier {
 }
 
 extension View {
-    func frozenGlassSurface(cornerRadius: CGFloat = 20, tint: Color? = nil, elevated: Bool = false) -> some View {
+    func frozenGlassSurface(cornerRadius: CGFloat = Theme.Radius.medium, tint: Color? = nil, elevated: Bool = false) -> some View {
         modifier(FrozenGlassSurfaceModifier(
             cornerRadius: cornerRadius,
-            tint: tint ?? Theme.accent.opacity(0.18),
+            tint: tint ?? Color.white.opacity(0.06),
             elevated: elevated
         ))
     }
@@ -106,9 +104,9 @@ struct FrozenWorkspacePanel<Content: View>: View {
 
     var body: some View {
         content
-            .padding(16)
+            .padding(Theme.Space.x4)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .frozenGlassSurface(cornerRadius: cornerRadius, tint: Theme.accent.opacity(0.16), elevated: elevated)
+            .frozenGlassSurface(cornerRadius: cornerRadius, tint: .white.opacity(0.06), elevated: elevated)
     }
 }
 
@@ -143,13 +141,13 @@ struct FrozenGlassMenuLabel: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(.regularMaterial, in: Capsule())
+        .background(Capsule().fill(Color.black))
         .overlay {
             Capsule().strokeBorder(LinearGradient(
                 colors: [
                     Color.white.opacity(0.36),
-                    Color(red: 1.0, green: 0.91, blue: 0.82).opacity(0.15),
-                    Theme.accent.opacity(0.13),
+                    Color.white.opacity(0.12),
+                    Color.white.opacity(0.06),
                     Color.white.opacity(0.075)
                 ],
                 startPoint: .topLeading,
@@ -171,4 +169,21 @@ struct FrozenGlassPressStyle: ButtonStyle {
                 value: configuration.isPressed
             )
     }
+}
+
+
+#Preview("Workspace card") {
+    FrozenWorkspacePanel(cornerRadius: Theme.Radius.medium, elevated: true) {
+        VStack(alignment: .leading, spacing: Theme.Space.x2) {
+            Text("Signer readiness")
+                .font(.headline)
+                .foregroundStyle(.white)
+            Text("Pairing, authentication and install state are shown here.")
+                .font(.body)
+                .foregroundStyle(.white.opacity(0.72))
+        }
+    }
+    .padding(24)
+    .background(Theme.matteSurface.ignoresSafeArea())
+    .preferredColorScheme(.dark)
 }

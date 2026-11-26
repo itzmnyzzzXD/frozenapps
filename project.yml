@@ -22,6 +22,8 @@ targets:
     sources:
       - path: Vendor/SideInstaller/ios-app
       - path: InstallerIntegration
+      - path: SideStickTheme.swift
+      - path: SideStickLiquidMetal.metal
     dependencies:
       - framework: Vendor/SideInstaller/SideInstallerFFI.xcframework
         embed: false

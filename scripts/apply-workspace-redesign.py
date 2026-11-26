@@ -112,30 +112,29 @@ replace_owned(
     var body: some View {
         GeometryReader { proxy in
             ZStack {
-                FrozenWorkspaceBackdrop()
-                if proxy.size.width >= 760 {
-                    HStack(alignment: .center, spacing: 16) {
-                        FrozenWorkspaceRail(selectedID: currentPageID, compact: false, onSelect: selectPageID)
-                            .padding(.leading, 15)
-                            .padding(.vertical, 18)
-                        VStack(spacing: 12) {
-                            navigationHeader
-                            workspaceTabs
-                        }
-                        .padding(.vertical, 14)
-                        .padding(.trailing, 16)
-                    }
-                } else {
-                    VStack(spacing: 8) {
-                        navigationHeader
-                            .padding(.horizontal, 12)
-                            .padding(.top, 7)
-                        workspaceTabs
-                        FrozenWorkspaceRail(selectedID: currentPageID, compact: true, onSelect: selectPageID)
-                            .padding(.horizontal, 12)
-                            .padding(.bottom, 8)
-                    }
+                Color.black.ignoresSafeArea()
+                VStack(spacing: proxy.size.width >= 760 ? 14 : 8) {
+                    navigationHeader
+                        .frame(maxWidth: 1280)
+                        .padding(.horizontal, proxy.size.width >= 760 ? 8 : 12)
+                        .padding(.top, proxy.size.width >= 760 ? 14 : 7)
+
+                    workspaceTabs
+                        .frame(maxWidth: 1280)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                    FrozenWorkspaceRail(
+                        selectedID: currentPageID,
+                        compact: true,
+                        onSelect: selectPageID
+                    )
+                    .frame(maxWidth: proxy.size.width >= 760 ? 760 : .infinity)
+                    .padding(.horizontal, proxy.size.width >= 760 ? 0 : 12)
+                    .padding(.bottom, proxy.size.width >= 760 ? 14 : 8)
                 }
+                .frame(maxWidth: 1320)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding(.horizontal, proxy.size.width >= 760 ? 24 : 0)
             }
         }
         .onChange(of: page) { _, page in Backdrop.settle(on: page.wash) }
@@ -622,6 +621,41 @@ replace_owned(
             .toolbar(.hidden, for: .navigationBar)
         }
     }'''
+)
+
+# Native Uiverse-inspired primary action. Keep the original press-reporting
+# binding because ContentView uses it to compress the surrounding progress surface.
+replace_owned(
+    APP / "ContentView.swift",
+    "struct ContentView: View {",
+    ".buttonStyle(PressReportingButtonStyle(isPressed: $installPressed))",
+    ".transition(.surfaceSwap)",
+    ".buttonStyle(FrozenNeonLiquidButtonStyle(isPressed: $installPressed))"
+)
+
+# The completed-run reinstall action uses the same visual language without
+# changing its existing startInstall callback.
+replace_owned(
+    APP / "ContentView.swift",
+    "    private var installButton: some View {",
+    ".buttonStyle(PrimaryButtonStyle())",
+    "    }",
+    ".buttonStyle(FrozenNeonLiquidButtonStyle())"
+)
+
+# Keep the existing install progress calculation and animated sheen, but give
+# the track a static gunmetal finish so it does not consume a live shader slot.
+replace_owned(
+    APP / "ContentView.swift",
+    "private struct InstallProgressBar: View {",
+    """Capsule()
+                    .fill(Color(.tertiarySystemFill))
+                    .overlay(Capsule().strokeBorder(.white.opacity(0.05), lineWidth: 1))""",
+    "fill(across: full)",
+    r'''Capsule()
+                    .fill(Color.clear)
+                    .frozenLiquidMetal(variant: .gunmetal, cornerRadius: 6, live: false)
+                    .overlay(Capsule().strokeBorder(.white.opacity(0.20), lineWidth: 1))'''
 )
 
 print("Applied FrozenApps structural workspace redesign.")

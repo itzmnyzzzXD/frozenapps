@@ -52,10 +52,17 @@ jobs:
           xcodebuild -version
           swift --version
           python3 --version
-          if ! command -v cargo >/dev/null 2>&1; then
+          if ! command -v rustup >/dev/null 2>&1; then
             curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
           fi
-          source "$HOME/.cargo/env"
+          if [ -f "$HOME/.cargo/env" ]; then
+            source "$HOME/.cargo/env"
+          fi
+          export PATH="$HOME/.cargo/bin:$PATH"
+          if ! command -v rustup >/dev/null 2>&1 || ! command -v cargo >/dev/null 2>&1; then
+            echo "Rust toolchain installation did not provide both rustup and cargo." >&2
+            exit 1
+          fi
           rustup target add aarch64-apple-ios aarch64-apple-ios-sim
           echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
           if ! command -v xcodegen >/dev/null 2>&1; then
@@ -69,13 +76,40 @@ jobs:
           python3 scripts/apply-settings-redesign.py
           python3 scripts/apply-sidestick-branding.py
 
+      - name: Check OLED monochrome palette
+        shell: bash
+        run: bash scripts/check-monochrome.sh
+
+      - name: Compile LiquidChrome Metal pipelines
+        shell: bash
+        run: bash scripts/compile-liquidchrome-metal.sh
+
       - name: Build Rust pairing and signing engine plus iOS app
         shell: bash
         run: |
           set -euo pipefail
           export DEVELOPER_DIR="$(xcode-select -p)"
           export IPHONEOS_DEPLOYMENT_TARGET=17.4
-          bash Vendor/SideInstaller/build-rust.sh
+          echo "Build environment: $(uname -a)"
+          echo "DEVELOPER_DIR=$DEVELOPER_DIR"
+          echo "HOME=$HOME"
+          command -v rustup
+          command -v cargo
+          rustup show active-toolchain
+          test -f Vendor/SideInstaller/build-rust.sh
+          test -f Vendor/SideInstaller/rust-core/Cargo.toml
+          export PATH="$HOME/.cargo/bin:$PATH"
+          python3 - <<'PY'
+          from pathlib import Path
+          script = Path("Vendor/SideInstaller/build-rust.sh")
+          source_line = 'source "$HOME/.cargo/env" 2>/dev/null || true'
+          contents = script.read_text()
+          if source_line not in contents:
+              raise SystemExit("Expected upstream Cargo environment-source line was not found.")
+          script.write_text(contents.replace(source_line, 'export PATH="$HOME/.cargo/bin:$PATH"', 1))
+          print("Patched CI working copy to use the already-installed Cargo PATH.")
+          PY
+          bash -x Vendor/SideInstaller/build-rust.sh 2>&1 | tee "$GITHUB_WORKSPACE/rust-build.log"
           xcodegen generate
           set -o pipefail
           xcodebuild -project FrozenApps.xcodeproj -scheme FrozenApps \
@@ -195,12 +229,10 @@ jobs:
             SideStick-unsigned.ipa.sha256
           fail_on_unmatched_files: true
 
-      # Public binary distribution is the repository owner's responsibility.
-      # Upload the artifact only for an explicit version-release publish.
+      # Keep every successful build downloadable from its Actions run.
+      # This is an unsigned CI artifact; release publication remains separately gated above.
       - name: Upload FrozenApps IPA build artifact
-        if: >-
-          github.event_name == 'push' &&
-          (startsWith(github.ref, 'refs/tags/') || (github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[publish-release]')))
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: SideStick-unsigned-ipa
@@ -218,5 +250,6 @@ jobs:
           path: |
             build.log
             build-validation.txt
+            rust-build.log
           if-no-files-found: warn
           retention-days: 14
