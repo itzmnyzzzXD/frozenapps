@@ -53,7 +53,7 @@ signal_green_set.mkdir(parents=True, exist_ok=True)
         "idiom": "universal"
     }],
     "info": {"author": "xcode", "version": 1}
-}, indent=2) + "\\n", encoding="utf-8")
+}, indent=2) + "\n", encoding="utf-8")
 
 # Reuse IMG_2151.jpeg as a small in-app brand mark. Keeping it in the existing
 # asset catalog means it is compiled into Assets.car instead of loaded at runtime.
