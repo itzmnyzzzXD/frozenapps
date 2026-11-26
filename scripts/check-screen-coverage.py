@@ -8,6 +8,7 @@ APP = ROOT / "Vendor" / "SideInstaller" / "ios-app"
 failures = []
 
 def read(path):
+    path = Path(path)
     file = path if path.is_absolute() else ROOT / path
     if not file.is_file():
         failures.append(f"missing source file: {file.relative_to(ROOT)}")
