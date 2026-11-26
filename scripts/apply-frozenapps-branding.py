@@ -673,18 +673,9 @@ replace_section(
 
     private var header: some View {
         VStack(spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .fill(Theme.brand)
-                Circle()
-                    .strokeBorder(.white.opacity(0.22), lineWidth: 1)
-                    .padding(7)
-                Image(systemName: "lock.shield.fill")
-                    .font(.system(size: 31, weight: .semibold))
-                    .foregroundStyle(.white)
-            }
-            .frame(width: 74, height: 74)
-            .shadow(color: Theme.accent.opacity(0.3), radius: 20, x: 0, y: 8)
+            FrozenOTPSecurityOrb()
+                .frame(width: 112, height: 112)
+                .padding(.bottom, 2)
 
             Text("APPLE ACCOUNT · SECURITY")
                 .font(.system(size: 9, weight: .heavy, design: .rounded))
@@ -720,10 +711,16 @@ replace_section(
                 isDisabled: pending != nil
             )
 
-            Text("Enter the six digits you received. Codes are used for this sign-in attempt only.")
-                .font(.system(size: 11))
-                .foregroundStyle(.white.opacity(0.48))
+            Text(code.count == 6
+                 ? "Six digits entered. Ready to verify with Apple."
+                 : "Enter the six digits you received. Codes are used for this sign-in attempt only.")
+                .font(.system(size: 11, weight: code.count == 6 ? .semibold : .regular))
+                .foregroundStyle(code.count == 6
+                    ? Color(hue: 0.37, saturation: 0.82, brightness: 0.88)
+                    : .white.opacity(0.48))
                 .fixedSize(horizontal: false, vertical: true)
+                .contentTransition(.opacity)
+                .animation(.easeOut(duration: 0.2), value: code.count)
         }
         .padding(17)
         .background {
