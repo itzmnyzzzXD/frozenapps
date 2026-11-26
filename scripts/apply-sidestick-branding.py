@@ -41,6 +41,20 @@ def write_solid_color_asset(name, component):
 write_solid_color_asset("AccentColor", "1.000")
 write_solid_color_asset("LaunchBackground", "0.000")
 
+# One approved vivid-green signal accent; the rest of the app stays OLED black/white.
+signal_green_set = ASSETS / "SignalGreen.colorset"
+signal_green_set.mkdir(parents=True, exist_ok=True)
+(signal_green_set / "Contents.json").write_text(json.dumps({
+    "colors": [{
+        "color": {
+            "color-space": "srgb",
+            "components": {"red": "0.160", "green": "0.910", "blue": "0.470", "alpha": "1.000"}
+        },
+        "idiom": "universal"
+    }],
+    "info": {"author": "xcode", "version": 1}
+}, indent=2) + "\\n", encoding="utf-8")
+
 # Reuse IMG_2151.jpeg as a small in-app brand mark. Keeping it in the existing
 # asset catalog means it is compiled into Assets.car instead of loaded at runtime.
 MARK_SET.mkdir(parents=True, exist_ok=True)
@@ -563,48 +577,58 @@ struct FrozenInstallProgressPopup: View {
 
     /// Read the icon from the signed app bundle. This works for built-in
     /// sources and arbitrary imported IPAs without adding an extraction library.
+    private var iconSource: InstallSource {
+        guard engine.installSource == .custom else { return engine.installSource }
+        return engine.customIPABuild ?? .custom
+    }
+
+    /// Prefer the actual icon inside the signed IPA bundle. Before signing finishes,
+    /// use the selected built-in package icon already shipped with the app.
     private var appIcon: UIImage? {
-        guard let appPath = engine.signedAppPath,
-              let appBundle = Bundle(path: appPath) else { return nil }
+        if let appPath = engine.signedAppPath,
+           let appBundle = Bundle(path: appPath) {
+            let info = appBundle.infoDictionary ?? [:]
+            var iconNames: [String] = []
 
-        let info = appBundle.infoDictionary ?? [:]
-        var iconNames: [String] = []
+            if let iconName = info["CFBundleIconName"] as? String {
+                iconNames.append(iconName)
+            }
 
-        if let iconName = info["CFBundleIconName"] as? String {
-            iconNames.append(iconName)
-        }
+            let iconDictionaries = [
+                info["CFBundleIcons~ipad"] as? [String: Any],
+                info["CFBundleIcons"] as? [String: Any]
+            ].compactMap { $0 }
 
-        let iconDictionaries = [
-            info["CFBundleIcons~ipad"] as? [String: Any],
-            info["CFBundleIcons"] as? [String: Any]
-        ].compactMap { $0 }
+            for icons in iconDictionaries {
+                if let primary = icons["CFBundlePrimaryIcon"] as? [String: Any],
+                   let files = primary["CFBundleIconFiles"] as? [String] {
+                    iconNames.append(contentsOf: files.reversed())
+                }
+            }
 
-        for icons in iconDictionaries {
-            if let primary = icons["CFBundlePrimaryIcon"] as? [String: Any],
-               let files = primary["CFBundleIconFiles"] as? [String] {
+            if let files = info["CFBundleIconFiles"] as? [String] {
                 iconNames.append(contentsOf: files.reversed())
             }
-        }
 
-        if let files = info["CFBundleIconFiles"] as? [String] {
-            iconNames.append(contentsOf: files.reversed())
-        }
-
-        for name in iconNames where !name.isEmpty {
-            if let image = UIImage(named: name, in: appBundle, compatibleWith: nil) {
-                return image
-            }
-
-            for ext in ["png", "jpg", "jpeg"] {
-                let file = appBundle.bundleURL
-                    .appendingPathComponent(name)
-                    .appendingPathExtension(ext)
-                if let image = UIImage(contentsOfFile: file.path) {
+            for name in iconNames where !name.isEmpty {
+                if let image = UIImage(named: name, in: appBundle, compatibleWith: nil) {
                     return image
+                }
+
+                for ext in ["png", "jpg", "jpeg"] {
+                    let file = appBundle.bundleURL
+                        .appendingPathComponent(name)
+                        .appendingPathExtension(ext)
+                    if let image = UIImage(contentsOfFile: file.path) {
+                        return image
+                    }
                 }
             }
         }
 
+        if let assetName = iconSource.iconImage {
+            return UIImage(named: assetName)
+        }
         return nil
     }
 
@@ -642,7 +666,7 @@ struct FrozenInstallProgressPopup: View {
                         .resizable()
                         .scaledToFill()
                 } else {
-                    Image(systemName: "app.fill")
+                    Image(systemName: iconSource.iconSymbol)
                         .font(.system(size: 25, weight: .medium))
                         .foregroundStyle(Color.white.opacity(0.82))
                 }
@@ -657,7 +681,7 @@ struct FrozenInstallProgressPopup: View {
             VStack(alignment: .leading, spacing: 7) {
                 HStack(alignment: .center, spacing: 10) {
                     VStack(alignment: .leading, spacing: 3) {
-                        Text("INSTALLING APP")
+                        Text("INSTALLATION PROGRESS")
                             .font(.system(size: 8, weight: .heavy, design: .rounded))
                             .tracking(1.45)
                             .foregroundStyle(Color.white.opacity(0.56))
@@ -694,7 +718,7 @@ struct FrozenInstallProgressPopup: View {
                     Text("LIVE")
                         .font(.system(size: 8, weight: .heavy, design: .rounded))
                         .tracking(1.1)
-                        .foregroundStyle(Color.white.opacity(0.72))
+                        .foregroundStyle(Color("SignalGreen"))
                 }
 
                 GeometryReader { proxy in
@@ -706,7 +730,7 @@ struct FrozenInstallProgressPopup: View {
                         Capsule()
                             .fill(
                                 LinearGradient(
-                                    colors: [Color.white.opacity(0.62), Color.white.opacity(0.96)],
+                                    colors: [Color("SignalGreen").opacity(0.76), Color("SignalGreen")],
                                     startPoint: .leading,
                                     endPoint: .trailing
                                 )
@@ -715,7 +739,7 @@ struct FrozenInstallProgressPopup: View {
                             .animation(.smooth(duration: 0.38), value: progress)
 
                         Circle()
-                            .fill(Color.white.opacity(0.72))
+                            .fill(Color("SignalGreen"))
                             .frame(width: 12, height: 12)
                             .blur(radius: 5)
                             .offset(x: max(0, fillWidth - 6))
@@ -728,12 +752,12 @@ struct FrozenInstallProgressPopup: View {
                     ZStack(alignment: .leading) {
                         FrozenInstallProgressTrace()
                             .stroke(
-                                Color.white.opacity(0.17),
+                                Color("SignalGreen").opacity(0.30),
                                 style: StrokeStyle(lineWidth: 1, lineCap: .round)
                             )
 
                         Circle()
-                            .fill(Color.white.opacity(0.88))
+                            .fill(Color("SignalGreen"))
                             .frame(width: 4, height: 4)
                             .blur(radius: 2)
                             .offset(
@@ -785,8 +809,7 @@ root_view_path = APP / "RootView.swift"
 if not root_view_path.is_file():
     raise SystemExit("RootView.swift is missing; cannot attach the install progress popup.")
 root_source = root_view_path.read_text(encoding="utf-8")
-popup_hook = '''        // Animate the backdrop to the new tab's level.
-        .onChange(of: page) { _, page in Backdrop.settle(on: page.wash) }
+popup_hook = '''        .onChange(of: page) { _, page in Backdrop.settle(on: page.wash) }
 '''
 popup_overlay = '''        .overlay(alignment: .top) {
             Group {
