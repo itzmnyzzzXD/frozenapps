@@ -87,8 +87,11 @@ jobs:
           python3 scripts/apply-settings-redesign.py
           python3 scripts/apply-sidestick-branding.py
           python3 scripts/apply-liquidchrome-redesign.py
+          python3 scripts/migrate-system-icons.py
+          python3 scripts/import-vector-icons.py
           bash scripts/check-monochrome.sh
           python3 scripts/check-liquidchrome-contract.py
+          python3 scripts/check-icon-usage.py
           bash scripts/compile-liquidchrome-metal.sh
 
       - name: Generate Xcode project for incremental builds
