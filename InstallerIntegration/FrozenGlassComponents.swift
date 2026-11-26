@@ -3,26 +3,7 @@ import SwiftUI
 /// Cached wallpaper plus one inexpensive tint pass replace the old full-screen blur stack.
 struct FrozenWorkspaceBackdrop: View {
     var body: some View {
-        GeometryReader { proxy in
-            Image("SideStickBackground")
-                .resizable()
-                .scaledToFill()
-                .frame(width: proxy.size.width, height: proxy.size.height)
-                .clipped()
-                .overlay {
-                    LinearGradient(
-                        stops: [
-                            .init(color: Color.black.opacity(0.10), location: 0),
-                            .init(color: Color.black.opacity(0.16), location: 0.46),
-                            .init(color: Color.black.opacity(0.46), location: 1)
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                }
-        }
-        .ignoresSafeArea()
-        .accessibilityHidden(true)
+        Color.clear.ignoresSafeArea().accessibilityHidden(true)
     }
 }
 

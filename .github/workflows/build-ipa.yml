@@ -68,6 +68,9 @@ jobs:
           python3 scripts/apply-workspace-redesign.py
           python3 scripts/apply-settings-redesign.py
           python3 scripts/apply-sidestick-branding.py
+          python3 scripts/apply-liquidchrome-redesign.py
+          bash scripts/check-monochrome.sh
+          bash scripts/compile-liquidchrome-metal.sh
 
       - name: Build Rust pairing and signing engine plus iOS app
         shell: bash
