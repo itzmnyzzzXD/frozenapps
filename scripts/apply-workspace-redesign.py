@@ -112,30 +112,29 @@ replace_owned(
     var body: some View {
         GeometryReader { proxy in
             ZStack {
-                FrozenWorkspaceBackdrop()
-                if proxy.size.width >= 760 {
-                    HStack(alignment: .center, spacing: 16) {
-                        FrozenWorkspaceRail(selectedID: currentPageID, compact: false, onSelect: selectPageID)
-                            .padding(.leading, 15)
-                            .padding(.vertical, 18)
-                        VStack(spacing: 12) {
-                            navigationHeader
-                            workspaceTabs
-                        }
-                        .padding(.vertical, 14)
-                        .padding(.trailing, 16)
-                    }
-                } else {
-                    VStack(spacing: 8) {
-                        navigationHeader
-                            .padding(.horizontal, 12)
-                            .padding(.top, 7)
-                        workspaceTabs
-                        FrozenWorkspaceRail(selectedID: currentPageID, compact: true, onSelect: selectPageID)
-                            .padding(.horizontal, 12)
-                            .padding(.bottom, 8)
-                    }
+                Color.black.ignoresSafeArea()
+                VStack(spacing: proxy.size.width >= 760 ? 14 : 8) {
+                    navigationHeader
+                        .frame(maxWidth: 1280)
+                        .padding(.horizontal, proxy.size.width >= 760 ? 8 : 12)
+                        .padding(.top, proxy.size.width >= 760 ? 14 : 7)
+
+                    workspaceTabs
+                        .frame(maxWidth: 1280)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                    FrozenWorkspaceRail(
+                        selectedID: currentPageID,
+                        compact: true,
+                        onSelect: selectPageID
+                    )
+                    .frame(maxWidth: proxy.size.width >= 760 ? 760 : .infinity)
+                    .padding(.horizontal, proxy.size.width >= 760 ? 0 : 12)
+                    .padding(.bottom, proxy.size.width >= 760 ? 14 : 8)
                 }
+                .frame(maxWidth: 1320)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding(.horizontal, proxy.size.width >= 760 ? 24 : 0)
             }
         }
         .onChange(of: page) { _, page in Backdrop.settle(on: page.wash) }
