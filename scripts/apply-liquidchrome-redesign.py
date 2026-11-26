@@ -97,7 +97,7 @@ replace_section(account_path, "struct AccountSetupView: View {",
     lambda section: section.replace(
         '''            HStack(spacing: 11) {
                 Image(systemName: "envelope")''',
-        '''            FrozenAnimatedAccountReadiness(email: email, password: password)
+        '''            FrozenAnimatedAccountReadiness(email: email, password: password, focusedField: focus)
 
             HStack(spacing: 11) {
                 Image(systemName: "envelope")''', 1
@@ -121,14 +121,12 @@ replace_section(root_path, "struct TwoFactorSheet: View {", "// MARK: - Tools",
                     let digits = String(typed.filter(\.isNumber).prefix(6))
                     if digits != typed { code = digits }
                 }''',
-        '''            FrozenOTPSecurityOrb()
-                .frame(maxWidth: .infinity)
-                .frame(height: 92)
-
-            FrozenAnimatedOTPInput(
+        '''            FrozenAnimatedOTPInput(
                 code: $code,
                 isFocused: $codeFocused,
-                isDisabled: pending != nil
+                isDisabled: pending != nil,
+                isWorking: pending != nil,
+                statusMessage: prompt.lastError
             )''', 1
     ) if "FrozenAnimatedOTPInput(" not in section else section)
 

@@ -18,7 +18,49 @@ private enum FrozenWorkspaceDestinations {
     ]
 }
 
-/// One floating capsule shared by iPhone and iPad. No vertical rail or header bar.
+/// A shape-based black lens with restrained specular rails and no system materials.
+private struct FrozenLiquidDockLens: View {
+    var body: some View {
+        Capsule(style: .continuous)
+            .fill(Color.black.opacity(0.72))
+            .overlay {
+                Capsule(style: .continuous)
+                    .fill(LinearGradient(
+                        stops: [
+                            .init(color: .white.opacity(0.12), location: 0),
+                            .init(color: .white.opacity(0.03), location: 0.22),
+                            .init(color: .black.opacity(0.72), location: 0.72),
+                            .init(color: .white.opacity(0.06), location: 1)
+                        ],
+                        startPoint: .topLeading, endPoint: .bottomTrailing
+                    ))
+            }
+            .overlay {
+                Capsule(style: .continuous)
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [.white.opacity(0.24), .white.opacity(0.06), .white.opacity(0.12)],
+                            startPoint: .topLeading, endPoint: .bottomTrailing
+                        ), lineWidth: 1
+                    )
+            }
+            .overlay(alignment: .top) {
+                Capsule().fill(.white.opacity(0.24))
+                    .frame(height: 1).padding(.horizontal, 28).padding(.top, 1)
+                    .allowsHitTesting(false)
+            }
+            .overlay(alignment: .bottom) {
+                Capsule().fill(.white.opacity(0.06))
+                    .frame(height: 1).padding(.horizontal, 42).padding(.bottom, 1)
+                    .allowsHitTesting(false)
+            }
+            .shadow(color: .black.opacity(0.72), radius: 18, x: 0, y: 9)
+            .shadow(color: .white.opacity(0.06), radius: 1, x: 0, y: -1)
+            .accessibilityHidden(true)
+    }
+}
+
+/// One floating six-destination capsule shared by iPhone and iPad.
 struct FrozenWorkspaceDock: View {
     let selectedID: String
     let onSelect: (String) -> Void
@@ -27,32 +69,12 @@ struct FrozenWorkspaceDock: View {
 
     var body: some View {
         HStack(spacing: 3) {
-            ForEach(FrozenWorkspaceDestinations.all) { destination in
-                dockButton(destination)
-            }
+            ForEach(FrozenWorkspaceDestinations.all) { destination in dockButton(destination) }
         }
         .padding(6)
         .frame(maxWidth: .infinity)
-        .background {
-            Capsule(style: .continuous)
-                .fill(Color.black)
-                .overlay { Capsule(style: .continuous).fill(Color.black.opacity(0.72)) }
-        }
-        .overlay {
-            Capsule(style: .continuous)
-                .strokeBorder(
-                    LinearGradient(
-                        colors: [.white.opacity(0.24), .white.opacity(0.06), .white.opacity(0.12)],
-                        startPoint: .topLeading, endPoint: .bottomTrailing
-                    ), lineWidth: 1
-                )
-        }
-        
-        .overlay(alignment: .top) {
-            Capsule().fill(.white.opacity(0.24))
-                .frame(height: 1).padding(.horizontal, 24).padding(.top, 1)
-                .allowsHitTesting(false)
-        }
+        .background { FrozenLiquidDockLens() }
+        .animation(reduceMotion ? nil : .spring(response: 0.34, dampingFraction: 0.82), value: selectedID)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Workspace navigation")
     }
@@ -63,7 +85,7 @@ struct FrozenWorkspaceDock: View {
             HStack(spacing: 7) {
                 Image(systemName: destination.symbol)
                     .font(.system(size: 16, weight: selected ? .semibold : .medium))
-                    .symbolRenderingMode(.hierarchical)
+                    .symbolRenderingMode(.monochrome)
                     .frame(width: 22, height: 22)
                 if selected {
                     Text(destination.compactTitle)
@@ -83,7 +105,10 @@ struct FrozenWorkspaceDock: View {
                         .overlay {
                             Capsule(style: .continuous).strokeBorder(.white.opacity(0.24), lineWidth: 1)
                         }
-                        
+                        .overlay(alignment: .top) {
+                            Capsule().fill(.white.opacity(0.24))
+                                .frame(height: 1).padding(.horizontal, 12).padding(.top, 1)
+                        }
                 }
             }
             .contentShape(Capsule())
@@ -101,28 +126,21 @@ private struct FrozenWorkspaceDockPressStyle: ButtonStyle {
         configuration.label
             .scaleEffect(configuration.isPressed && !reduceMotion ? 0.96 : 1)
             .brightness(configuration.isPressed ? -0.025 : 0)
-            .animation(
-                reduceMotion ? nil : .spring(response: 0.24, dampingFraction: 0.78),
-                value: configuration.isPressed
-            )
+            .animation(reduceMotion ? nil : .spring(response: 0.24, dampingFraction: 0.78),
+                       value: configuration.isPressed)
     }
 }
 
 
 // Shared workspace primitives used by Signer, App Catalog, IPA Library and Settings.
-// Kept in the integration target so the clean-build patch has one canonical definition.
-
 struct FrozenWorkspacePressStyle: ButtonStyle {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .scaleEffect(configuration.isPressed && !reduceMotion ? 0.975 : 1)
             .brightness(configuration.isPressed ? -0.025 : 0)
-            .animation(
-                reduceMotion ? nil : .spring(response: 0.22, dampingFraction: 0.78),
-                value: configuration.isPressed
-            )
+            .animation(reduceMotion ? nil : .spring(response: 0.22, dampingFraction: 0.78),
+                       value: configuration.isPressed)
     }
 }
 
@@ -137,22 +155,18 @@ struct FrozenWorkspacePageHeader: View {
             VStack(alignment: .leading, spacing: 7) {
                 Text(eyebrow.uppercased())
                     .font(.system(size: 9, weight: .heavy, design: .rounded))
-                    .tracking(1.45)
-                    .foregroundStyle(.white.opacity(0.48))
+                    .tracking(1.45).foregroundStyle(.white.opacity(0.48))
                 Text(title)
                     .font(.system(size: 27, weight: .bold, design: .rounded))
-                    .tracking(-0.7)
-                    .foregroundStyle(.white)
+                    .tracking(-0.7).foregroundStyle(.white)
                 Text(description)
                     .font(.system(size: 12, weight: .medium))
-                    .lineSpacing(3)
-                    .foregroundStyle(.white.opacity(0.72))
+                    .lineSpacing(3).foregroundStyle(.white.opacity(0.72))
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 4)
             Image(systemName: symbol)
-                .font(.system(size: 19, weight: .semibold))
-                .foregroundStyle(.white.opacity(1.0))
+                .font(.system(size: 19, weight: .semibold)).foregroundStyle(.white)
                 .frame(width: 48, height: 48)
                 .background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
                 .overlay {
@@ -160,8 +174,7 @@ struct FrozenWorkspacePageHeader: View {
                         .strokeBorder(.white.opacity(0.12), lineWidth: 1)
                 }
         }
-        .padding(.horizontal, 2)
-        .padding(.vertical, 5)
+        .padding(.horizontal, 2).padding(.vertical, 5)
         .accessibilityElement(children: .combine)
     }
 }
@@ -174,31 +187,20 @@ struct FrozenWorkspaceSearchField: View {
     var body: some View {
         HStack(spacing: 10) {
             Image(systemName: "magnifyingglass")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.48))
+                .font(.system(size: 14, weight: .semibold)).foregroundStyle(.white.opacity(0.48))
             TextField(placeholder, text: $text)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(.white)
-                .tint(.white)
-                .focused($isFocused)
-                .autocorrectionDisabled()
-                .textInputAutocapitalization(.never)
-                .submitLabel(.search)
+                .font(.system(size: 13, weight: .medium)).foregroundStyle(.white).tint(.white)
+                .focused($isFocused).autocorrectionDisabled()
+                .textInputAutocapitalization(.never).submitLabel(.search)
             if !text.isEmpty {
-                Button {
-                    text = ""
-                    isFocused = true
-                } label: {
+                Button { text = ""; isFocused = true } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 14))
-                        .foregroundStyle(.white.opacity(0.48))
+                        .font(.system(size: 14)).foregroundStyle(.white.opacity(0.48))
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Clear search")
+                .buttonStyle(.plain).accessibilityLabel("Clear search")
             }
         }
-        .padding(.horizontal, 14)
-        .frame(minHeight: 48)
+        .padding(.horizontal, 14).frame(minHeight: 48)
         .background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 15, style: .continuous)
@@ -218,20 +220,15 @@ struct FrozenWorkspaceFilterChoice: View {
         Button(action: action) {
             HStack(spacing: 10) {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(title)
-                        .font(.system(size: 12, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.white)
-                    Text(subtitle)
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.48))
+                    Text(title).font(.system(size: 12, weight: .semibold, design: .rounded)).foregroundStyle(.white)
+                    Text(subtitle).font(.system(size: 10, weight: .medium)).foregroundStyle(.white.opacity(0.48))
                 }
                 Spacer(minLength: 4)
                 Image(systemName: selected ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 16, weight: .medium))
                     .foregroundStyle(.white.opacity(selected ? 1.0 : 0.24))
             }
-            .padding(.horizontal, 11)
-            .padding(.vertical, 10)
+            .padding(.horizontal, 11).padding(.vertical, 10)
             .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             .background {
                 if selected {

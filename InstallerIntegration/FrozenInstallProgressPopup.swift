@@ -65,12 +65,18 @@ struct FrozenInstallProgressPopup: View {
             }
         }
     }
+    private var failedStep: Step? {
+        Step.allCases.first { (engine.stepStates[$0] ?? .pending) == .failed }
+    }
+
     private var stepLabel: String {
-        guard let step = activeStep else {
-            return engine.isCancelling ? "Stopping installation" : "Preparing installation"
+        if engine.isCancelling { return "Stopping installation" }
+        if let step = activeStep {
+            let title = step.title(for: engine.installSource)
+            return engine.stepStates[step] == .waiting ? "Waiting · \(title)" : title
         }
-        let title = step.title(for: engine.installSource)
-        return engine.stepStates[step] == .waiting ? "Waiting · \(title)" : title
+        if let step = failedStep { return "Failed · \(step.title(for: engine.installSource))" }
+        return engine.isRunning ? "Finalizing installation" : "Preparing installation"
     }
     private var progress: Double { min(max(engine.overallProgress, 0), 1) }
     private var percentage: Int { Int((progress * 100).rounded()) }
