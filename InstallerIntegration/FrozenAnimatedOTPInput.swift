@@ -10,7 +10,7 @@ struct FrozenAnimatedOTPInput: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
-    private static let accent = Color(hue: 0.37, saturation: 0.82, brightness: 0.88)
+    private static let accent = Color("SignalGreen")
 
     init(
         code: Binding<String>,
@@ -131,7 +131,7 @@ struct FrozenOTPSecurityOrb: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var rotation = 0.0
 
-    private let green = Color(hue: 0.37, saturation: 0.82, brightness: 0.88)
+    private let green = Color("SignalGreen")
 
     var body: some View {
         ZStack {
