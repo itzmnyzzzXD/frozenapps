@@ -526,62 +526,101 @@ private struct FrozenInstallProgressTrace: Shape {
         var path = Path()
         path.move(to: CGPoint(x: rect.minX, y: rect.height * 0.72))
         path.addCurve(
-            to: CGPoint(x: rect.maxX, y: rect.height * 0.42),
+            to: CGPoint(x: rect.width * 0.42, y: rect.height * 0.24),
             control1: CGPoint(x: rect.width * 0.18, y: rect.height * 0.12),
             control2: CGPoint(x: rect.width * 0.31, y: rect.height * 0.95)
         )
         path.addCurve(
-            to: CGPoint(x: rect.width * 0.68, y: rect.height * 0.30),
-            control1: CGPoint(x: rect.width * 0.82, y: rect.height * 0.02),
-            control2: CGPoint(x: rect.width * 0.86, y: rect.height * 0.82)
+            to: CGPoint(x: rect.width * 0.74, y: rect.height * 0.40),
+            control1: CGPoint(x: rect.width * 0.52, y: rect.height * 0.02),
+            control2: CGPoint(x: rect.width * 0.62, y: rect.height * 0.85)
         )
         path.addCurve(
             to: CGPoint(x: rect.maxX, y: rect.height * 0.55),
-            control1: CGPoint(x: rect.width * 0.79, y: rect.height * 0.08),
-            control2: CGPoint(x: rect.width * 0.93, y: rect.height * 0.98)
+            control1: CGPoint(x: rect.width * 0.85, y: rect.height * 0.02),
+            control2: CGPoint(x: rect.width * 0.91, y: rect.height * 0.98)
         )
         return path
     }
 }
 
-/// A live foreground banner. Values come from Engine, not a simulated timer.
+/// A compact foreground banner driven by the real install pipeline.
 struct FrozenInstallProgressPopup: View {
-    @Environment(Engine.self) private var engine
+    @EnvironmentObject private var engine: Engine
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var glowIsMoving = false
 
-    private var iconSource: InstallSource {
-        guard engine.installSource == .custom else { return engine.installSource }
-        return engine.customIPABuild ?? .custom
-    }
-
     private var appName: String {
-        guard engine.installSource == .custom else { return engine.installSource.displayName }
-        guard let name = engine.customIPAName else { return "Custom app" }
-        return (name as NSString).deletingPathExtension
+        if let signedName = engine.signedDisplayName, !signedName.isEmpty {
+            return signedName
+        }
+        if engine.installSource == .custom,
+           let fileName = engine.customIPAName {
+            return (fileName as NSString).deletingPathExtension
+        }
+        return engine.installedSourceName
     }
 
+    /// Read the icon from the signed app bundle. This works for built-in
+    /// sources and arbitrary imported IPAs without adding an extraction library.
     private var appIcon: UIImage? {
-        guard let assetName = iconSource.iconImage else { return nil }
-        return UIImage(named: assetName)
+        guard let appPath = engine.signedAppPath,
+              let appBundle = Bundle(path: appPath) else { return nil }
+
+        let info = appBundle.infoDictionary ?? [:]
+        var iconNames: [String] = []
+
+        if let iconName = info["CFBundleIconName"] as? String {
+            iconNames.append(iconName)
+        }
+
+        let iconDictionaries = [
+            info["CFBundleIcons~ipad"] as? [String: Any],
+            info["CFBundleIcons"] as? [String: Any]
+        ].compactMap { $0 }
+
+        for icons in iconDictionaries {
+            if let primary = icons["CFBundlePrimaryIcon"] as? [String: Any],
+               let files = primary["CFBundleIconFiles"] as? [String] {
+                iconNames.append(contentsOf: files.reversed())
+            }
+        }
+
+        if let files = info["CFBundleIconFiles"] as? [String] {
+            iconNames.append(contentsOf: files.reversed())
+        }
+
+        for name in iconNames where !name.isEmpty {
+            if let image = UIImage(named: name, in: appBundle, compatibleWith: nil) {
+                return image
+            }
+
+            for ext in ["png", "jpg", "jpeg"] {
+                let file = appBundle.bundleURL
+                    .appendingPathComponent(name)
+                    .appendingPathExtension(ext)
+                if let image = UIImage(contentsOfFile: file.path) {
+                    return image
+                }
+            }
+        }
+
+        return nil
     }
 
     private var activeStep: Step? {
-        for step in Step.allCases {
+        Step.allCases.first { step in
             let state = engine.stepStates[step] ?? .pending
-            if state == .active || state == .waiting { return step }
+            return state == .active || state == .waiting
         }
-        return nil
     }
 
     private var stepLabel: String {
         guard let step = activeStep else {
             return engine.isCancelling ? "Stopping installation" : "Preparing installation"
         }
-        if engine.stepStates[step] == .waiting {
-            return "Waiting · \(step.title(for: engine.installSource))"
-        }
-        return step.title(for: engine.installSource)
+        let title = step.title(for: engine.installSource)
+        return engine.stepStates[step] == .waiting ? "Waiting · \(title)" : title
     }
 
     private var progress: Double {
@@ -603,7 +642,7 @@ struct FrozenInstallProgressPopup: View {
                         .resizable()
                         .scaledToFill()
                 } else {
-                    Image(systemName: iconSource.iconSymbol)
+                    Image(systemName: "app.fill")
                         .font(.system(size: 25, weight: .medium))
                         .foregroundStyle(Color.white.opacity(0.82))
                 }
@@ -746,9 +785,8 @@ root_view_path = APP / "RootView.swift"
 if not root_view_path.is_file():
     raise SystemExit("RootView.swift is missing; cannot attach the install progress popup.")
 root_source = root_view_path.read_text(encoding="utf-8")
-popup_hook = '''        .onChange(of: engine.pendingLink) { _, link in
-            if link != nil { page = .install }
-        }
+popup_hook = '''        // Animate the backdrop to the new tab's level.
+        .onChange(of: page) { _, page in Backdrop.settle(on: page.wash) }
 '''
 popup_overlay = '''        .overlay(alignment: .top) {
             Group {
@@ -767,6 +805,5 @@ if "FrozenInstallProgressPopup()" not in root_source:
     if root_source.count(popup_hook) != 1:
         raise SystemExit("Expected one RootView install-banner anchor; refusing to patch an unknown layout.")
     root_view_path.write_text(root_source.replace(popup_hook, popup_hook + popup_overlay, 1), encoding="utf-8")
-
 
 print("Applied SideStick branding, custom icon assets, and focused render optimizations.")
