@@ -281,7 +281,7 @@ replace_section(
             .overlay {
                 RoundedRectangle(cornerRadius: 15, style: .continuous)
                     .strokeBorder(
-                        focus == .email ? Color(hue: 0.37, saturation: 0.82, brightness: 0.88) : .white.opacity(0),
+                        focus == .email ? Color("SignalGreen") : .white.opacity(0),
                         lineWidth: 1.2
                     )
                     .allowsHitTesting(false)
@@ -291,7 +291,7 @@ replace_section(
             if !email.isEmpty && !emailLooksValid {
                 Label("Enter a valid Apple Account email address.", systemImage: "exclamationmark.circle")
                     .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(Color(hue: 0.37, saturation: 0.72, brightness: 0.88))
+                    .foregroundStyle(Color("SignalGreen"))
                     .transition(.move(edge: .top).combined(with: .opacity))
                     .padding(.leading, 4)
             }
@@ -334,7 +334,7 @@ replace_section(
             .overlay {
                 RoundedRectangle(cornerRadius: 15, style: .continuous)
                     .strokeBorder(
-                        focus == .password ? Color(hue: 0.37, saturation: 0.82, brightness: 0.88) : .white.opacity(0),
+                        focus == .password ? Color("SignalGreen") : .white.opacity(0),
                         lineWidth: 1.2
                     )
                     .allowsHitTesting(false)
@@ -716,7 +716,7 @@ replace_section(
                  : "Enter the six digits you received. Codes are used for this sign-in attempt only.")
                 .font(.system(size: 11, weight: code.count == 6 ? .semibold : .regular))
                 .foregroundStyle(code.count == 6
-                    ? Color(hue: 0.37, saturation: 0.82, brightness: 0.88)
+                    ? Color("SignalGreen")
                     : .white.opacity(0.48))
                 .fixedSize(horizontal: false, vertical: true)
                 .contentTransition(.opacity)
