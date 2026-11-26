@@ -113,7 +113,7 @@ private struct FrozenWorkspaceDockPressStyle: ButtonStyle {
 // Kept in the integration target so the clean-build patch has one canonical definition.
 
 struct FrozenWorkspacePressStyle: ButtonStyle {
-    @Environment(\\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
