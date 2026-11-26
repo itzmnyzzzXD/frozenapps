@@ -107,3 +107,144 @@ private struct FrozenWorkspaceDockPressStyle: ButtonStyle {
             )
     }
 }
+
+
+// Shared workspace primitives used by Signer, App Catalog, IPA Library and Settings.
+// Kept in the integration target so the clean-build patch has one canonical definition.
+
+struct FrozenWorkspacePressStyle: ButtonStyle {
+    @Environment(\\.accessibilityReduceMotion) private var reduceMotion
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.975 : 1)
+            .brightness(configuration.isPressed ? -0.025 : 0)
+            .animation(
+                reduceMotion ? nil : .spring(response: 0.22, dampingFraction: 0.78),
+                value: configuration.isPressed
+            )
+    }
+}
+
+struct FrozenWorkspacePageHeader: View {
+    let eyebrow: String
+    let title: String
+    let description: String
+    let symbol: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 14) {
+            VStack(alignment: .leading, spacing: 7) {
+                Text(eyebrow.uppercased())
+                    .font(.system(size: 9, weight: .heavy, design: .rounded))
+                    .tracking(1.45)
+                    .foregroundStyle(.white.opacity(0.52))
+                Text(title)
+                    .font(.system(size: 27, weight: .bold, design: .rounded))
+                    .tracking(-0.7)
+                    .foregroundStyle(.white)
+                Text(description)
+                    .font(.system(size: 12, weight: .medium))
+                    .lineSpacing(3)
+                    .foregroundStyle(.white.opacity(0.62))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 4)
+            Image(systemName: symbol)
+                .font(.system(size: 19, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.9))
+                .frame(width: 48, height: 48)
+                .background(.white.opacity(0.09), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 15, style: .continuous)
+                        .strokeBorder(.white.opacity(0.16), lineWidth: 1)
+                }
+        }
+        .padding(.horizontal, 2)
+        .padding(.vertical, 5)
+        .accessibilityElement(children: .combine)
+    }
+}
+
+struct FrozenWorkspaceSearchField: View {
+    let placeholder: String
+    @Binding var text: String
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.55))
+            TextField(placeholder, text: $text)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(.white)
+                .tint(.white)
+                .focused($isFocused)
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
+                .submitLabel(.search)
+            if !text.isEmpty {
+                Button {
+                    text = ""
+                    isFocused = true
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.white.opacity(0.52))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Clear search")
+            }
+        }
+        .padding(.horizontal, 14)
+        .frame(minHeight: 48)
+        .background(.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 15, style: .continuous)
+                .strokeBorder(.white.opacity(isFocused ? 0.32 : 0.13), lineWidth: 1)
+        }
+        .animation(.easeOut(duration: 0.16), value: isFocused)
+    }
+}
+
+struct FrozenWorkspaceFilterChoice: View {
+    let title: String
+    let subtitle: String
+    let selected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title)
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white)
+                    Text(subtitle)
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.53))
+                }
+                Spacer(minLength: 4)
+                Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(.white.opacity(selected ? 0.95 : 0.32))
+            }
+            .padding(.horizontal, 11)
+            .padding(.vertical, 10)
+            .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .background {
+                if selected {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(.white.opacity(0.085))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .strokeBorder(.white.opacity(0.15), lineWidth: 1)
+                        }
+                }
+            }
+        }
+        .buttonStyle(FrozenWorkspacePressStyle())
+        .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+}
