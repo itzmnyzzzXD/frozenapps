@@ -97,8 +97,7 @@ with tempfile.TemporaryDirectory(prefix="sidestick-icon-") as temporary_director
     crop_left = (image_width - crop_size) // 2
     subprocess.run(
         ["sips", "-c", str(crop_size), str(crop_size), "--cropOffset",
-         str(crop_top), str(crop_left), str(normalized), "--out", str(square)],
-        check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+         str(crop_top), str(crop_left), str(normalized), "--out", str(square)],        check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
     )
     subprocess.run(
         ["sips", "-z", "1024", "1024", str(square), "--out", str(master)],
@@ -197,8 +196,7 @@ for folder in (APP, ACTIVITY, INTEGRATION):
             r'Label\(([^,\n]+),\s*systemImage:\s*"snowflake"\)',
             lambda match: 'Label { Text(' + match.group(1) + ') } icon: { '
                 'Image("SideStickMark").resizable().scaledToFit().frame(width: 17, height: 17) }',
-            branded
-        )
+            branded        )
         if 'if symbol == "snowflake"' not in branded:
             branded = branded.replace(
                 'Image(systemName: symbol)',
@@ -297,8 +295,7 @@ def normalize_swift(source):
     monochrome = re.sub(
         r"\.(?:red|orange|yellow|green|mint|teal|cyan|blue|indigo|purple|pink|brown)(?![A-Za-z0-9_])",
         ".white",
-        monochrome
-    )
+        monochrome    )
     monochrome = re.sub(rgb_pattern, grayscale_rgb, monochrome)
     monochrome = re.sub(
         r"Color\(white:\s*((?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+))\)",
@@ -397,8 +394,7 @@ def normalize_swift(source):
         "tertiary": ".white.opacity(0.24)",
     }
     def normalize_style_arguments(match):
-        arguments = match.group(2)
-        for member, replacement in semantic_values.items():
+        arguments = match.group(2)        for member, replacement in semantic_values.items():
             arguments = re.sub(
                 rf"\.{member}(?![A-Za-z0-9_])",
                 replacement,
@@ -467,8 +463,7 @@ for swift_path in sorted(swift_paths):
         start = monochrome.find("struct AppBackground: View {")
         end = monochrome.find("// MARK: - Cards", start)
         if start >= 0 and end > start:
-            monochrome = (
-                monochrome[:start]
+            monochrome = (                monochrome[:start]
                 + "struct AppBackground: View {\n"
                   "    var body: some View {\n"
                   "        Color.black.ignoresSafeArea()\n"
@@ -515,5 +510,261 @@ if activity_path.is_file():
         if key in activity:
             activity[key] = "SideStick"
     activity_path.write_bytes(plistlib.dumps(activity, fmt=plistlib.FMT_XML, sort_keys=False))
+
+
+
+# A foreground install gets a compact, non-blocking status card over every tab.
+# Keep this app-owned view in InstallerIntegration and reapply the RootView hook
+# here so the change survives the pinned SideInstaller source checkout.
+install_popup_source = r'''import SwiftUI
+import UIKit
+
+private struct FrozenInstallProgressTrace: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX, y: rect.height * 0.72))
+        path.addCurve(
+            to: CGPoint(x: rect.maxX, y: rect.height * 0.42),
+            control1: CGPoint(x: rect.width * 0.18, y: rect.height * 0.12),
+            control2: CGPoint(x: rect.width * 0.31, y: rect.height * 0.95)
+        )
+        path.addCurve(
+            to: CGPoint(x: rect.width * 0.68, y: rect.height * 0.30),
+            control1: CGPoint(x: rect.width * 0.82, y: rect.height * 0.02),
+            control2: CGPoint(x: rect.width * 0.86, y: rect.height * 0.82)
+        )
+        path.addCurve(
+            to: CGPoint(x: rect.maxX, y: rect.height * 0.55),
+            control1: CGPoint(x: rect.width * 0.79, y: rect.height * 0.08),
+            control2: CGPoint(x: rect.width * 0.93, y: rect.height * 0.98)
+        )
+        return path
+    }
+}
+
+/// A live foreground banner. Values come from Engine, not a simulated timer.
+struct FrozenInstallProgressPopup: View {
+    @Environment(Engine.self) private var engine
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var glowIsMoving = false
+
+    private var iconSource: InstallSource {
+        guard engine.installSource == .custom else { return engine.installSource }
+        return engine.customIPABuild ?? .custom
+    }
+
+    private var appName: String {
+        guard engine.installSource == .custom else { return engine.installSource.displayName }
+        guard let name = engine.customIPAName else { return "Custom app" }
+        return (name as NSString).deletingPathExtension
+    }
+
+    private var appIcon: UIImage? {
+        guard let assetName = iconSource.iconImage else { return nil }
+        return UIImage(named: assetName)
+    }
+
+    private var activeStep: Step? {
+        for step in Step.allCases {
+            let state = engine.stepStates[step] ?? .pending
+            if state == .active || state == .waiting { return step }
+        }
+        return nil
+    }
+
+    private var stepLabel: String {
+        guard let step = activeStep else {
+            return engine.isCancelling ? "Stopping installation" : "Preparing installation"
+        }
+        if engine.stepStates[step] == .waiting {
+            return "Waiting · \(step.title(for: engine.installSource))"
+        }
+        return step.title(for: engine.installSource)
+    }
+
+    private var progress: Double {
+        min(max(engine.overallProgress, 0), 1)
+    }
+
+    private var percentage: Int {
+        Int((progress * 100).rounded())
+    }
+
+    var body: some View {
+        HStack(spacing: 13) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 15, style: .continuous)
+                    .fill(Color.white.opacity(0.065))
+
+                if let appIcon {
+                    Image(uiImage: appIcon)
+                        .resizable()
+                        .scaledToFill()
+                } else {
+                    Image(systemName: iconSource.iconSymbol)
+                        .font(.system(size: 25, weight: .medium))
+                        .foregroundStyle(Color.white.opacity(0.82))
+                }
+
+                RoundedRectangle(cornerRadius: 15, style: .continuous)
+                    .strokeBorder(Color.white.opacity(0.17), lineWidth: 1)
+            }
+            .frame(width: 54, height: 54)
+            .clipShape(RoundedRectangle(cornerRadius: 15, style: .continuous))
+            .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 7) {
+                HStack(alignment: .center, spacing: 10) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("INSTALLING APP")
+                            .font(.system(size: 8, weight: .heavy, design: .rounded))
+                            .tracking(1.45)
+                            .foregroundStyle(Color.white.opacity(0.56))
+
+                        Text(appName)
+                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
+
+                    Spacer(minLength: 4)
+
+                    Text("\(percentage)%")
+                        .font(.system(size: 23, weight: .semibold, design: .rounded).monospacedDigit())
+                        .foregroundStyle(.white)
+                        .contentTransition(.numericText(value: Double(percentage)))
+                }
+
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(Color.white.opacity(0.9))
+                        .frame(width: 5, height: 5)
+                        .shadow(color: Color.white.opacity(0.45), radius: 4)
+
+                    Text(stepLabel)
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(Color.white.opacity(0.62))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+
+                    Spacer(minLength: 4)
+
+                    Text("LIVE")
+                        .font(.system(size: 8, weight: .heavy, design: .rounded))
+                        .tracking(1.1)
+                        .foregroundStyle(Color.white.opacity(0.72))
+                }
+
+                GeometryReader { proxy in
+                    let fillWidth = proxy.size.width * progress
+                    ZStack(alignment: .leading) {
+                        Capsule()
+                            .fill(Color.white.opacity(0.105))
+
+                        Capsule()
+                            .fill(
+                                LinearGradient(
+                                    colors: [Color.white.opacity(0.62), Color.white.opacity(0.96)],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .frame(width: max(progress > 0 ? 3 : 0, fillWidth))
+                            .animation(.smooth(duration: 0.38), value: progress)
+
+                        Circle()
+                            .fill(Color.white.opacity(0.72))
+                            .frame(width: 12, height: 12)
+                            .blur(radius: 5)
+                            .offset(x: max(0, fillWidth - 6))
+                    }
+                    .clipShape(Capsule())
+                }
+                .frame(height: 5)
+
+                GeometryReader { proxy in
+                    ZStack(alignment: .leading) {
+                        FrozenInstallProgressTrace()
+                            .stroke(
+                                Color.white.opacity(0.17),
+                                style: StrokeStyle(lineWidth: 1, lineCap: .round)
+                            )
+
+                        Circle()
+                            .fill(Color.white.opacity(0.88))
+                            .frame(width: 4, height: 4)
+                            .blur(radius: 2)
+                            .offset(
+                                x: glowIsMoving ? max(0, proxy.size.width - 5) : 0,
+                                y: glowIsMoving ? -1 : 1
+                            )
+                    }
+                }
+                .frame(height: 9)
+                .clipped()
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .frame(maxWidth: 560)
+        .background {
+            RoundedRectangle(cornerRadius: 21, style: .continuous)
+                .fill(Color.black.opacity(0.91))
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 21, style: .continuous)
+                .strokeBorder(
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.23), Color.white.opacity(0.07)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
+        }
+        .shadow(color: Color.black.opacity(0.46), radius: 24, x: 0, y: 13)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Installing \(appName), \(percentage) percent. \(stepLabel).")
+        .accessibilityAddTraits(.updatesFrequently)
+        .allowsHitTesting(false)
+        .onAppear {
+            guard !reduceMotion else { return }
+            withAnimation(.linear(duration: 2.6).repeatForever(autoreverses: false)) {
+                glowIsMoving = true
+            }
+        }
+    }
+}
+'''
+popup_path = INTEGRATION / "FrozenInstallProgressPopup.swift"
+popup_path.write_text(install_popup_source, encoding="utf-8")
+
+root_view_path = APP / "RootView.swift"
+if not root_view_path.is_file():
+    raise SystemExit("RootView.swift is missing; cannot attach the install progress popup.")
+root_source = root_view_path.read_text(encoding="utf-8")
+popup_hook = '''        .onChange(of: engine.pendingLink) { _, link in
+            if link != nil { page = .install }
+        }
+'''
+popup_overlay = '''        .overlay(alignment: .top) {
+            Group {
+                if engine.isRunning {
+                    FrozenInstallProgressPopup()
+                        .padding(.horizontal, 16)
+                        .padding(.top, 9)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                        .zIndex(30)
+                }
+            }
+            .animation(.spring(response: 0.42, dampingFraction: 0.86), value: engine.isRunning)
+        }
+'''
+if "FrozenInstallProgressPopup()" not in root_source:
+    if root_source.count(popup_hook) != 1:
+        raise SystemExit("Expected one RootView install-banner anchor; refusing to patch an unknown layout.")
+    root_view_path.write_text(root_source.replace(popup_hook, popup_hook + popup_overlay, 1), encoding="utf-8")
+
 
 print("Applied SideStick branding, custom icon assets, and focused render optimizations.")
