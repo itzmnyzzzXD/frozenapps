@@ -96,6 +96,11 @@ jobs:
           python3 scripts/check-screen-coverage.py
           bash scripts/compile-liquidchrome-metal.sh
 
+      - name: Run aggregate static verification
+        env:
+          SKIP_BUILD: "1"
+        run: bash scripts/verify-all.sh
+
       - name: Generate Xcode project for incremental builds
         run: xcodegen generate
 
