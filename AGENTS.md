@@ -1,5 +1,7 @@
 # Agent Playbooks
 
+The authoritative R1–R10 status, per-check evidence, verified commit SHAs and exact resume point are recorded in [`REDESIGN_LEDGER.md`](REDESIGN_LEDGER.md). Update the ledger after every requirement/check commit; never mark a row DONE without its TEST output.
+
 1. proof-of-work: sync and verify the branch; hash files before and after; show git diff --stat; never present unchanged files; no TEST pasted means not done.
 2. build-doctor: read the real log; classify the error; make the minimal root-cause fix; rerun; loop; one commit per fix; stop and report when you cannot verify.
 3. web-to-swiftui-port: read the whole source; list its props; mark demo-only behavior versus real behavior; convert Tailwind to points; map motion to SwiftUI animations; convert to monochrome; add the Reduce Motion branch and a #Preview per state; run the TEST.
