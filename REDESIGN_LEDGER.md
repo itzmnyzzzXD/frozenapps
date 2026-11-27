@@ -10,7 +10,7 @@ Status values are authoritative. No requirement is DONE without its acceptance o
 | id | status | commit SHA | evidence | last verified (date and SHA) |
 |---|---|---|---|---|
 | R1 | DONE | e6ac374f2c36e3560e741b24070f3e6f66367c6b | R1.1 isolated build-only fix, R1.2 current-head Actions run and R1.3 exact failure record all pass. Actions run 46012933461: VERIFY-ALL: PASS; Rust, Metal, Xcode, native bundle validation and unsigned IPA packaging successful. | 2026-11-27 / e6ac374f2c36e3560e741b24070f3e6f66367c6b |
-| R2 | IN PROGRESS | f388658a6bd53ff1899a07b86a078a45d9418aa8 | Resume pointer: R2.1 — audit the strict monochrome root theme, AccentColor, all app-owned asset/color sources and the checker’s coverage; change only presentation/theme/checker assets. | 2026-11-27 / f388658a6bd53ff1899a07b86a078a45d9418aa8 |
+| R2 | IN PROGRESS | 74bdea2bf5c9039a74990f44f7b349f86df99385 | R2.1 checker and generated-source patch now cover Metal hex, root tint/dark/window, black launch colors, image-background references and zero asset deletions. Awaiting CI test output. | 2026-11-27 / 74bdea2bf5c9039a74990f44f7b349f86df99385 |
 | R3 | NOT STARTED | 398544106d664894e869fba33ec0e3af29921c64 | Unverified; queue begins after R1 build is green. | 2026-11-27 / 398544106d664894e869fba33ec0e3af29921c64 |
 | R4 | NOT STARTED | 398544106d664894e869fba33ec0e3af29921c64 | Unverified; queue begins after R1 build is green. | 2026-11-27 / 398544106d664894e869fba33ec0e3af29921c64 |
 | R5 | NOT STARTED | 398544106d664894e869fba33ec0e3af29921c64 | Unverified; queue begins after R1 build is green. | 2026-11-27 / 398544106d664894e869fba33ec0e3af29921c64 |
@@ -27,7 +27,7 @@ Status values are authoritative. No requirement is DONE without its acceptance o
 | R1.1 | DONE | a1872364d9ce54aa7503b5656017adb704a6c391 | `fix(build): define RootView before screen coverage assertions`; only `scripts/check-screen-coverage.py` changed (1 addition/1 deletion). Previous blob `dbff2a27a4102f8aed939e8637acd92d6018bab`, new blob `fe50ae59dd7dc1d0abdd0932171c6d0ee1f2d07e`. | 2026-11-27 / a1872364d9ce54aa7503b5656017adb704a6c391 |
 | R1.2 | DONE | e6ac374f2c36e3560e741b24070f3e6f66367c6b | Actions run 46012933461 completed success on current branch head. Exact output includes `VERIFY-ALL: PASS`, `PASS: device and simulator Rust static libraries packaged`, `PASS: LiquidChrome Metal shader compiled`, `Build validation passed`, `PASS: IPA ZIP CRC and required app bundle entries`, bundle version 1.2.2 build 18, minimum iOS 17.4. | 2026-11-27 / e6ac374f2c36e3560e741b24070f3e6f66367c6b |
 | R1.3 | DONE | ef6774007129be1551878c428fc11708cd57c17e | BUILD_FAILURES.md records both observed validator errors, exact file:line, root causes, fixing commits and the later green build evidence. | 2026-11-27 / ef6774007129be1551878c428fc11708cd57c17e |
-| R2.1 | IN PROGRESS | f388658a6bd53ff1899a07b86a078a45d9418aa8 | Audit scripts/check-monochrome.sh, root theme and AccentColor against the complete R2 leak list; broaden the script only for verifiable app-owned source paths. | 2026-11-27 / f388658a6bd53ff1899a07b86a078a45d9418aa8 |
+| R2.1 | IN PROGRESS | 74bdea2bf5c9039a74990f44f7b349f86df99385 | `scripts/check-monochrome.sh` now checks Swift+Metal source, 0/6/12/24/48/72/100% opacity steps, pure black/white hex and asset channels, materials/system colors, white AccentColor, dark root, black window/launch, and no referenced wallpaper/image backgrounds. `apply-liquidchrome-redesign.py` no longer deletes `SideStickBackground.imageset` or `SignalGreen.colorset`; test output pending. | 2026-11-27 / 74bdea2bf5c9039a74990f44f7b349f86df99385 |
 | R2.2 | NOT STARTED | 398544106d664894e869fba33ec0e3af29921c64 | The monochrome script output reports zero violations. | 2026-11-27 / 398544106d664894e869fba33ec0e3af29921c64 |
 | R2.3 | NOT STARTED | 398544106d664894e869fba33ec0e3af29921c64 | AccentColor is white and the app root applies .tint(.white). | 2026-11-27 / 398544106d664894e869fba33ec0e3af29921c64 |
 | R2.4 | NOT STARTED | 398544106d664894e869fba33ec0e3af29921c64 | The app root applies .preferredColorScheme(.dark). | 2026-11-27 / 398544106d664894e869fba33ec0e3af29921c64 |
@@ -86,4 +86,4 @@ Status values are authoritative. No requirement is DONE without its acceptance o
 
 ## Resume pointer
 
-**R2 → R2.1:** verify every checker assertion against the full R2 contract and capture a clean run; then commit the R2 implementation and ledger evidence.
+**R2 → R2.1:** inspect Actions for commit `74bdea2bf5c9039a74990f44f7b349f86df99385`; fix every checker/build failure, capture full monochrome output and verify-all result.
