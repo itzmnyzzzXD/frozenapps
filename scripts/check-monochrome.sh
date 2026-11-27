@@ -99,8 +99,12 @@ if account_path.is_file() and "FrozenAnimatedAccountReadiness(" not in account_p
     fail("animated account feedback is not bound to real fields")
 
 progress_path = integration / "FrozenInstallProgressPopup.swift"
-if progress_path.is_file() and "FrozenInstallProgressStack()" not in progress_path.read_text(encoding="utf-8"):
-    fail("install progress stack is missing from the stats screen")
+if progress_path.is_file():
+    progress_source = progress_path.read_text(encoding="utf-8")
+    if "FrozenInstallProgressStack()" not in progress_source:
+        fail("install progress stack is missing from the stats screen")
+    if "Image(uiImage: appIcon).resizable().renderingMode(.original).saturation(0)" not in progress_source:
+        fail("runtime app bundle icon is not displayed in grayscale")
 
 # Keep the original wallpaper files for source/license history, but assert that
 # neither source views nor the workspace backdrop refer to them.

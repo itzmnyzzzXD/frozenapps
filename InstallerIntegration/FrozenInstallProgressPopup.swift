@@ -86,7 +86,7 @@ struct FrozenInstallProgressPopup: View {
             ZStack {
                 RoundedRectangle(cornerRadius: 15, style: .continuous).fill(Color.white.opacity(0.06))
                 if let appIcon {
-                    Image(uiImage: appIcon).resizable().scaledToFill()
+                    Image(uiImage: appIcon).resizable().renderingMode(.original).saturation(0).scaledToFill()
                 } else {
                     Image(systemName: "app.fill")
                         .font(.system(size: 25, weight: .medium)).foregroundStyle(.white.opacity(0.82))
