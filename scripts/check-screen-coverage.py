@@ -48,6 +48,7 @@ for destination in ('"signer"', '"center"', '"network"', '"tools"', '"files"', '
 if workspace.count(".init(id:") != 6:
     failures.append("workspace dock must retain exactly six destinations")
 
+root_view = read(APP / "RootView.swift")
 account_patcher = read("scripts/apply-liquidchrome-redesign.py")
 require(account_patcher, "focusedField: focus", "account form focus binding")
 require(account_patcher, "statusMessage: prompt.lastError", "OTP error-state binding")
@@ -56,7 +57,6 @@ require(root_view, "engine.answerTwoFactor(.code(code))", "preserve original two
 root_source = read(APP / "SideInstallerApp.swift")
 require(root_source, "LiquidChromeBackground(interaction: liquidChromeInput)", "shared app-root Metal renderer")
 require(root_source, "FrozenLaunchWelcome", "cold-launch welcome reveal")
-root_view = read(APP / "RootView.swift")
 require(root_view, "FrozenInstallProgressPopup()", "install-only stats card")
 require(root_view, "engine.isRunning", "install visibility tied to real engine state")
 for forbidden in ("FrozenWorkspaceRail", "FrozenWorkspaceCommandBar"):
