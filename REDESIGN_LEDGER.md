@@ -9,7 +9,7 @@ Status values are authoritative. No requirement is DONE without its acceptance o
 
 | id | status | commit SHA | evidence | last verified (date and SHA) |
 |---|---|---|---|---|
-| R1 | IN PROGRESS | 090ce24a5d6eafa88bdd2b306f3bcb38de7e9244 | R1.1 and R1.3 complete; R1.2 remains in progress until current-head CI, full build/IPA and aggregate verify-all pass. | 2026-11-27 / 090ce24a5d6eafa88bdd2b306f3bcb38de7e9244 |
+| R1 | DONE | e6ac374f2c36e3560e741b24070f3e6f66367c6b | R1.1 isolated build-only fix, R1.2 current-head Actions run and R1.3 exact failure record all pass. Actions run 46012933461: VERIFY-ALL: PASS; Rust, Metal, Xcode, native bundle validation and unsigned IPA packaging successful. | 2026-11-27 / e6ac374f2c36e3560e741b24070f3e6f66367c6b |
 | R2 | NOT STARTED | 398544106d664894e869fba33ec0e3af29921c64 | Unverified; queue begins after R1 build is green. | 2026-11-27 / 398544106d664894e869fba33ec0e3af29921c64 |
 | R3 | NOT STARTED | 398544106d664894e869fba33ec0e3af29921c64 | Unverified; queue begins after R1 build is green. | 2026-11-27 / 398544106d664894e869fba33ec0e3af29921c64 |
 | R4 | NOT STARTED | 398544106d664894e869fba33ec0e3af29921c64 | Unverified; queue begins after R1 build is green. | 2026-11-27 / 398544106d664894e869fba33ec0e3af29921c64 |
@@ -25,7 +25,7 @@ Status values are authoritative. No requirement is DONE without its acceptance o
 | id | status | commit SHA | evidence / acceptance check | last verified (date and SHA) |
 |---|---|---|---|---|
 | R1.1 | DONE | a1872364d9ce54aa7503b5656017adb704a6c391 | `fix(build): define RootView before screen coverage assertions`; only `scripts/check-screen-coverage.py` changed (1 addition/1 deletion). Previous blob `dbff2a27a4102f8aed939e8637acd92d6018bab`, new blob `fe50ae59dd7dc1d0abdd0932171c6d0ee1f2d07e`. | 2026-11-27 / a1872364d9ce54aa7503b5656017adb704a6c391 |
-| R1.2 | IN PROGRESS | aab50a6810ba9d6d7871a3c45e559bc1a7734903 | Fixed CI checkout to fetch full history (`fetch-depth: 0`), so verify-all can resolve older ledger commit SHAs. Awaiting current-head aggregate verification and full build/IPA. | 2026-11-27 / aab50a6810ba9d6d7871a3c45e559bc1a7734903 |
+| R1.2 | DONE | e6ac374f2c36e3560e741b24070f3e6f66367c6b | Actions run 46012933461 completed success on current branch head. Exact output includes `VERIFY-ALL: PASS`, `PASS: device and simulator Rust static libraries packaged`, `PASS: LiquidChrome Metal shader compiled`, `Build validation passed`, `PASS: IPA ZIP CRC and required app bundle entries`, bundle version 1.2.2 build 18, minimum iOS 17.4. | 2026-11-27 / e6ac374f2c36e3560e741b24070f3e6f66367c6b |
 | R1.3 | DONE | ef6774007129be1551878c428fc11708cd57c17e | BUILD_FAILURES.md records both observed validator errors, exact file:line, root causes, fixing commits and the later green build evidence. | 2026-11-27 / ef6774007129be1551878c428fc11708cd57c17e |
 | R2.1 | NOT STARTED | 398544106d664894e869fba33ec0e3af29921c64 | scripts/check-monochrome.sh exists and is committed. | 2026-11-27 / 398544106d664894e869fba33ec0e3af29921c64 |
 | R2.2 | NOT STARTED | 398544106d664894e869fba33ec0e3af29921c64 | The monochrome script output reports zero violations. | 2026-11-27 / 398544106d664894e869fba33ec0e3af29921c64 |
@@ -86,4 +86,4 @@ Status values are authoritative. No requirement is DONE without its acceptance o
 
 ## Resume pointer
 
-**R1 → R1.2:** inspect Actions on `aab50a6810ba9d6d7871a3c45e559bc1a7734903`; verify the full-history ledger scan, aggregate verify-all and IPA packaging.
+**R2 → R2.1:** audit root theme/AccentColor and expand scripts/check-monochrome.sh to fail all contract-listed monochrome leaks.
