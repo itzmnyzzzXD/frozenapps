@@ -9,7 +9,7 @@ Status values are authoritative. No requirement is DONE without its acceptance o
 
 | id | status | commit SHA | evidence | last verified (date and SHA) |
 |---|---|---|---|---|
-| R1 | IN PROGRESS | 398544106d664894e869fba33ec0e3af29921c64 | Resume pointer: R1.1 — inspect current failed Actions logs, isolate root cause, then make only a build-fix commit. | 2026-11-27 / 398544106d664894e869fba33ec0e3af29921c64 |
+| R1 | IN PROGRESS | a1872364d9ce54aa7503b5656017adb704a6c391 | R1.1 isolated script-only build fix committed; R1.2 green Actions run pending. Resume pointer: R1.2 — verify the Actions run for this fix commit. | 2026-11-27 / a1872364d9ce54aa7503b5656017adb704a6c391 |
 | R2 | NOT STARTED | 398544106d664894e869fba33ec0e3af29921c64 | Unverified; queue begins after R1 build is green. | 2026-11-27 / 398544106d664894e869fba33ec0e3af29921c64 |
 | R3 | NOT STARTED | 398544106d664894e869fba33ec0e3af29921c64 | Unverified; queue begins after R1 build is green. | 2026-11-27 / 398544106d664894e869fba33ec0e3af29921c64 |
 | R4 | NOT STARTED | 398544106d664894e869fba33ec0e3af29921c64 | Unverified; queue begins after R1 build is green. | 2026-11-27 / 398544106d664894e869fba33ec0e3af29921c64 |
@@ -24,7 +24,7 @@ Status values are authoritative. No requirement is DONE without its acceptance o
 
 | id | status | commit SHA | evidence / acceptance check | last verified (date and SHA) |
 |---|---|---|---|---|
-| R1.1 | IN PROGRESS | 398544106d664894e869fba33ec0e3af29921c64 | Inspect failed run 45851830418 and the associated current-HEAD job logs. No UI/design files in the isolated build-fix commit; message is fix(build): <root cause>. | 2026-11-27 / 398544106d664894e869fba33ec0e3af29921c64 |
+| R1.1 | DONE | a1872364d9ce54aa7503b5656017adb704a6c391 | `fix(build): define RootView before screen coverage assertions`; only `scripts/check-screen-coverage.py` changed (1 addition/1 deletion). Previous blob `dbff2a27a4102f8aed939e8637acd92d6018bab`, new blob `fe50ae59dd7dc1d0abdd0932171c6d0ee1f2d07e`. | 2026-11-27 / a1872364d9ce54aa7503b5656017adb704a6c391 |
 | R1.2 | NOT STARTED | 398544106d664894e869fba33ec0e3af29921c64 | A green Actions run or real build command is attached to the fixed commit. | 2026-11-27 / 398544106d664894e869fba33ec0e3af29921c64 |
 | R1.3 | NOT STARTED | 398544106d664894e869fba33ec0e3af29921c64 | Every build error has message, file:line, root cause and fix evidence. | 2026-11-27 / 398544106d664894e869fba33ec0e3af29921c64 |
 | R2.1 | NOT STARTED | 398544106d664894e869fba33ec0e3af29921c64 | scripts/check-monochrome.sh exists and is committed. | 2026-11-27 / 398544106d664894e869fba33ec0e3af29921c64 |
