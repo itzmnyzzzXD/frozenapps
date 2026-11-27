@@ -4,7 +4,6 @@ from pathlib import Path
 import json
 import plistlib
 import re
-import shutil
 
 ROOT = Path(__file__).resolve().parents[1]
 APP = ROOT / "Vendor" / "SideInstaller" / "ios-app"
@@ -130,12 +129,11 @@ replace_section(root_path, "struct TwoFactorSheet: View {", "// MARK: - Tools",
             )''', 1
     ) if "FrozenAnimatedOTPInput(" not in section else section)
 
-# Remove the photo wallpaper from the generated asset catalog.
+# Keep upstream image/color asset files intact. The app must not reference them as
+# backgrounds; R2 checks presentation references and normalizes every colorset in place.
 glass_source = (INTEGRATION / "FrozenGlassComponents.swift").read_text(encoding="utf-8")
-if 'Image("SideStickBackground")' in glass_source:
-    raise SystemExit("Legacy SideStickBackground image remains in app background source.")
-shutil.rmtree(APP / "Assets.xcassets" / "SideStickBackground.imageset", ignore_errors=True)
-shutil.rmtree(APP / "Assets.xcassets" / "SignalGreen.colorset", ignore_errors=True)
+if 'Image("SideStickBackground")' in glass_source or "IMG_2135.jpeg" in glass_source:
+    raise SystemExit("Legacy photo wallpaper is still referenced by the workspace backdrop.")
 
 # Set shared theme tokens to grayscale.
 theme_path = APP / "Theme.swift"
