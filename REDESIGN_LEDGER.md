@@ -9,7 +9,7 @@ Status values are authoritative. No requirement is DONE without its acceptance o
 
 | id | status | commit SHA | evidence | last verified (date and SHA) |
 |---|---|---|---|---|
-| R1 | IN PROGRESS | ef6774007129be1551878c428fc11708cd57c17e | R1.1 isolated build fix, R1.2 full build/IPA run and R1.3 error record are complete; aggregate verify-all check on this head is running. Resume pointer: R1.2 — inspect the latest Actions run including SKIP_BUILD=1 verify-all. | 2026-11-27 / ef6774007129be1551878c428fc11708cd57c17e |
+| R1 | IN PROGRESS | 090ce24a5d6eafa88bdd2b306f3bcb38de7e9244 | R1.1 and R1.3 complete; R1.2 remains in progress until current-head CI, full build/IPA and aggregate verify-all pass. | 2026-11-27 / 090ce24a5d6eafa88bdd2b306f3bcb38de7e9244 |
 | R2 | NOT STARTED | 398544106d664894e869fba33ec0e3af29921c64 | Unverified; queue begins after R1 build is green. | 2026-11-27 / 398544106d664894e869fba33ec0e3af29921c64 |
 | R3 | NOT STARTED | 398544106d664894e869fba33ec0e3af29921c64 | Unverified; queue begins after R1 build is green. | 2026-11-27 / 398544106d664894e869fba33ec0e3af29921c64 |
 | R4 | NOT STARTED | 398544106d664894e869fba33ec0e3af29921c64 | Unverified; queue begins after R1 build is green. | 2026-11-27 / 398544106d664894e869fba33ec0e3af29921c64 |
@@ -25,7 +25,7 @@ Status values are authoritative. No requirement is DONE without its acceptance o
 | id | status | commit SHA | evidence / acceptance check | last verified (date and SHA) |
 |---|---|---|---|---|
 | R1.1 | DONE | a1872364d9ce54aa7503b5656017adb704a6c391 | `fix(build): define RootView before screen coverage assertions`; only `scripts/check-screen-coverage.py` changed (1 addition/1 deletion). Previous blob `dbff2a27a4102f8aed939e8637acd92d6018bab`, new blob `fe50ae59dd7dc1d0abdd0932171c6d0ee1f2d07e`. | 2026-11-27 / a1872364d9ce54aa7503b5656017adb704a6c391 |
-| R1.2 | DONE | a1872364d9ce54aa7503b5656017adb704a6c391 | Actions run 46010473811 completed success on the isolated fix commit. Logs: Metal shader compiled; Rust device+simulator libraries packaged; Build validation passed; unsigned IPA ZIP CRC/required entries/metadata passed. | 2026-11-27 / a1872364d9ce54aa7503b5656017adb704a6c391 |
+| R1.2 | IN PROGRESS | 090ce24a5d6eafa88bdd2b306f3bcb38de7e9244 | Prior isolated build/IPA run 46010473811 passed on a1872364; revalidating full build and aggregate verify-all on the current branch head after the ledger check failure. Resume pointer: fix shallow checkout so historical ledger commit SHAs resolve in CI. | 2026-11-27 / 090ce24a5d6eafa88bdd2b306f3bcb38de7e9244 |
 | R1.3 | DONE | ef6774007129be1551878c428fc11708cd57c17e | BUILD_FAILURES.md records both observed validator errors, exact file:line, root causes, fixing commits and the later green build evidence. | 2026-11-27 / ef6774007129be1551878c428fc11708cd57c17e |
 | R2.1 | NOT STARTED | 398544106d664894e869fba33ec0e3af29921c64 | scripts/check-monochrome.sh exists and is committed. | 2026-11-27 / 398544106d664894e869fba33ec0e3af29921c64 |
 | R2.2 | NOT STARTED | 398544106d664894e869fba33ec0e3af29921c64 | The monochrome script output reports zero violations. | 2026-11-27 / 398544106d664894e869fba33ec0e3af29921c64 |
@@ -86,4 +86,4 @@ Status values are authoritative. No requirement is DONE without its acceptance o
 
 ## Resume pointer
 
-**R1 → R1.2:** inspect the latest Actions run for `ef6774007129be1551878c428fc11708cd57c17e`; the aggregate `SKIP_BUILD=1 bash scripts/verify-all.sh` must pass and the full build/IPA steps must remain green.
+**R1 → R1.2:** update checkout depth so historical ledger SHAs resolve; run the aggregate check and full build on the updated branch head.
