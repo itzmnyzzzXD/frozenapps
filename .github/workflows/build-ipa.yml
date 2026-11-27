@@ -1,4 +1,4 @@
-name: Build and validate SideStick
+name: Build and validate SideStick OLED
 
 on:
   push:
@@ -18,16 +18,19 @@ permissions:
 
 concurrency:
   group: sidestick-build-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build:
     permissions:
       contents: write
     runs-on: xcode-27
+    timeout-minutes: 45
     steps:
       - name: Checkout FrozenApps source
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Prepare pinned installer engine (sparse checkout)
         shell: bash
@@ -52,12 +55,30 @@ jobs:
           xcodebuild -version
           swift --version
           python3 --version
-          if ! command -v cargo >/dev/null 2>&1; then
+          if ! command -v rustup >/dev/null 2>&1; then
             curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
           fi
-          source "$HOME/.cargo/env"
-          rustup target add aarch64-apple-ios aarch64-apple-ios-sim
+          if [[ -f "$HOME/.cargo/env" ]]; then
+            source "$HOME/.cargo/env"
+          else
+            export PATH="$(brew --prefix rustup)/bin:$HOME/.cargo/bin:$PATH"
+          fi
+          RUSTUP_BIN_DIR="$(dirname "$(command -v rustup)")"
+          export PATH="$RUSTUP_BIN_DIR:$HOME/.cargo/bin:$PATH"
+          echo "$RUSTUP_BIN_DIR" >> "$GITHUB_PATH"
           echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          echo "Rust toolchain path: $RUSTUP_BIN_DIR"
+          command -v rustup
+          command -v cargo
+          rustup --version
+          cargo --version
+          rustc --version
+          rustup target add aarch64-apple-ios aarch64-apple-ios-sim
+          rustup target list --installed
+          cargo metadata --locked --manifest-path Vendor/SideInstaller/rust-core/Cargo.toml --format-version 1 --no-deps >/dev/null
+          test -f Vendor/SideInstaller/build-rust.sh
+          test -f Vendor/SideInstaller/rust-core/Cargo.lock
+          echo "PASS: Rust CLI, iOS targets, Cargo manifest and lockfile preflight"
           if ! command -v xcodegen >/dev/null 2>&1; then
             brew install xcodegen
           fi
@@ -68,6 +89,33 @@ jobs:
           python3 scripts/apply-workspace-redesign.py
           python3 scripts/apply-settings-redesign.py
           python3 scripts/apply-sidestick-branding.py
+          python3 scripts/apply-liquidchrome-redesign.py
+          python3 scripts/migrate-system-icons.py
+          python3 scripts/import-vector-icons.py
+          bash scripts/check-monochrome.sh
+          python3 scripts/check-liquidchrome-contract.py
+          python3 scripts/check-icon-usage.py
+          python3 scripts/check-screen-coverage.py
+          bash scripts/compile-liquidchrome-metal.sh
+
+      - name: Run aggregate static verification
+        env:
+          SKIP_BUILD: "1"
+        run: bash scripts/verify-all.sh
+
+      - name: Generate Xcode project for incremental builds
+        run: xcodegen generate
+
+      - name: Cache Xcode incremental build data
+        uses: actions/cache@v4
+        with:
+          path: |
+            build/DerivedData/Build/Intermediates.noindex
+            build/DerivedData/ModuleCache.noindex
+            build/DerivedData/SDKStatCaches.noindex
+          key: ${{ runner.os }}-${{ runner.arch }}-xcode-27-${{ hashFiles('project.yml', 'Vendor/SideInstaller/ios-app/**/*.swift', 'Vendor/SideInstaller/ios-live-activity/**/*.swift', 'InstallerIntegration/**/*.swift', '**/*.metal') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-xcode-27-
 
       - name: Build Rust pairing and signing engine plus iOS app
         shell: bash
@@ -75,8 +123,34 @@ jobs:
           set -euo pipefail
           export DEVELOPER_DIR="$(xcode-select -p)"
           export IPHONEOS_DEPLOYMENT_TARGET=17.4
-          bash Vendor/SideInstaller/build-rust.sh
-          xcodegen generate
+          export PATH="$(dirname "$(command -v rustup)"):$HOME/.cargo/bin:$PATH"
+          echo "Build toolchain:"
+          command -v cargo
+          cargo --version
+          command -v rustc
+          rustc --version
+          test -f Vendor/SideInstaller/build-rust.sh
+          test -f Vendor/SideInstaller/rust-core/Cargo.toml
+          test -f Vendor/SideInstaller/rust-core/Cargo.lock
+          echo "Building pinned Rust FFI crate directly; bypassing upstream env loader."
+          export RUSTFLAGS="${RUSTFLAGS:-} --remap-path-prefix=${HOME}=/build"
+          export CFLAGS="${CFLAGS:-} -ffile-prefix-map=${HOME}=/build"
+          export TARGET_CFLAGS="${TARGET_CFLAGS:-} -ffile-prefix-map=${HOME}=/build"
+          RUST_CORE="$GITHUB_WORKSPACE/Vendor/SideInstaller/rust-core"
+          SIDESTORE="$GITHUB_WORKSPACE/Vendor/SideInstaller"
+          cd "$RUST_CORE"
+          cargo build --locked --release --target aarch64-apple-ios
+          cargo build --locked --release --target aarch64-apple-ios-sim
+          cd "$SIDESTORE"
+          rm -rf "$SIDESTORE/SideInstallerFFI.xcframework"
+          xcodebuild -create-xcframework \
+            -library rust-core/target/aarch64-apple-ios/release/libsideinstaller_ffi.a -headers rust-core/include \
+            -library rust-core/target/aarch64-apple-ios-sim/release/libsideinstaller_ffi.a -headers rust-core/include \
+            -output "$SIDESTORE/SideInstallerFFI.xcframework"
+          echo "PASS: device and simulator Rust static libraries packaged into SideInstallerFFI.xcframework."
+          cd "$GITHUB_WORKSPACE"
+          test -d FrozenApps.xcodeproj
+          echo "PASS: Xcode project found at $GITHUB_WORKSPACE/FrozenApps.xcodeproj"
           set -o pipefail
           xcodebuild -project FrozenApps.xcodeproj -scheme FrozenApps \
             -configuration Release -sdk iphoneos \
@@ -198,9 +272,7 @@ jobs:
       # Public binary distribution is the repository owner's responsibility.
       # Upload the artifact only for an explicit version-release publish.
       - name: Upload FrozenApps IPA build artifact
-        if: >-
-          github.event_name == 'push' &&
-          (startsWith(github.ref, 'refs/tags/') || (github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[publish-release]')))
+        if: success() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         uses: actions/upload-artifact@v4
         with:
           name: SideStick-unsigned-ipa

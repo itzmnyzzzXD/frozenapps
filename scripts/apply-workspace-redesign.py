@@ -41,7 +41,7 @@ for required in ("RootView.swift", "ContentView.swift"):
         raise SystemExit(f"Missing generated app source {APP / required}. Run the branding patch first.")
 
 
-# Floating vertical workspace rail on iPad and compact bottom dock on smaller screens.
+# One floating bottom dock for every device size. No sidebar or command bar.
 replace_owned(
     APP / "RootView.swift",
     "struct RootView: View {",
@@ -68,15 +68,6 @@ replace_owned(
         case "settings": selectPage(.settings)
         default: break
         }
-    }
-
-    private var navigationHeader: some View {
-        FrozenWorkspaceCommandBar(
-            title: currentPageTitle,
-            symbol: currentPageSymbol,
-            selectedID: currentPageID,
-            onSelect: selectPageID
-        )
     }
 
     private var workspaceTabs: some View {
@@ -110,41 +101,25 @@ replace_owned(
     }
 
     var body: some View {
-        GeometryReader { proxy in
-            ZStack {
-                FrozenWorkspaceBackdrop()
-                if proxy.size.width >= 760 {
-                    HStack(alignment: .center, spacing: 16) {
-                        FrozenWorkspaceRail(selectedID: currentPageID, compact: false, onSelect: selectPageID)
-                            .padding(.leading, 15)
-                            .padding(.vertical, 18)
-                        VStack(spacing: 12) {
-                            navigationHeader
-                            workspaceTabs
-                        }
-                        .padding(.vertical, 14)
-                        .padding(.trailing, 16)
-                    }
-                } else {
-                    VStack(spacing: 8) {
-                        navigationHeader
-                            .padding(.horizontal, 12)
-                            .padding(.top, 7)
-                        workspaceTabs
-                        FrozenWorkspaceRail(selectedID: currentPageID, compact: true, onSelect: selectPageID)
-                            .padding(.horizontal, 12)
-                            .padding(.bottom, 8)
-                    }
-                }
-            }
+        VStack(spacing: 0) {
+            workspaceTabs
+                .frame(maxWidth: 1280)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            FrozenWorkspaceDock(selectedID: currentPageID, onSelect: selectPageID)
+                .frame(maxWidth: 760)
+                .padding(.horizontal, 12)
+                .padding(.top, 8)
+                .padding(.bottom, 8)
+                .frame(maxWidth: .infinity)
         }
+        .frame(maxWidth: 1320)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.clear)
         .onChange(of: page) { _, page in Backdrop.settle(on: page.wash) }
         .onReceive(NotificationCenter.default.publisher(for: .frozenAppsOpenNetwork)) { _ in
             withAnimation(.smooth(duration: 0.25)) { page = .network }
         }
-        .popupStack(entries, onBackdropTap: backdropTap) { entry in
-            card(for: entry)
-        }
+        .popupStack(entries, onBackdropTap: backdropTap) { entry in card(for: entry) }
         .environmentObject(certManager)
         .onChange(of: accounts.revision) { _, _ in
             engine.forgetAppleSession()
@@ -152,7 +127,7 @@ replace_owned(
             entitlementsManager.signOut()
             sideBySideManager.signOut()
         }
-        .tint(Theme.accent)
+        .tint(.white)
         .preferredColorScheme(.dark)
         .sheet(isPresented: Binding(
             get: { engine.twoFactor != nil },

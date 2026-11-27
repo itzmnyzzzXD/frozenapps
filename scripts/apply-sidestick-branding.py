@@ -17,29 +17,17 @@ VENDOR = ROOT / "Vendor" / "SideInstaller"
 APP = VENDOR / "ios-app"
 ACTIVITY = VENDOR / "ios-live-activity"
 INTEGRATION = ROOT / "InstallerIntegration"
-SOURCE_BACKGROUND = ROOT / "IMG_2135.jpeg"
 SOURCE_ICON = ROOT / "IMG_2151.jpeg"
 ASSETS = APP / "Assets.xcassets"
-BACKGROUND_SET = ASSETS / "SideStickBackground.imageset"
 MARK_SET = ASSETS / "SideStickMark.imageset"
 ICON_SET = ASSETS / "AppIcon.appiconset"
 
 if not (APP / "Info.plist").is_file():
     raise SystemExit("Generated app Info.plist is missing; prepare the pinned engine first.")
-if not SOURCE_BACKGROUND.is_file():
-    raise SystemExit("IMG_2135.jpeg is missing from the repository root.")
 if not SOURCE_ICON.is_file():
     raise SystemExit("IMG_2151.jpeg is missing from the repository root.")
 if not ASSETS.is_dir():
     raise SystemExit("The upstream app asset catalog is missing.")
-
-# Add the supplied image to the asset catalog used by the app target.
-BACKGROUND_SET.mkdir(parents=True, exist_ok=True)
-shutil.copyfile(SOURCE_BACKGROUND, BACKGROUND_SET / "IMG_2135.jpeg")
-(BACKGROUND_SET / "Contents.json").write_text(json.dumps({
-    "images": [{"filename": "IMG_2135.jpeg", "idiom": "universal", "scale": "1x"}],
-    "info": {"author": "xcode", "version": 1}
-}, indent=2) + "\n", encoding="utf-8")
 
 # Reuse IMG_2151.jpeg as a small in-app brand mark. Keeping it in the existing
 # asset catalog means it is compiled into Assets.car instead of loaded at runtime.

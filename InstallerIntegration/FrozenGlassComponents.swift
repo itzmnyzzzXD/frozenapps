@@ -1,32 +1,13 @@
 import SwiftUI
 
-/// Cached wallpaper plus one inexpensive tint pass replace the old full-screen blur stack.
+/// Solid OLED surfaces that let the shared LiquidChrome renderer remain visible in gutters.
 struct FrozenWorkspaceBackdrop: View {
     var body: some View {
-        GeometryReader { proxy in
-            Image("SideStickBackground")
-                .resizable()
-                .scaledToFill()
-                .frame(width: proxy.size.width, height: proxy.size.height)
-                .clipped()
-                .overlay {
-                    LinearGradient(
-                        stops: [
-                            .init(color: Color.black.opacity(0.10), location: 0),
-                            .init(color: Color.black.opacity(0.16), location: 0.46),
-                            .init(color: Color.black.opacity(0.46), location: 1)
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                }
-        }
-        .ignoresSafeArea()
-        .accessibilityHidden(true)
+        Color.black.ignoresSafeArea().accessibilityHidden(true)
     }
 }
 
-/// Material glass with a directional specular edge, inner hairline and soft shadow.
+/// A monochrome black surface with two restrained white hairlines.
 struct FrozenGlassSurfaceModifier: ViewModifier {
     let cornerRadius: CGFloat
     let tint: Color
@@ -35,50 +16,13 @@ struct FrozenGlassSurfaceModifier: ViewModifier {
     func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
         content
-            .background {
-                shape.fill(.regularMaterial)
-                    .overlay {
-                        shape.fill(LinearGradient(
-                            stops: [
-                                .init(color: Color.white.opacity(0.17), location: 0),
-                                .init(color: tint.opacity(0.075), location: 0.28),
-                                .init(color: Color.white.opacity(0.025), location: 0.58),
-                                .init(color: Color.black.opacity(0.16), location: 1)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ))
-                    }
-                    .overlay(alignment: .topLeading) {
-                        shape.fill(LinearGradient(
-                            colors: [Color.white.opacity(0.06), Color.white.opacity(0.018), .clear],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ))
-                    }
+            .background { shape.fill(Color.black) }
+            .overlay {
+                shape.strokeBorder(Color.white.opacity(0.12), lineWidth: 1)
             }
             .overlay {
-                shape.strokeBorder(LinearGradient(
-                    stops: [
-                        .init(color: Color.white.opacity(0.42), location: 0),
-                        .init(color: Color(red: 1.0, green: 0.91, blue: 0.82).opacity(0.20), location: 0.20),
-                        .init(color: tint.opacity(0.17), location: 0.48),
-                        .init(color: Color.white.opacity(0.055), location: 0.78),
-                        .init(color: Color.white.opacity(0.22), location: 1)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                ), lineWidth: 1)
+                shape.inset(by: 1).strokeBorder(Color.white.opacity(0.06), lineWidth: 1)
             }
-            .overlay {
-                shape.inset(by: 1).strokeBorder(Color.white.opacity(0.045), lineWidth: 1)
-            }
-            .shadow(
-                color: Color.black.opacity(elevated ? 0.23 : 0.13),
-                radius: elevated ? 24 : 12,
-                x: 0,
-                y: elevated ? 10 : 5
-            )
     }
 }
 
@@ -86,13 +30,13 @@ extension View {
     func frozenGlassSurface(cornerRadius: CGFloat = 20, tint: Color? = nil, elevated: Bool = false) -> some View {
         modifier(FrozenGlassSurfaceModifier(
             cornerRadius: cornerRadius,
-            tint: tint ?? Theme.accent.opacity(0.18),
-            elevated: elevated
+            tint: .white,
+            elevated: false
         ))
     }
 }
 
-/// One material system for all workspace-owned cards.
+/// Shared black workspace panel; content and existing callbacks are unchanged.
 struct FrozenWorkspacePanel<Content: View>: View {
     private let content: Content
     var cornerRadius: CGFloat
@@ -108,11 +52,11 @@ struct FrozenWorkspacePanel<Content: View>: View {
         content
             .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .frozenGlassSurface(cornerRadius: cornerRadius, tint: Theme.accent.opacity(0.16), elevated: elevated)
+            .frozenGlassSurface(cornerRadius: cornerRadius)
     }
 }
 
-/// A glass label for native menus with system-managed placement and dismissal.
+/// Black native menu label with a white hairline.
 struct FrozenGlassMenuLabel: View {
     let title: String
     var icon: String? = nil
@@ -123,7 +67,7 @@ struct FrozenGlassMenuLabel: View {
             if let icon {
                 Image(systemName: icon)
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(Theme.accent2)
+                    .foregroundStyle(.white)
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
@@ -133,28 +77,19 @@ struct FrozenGlassMenuLabel: View {
                 if let subtitle {
                     Text(subtitle)
                         .font(.system(size: 9, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.54))
+                        .foregroundStyle(.white.opacity(0.48))
                         .lineLimit(1)
                 }
             }
             Image(systemName: "chevron.down")
                 .font(.system(size: 9, weight: .heavy))
-                .foregroundStyle(.white.opacity(0.60))
+                .foregroundStyle(.white.opacity(0.48))
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(.regularMaterial, in: Capsule())
+        .background(Color.black, in: Capsule())
         .overlay {
-            Capsule().strokeBorder(LinearGradient(
-                colors: [
-                    Color.white.opacity(0.36),
-                    Color(red: 1.0, green: 0.91, blue: 0.82).opacity(0.15),
-                    Theme.accent.opacity(0.13),
-                    Color.white.opacity(0.075)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            ), lineWidth: 1)
+            Capsule().strokeBorder(Color.white.opacity(0.12), lineWidth: 1)
         }
         .contentShape(Capsule())
     }

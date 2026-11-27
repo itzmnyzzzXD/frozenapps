@@ -1,29 +1,24 @@
-# SideStick release-readiness checklist
+# SideStick 1.2.2 — OLED LiquidChrome redesign
 
-## Current state
+## Scope
 
-- The structural workspace redesign is reproducibly applied by `scripts/apply-workspace-redesign.py` and `scripts/apply-settings-redesign.py` after the branding patch; shared glass/navigation components and redesigned library/catalog layouts live in `InstallerIntegration/`.
-- The redesign includes a responsive floating navigation rail, compact dock, command bar, two-column Signer workspace, filter-panel IPA Library and App Catalog, responsive Tools grid and card-based Settings. Account setup/onboarding and two-factor screens remain unchanged.
-- SideStick 1.2.0 uses marketing version `1.1.0` and CI build number `15` in `project.yml`. The published IPA is unsigned; a successful archive build does not prove on-device signing or installation.
-- GitHub Actions builds the native engine and iOS app, validates app metadata/architecture, packages the unsigned IPA and checksum, and checks ZIP integrity plus app bundle/version metadata before replacing the version release assets. The release process does not require a repository variable or manual true switch. The published package is unsigned and still needs a supported signing method before installation.
-- The app has not been physically tested as part of this source change. Pairing, Local Network permission, Apple authentication, two-factor callbacks, provisioning, signing, installation, and error recovery still require testing on an actual iPhone/iPad with a user-controlled account.
-- Required upstream attribution and the full custom licence are retained in source documentation, the Terms screen, and Settings.
-- The release workflow does not require a repository variable or a manual `true` switch: a validated version-tag push or a `[publish-release]` commit on `main` attaches the unsigned IPA and SHA-256 checksum to the GitHub Release.
+This branch is based on the published 1.2.2 release and replaces its legacy presentation layer with native SwiftUI and Metal components.
 
-## Gates
+- A single monochrome LiquidChrome Metal renderer sits behind Welcome, account setup, verification and every workspace page. The requested white defaults are pinned; Reduce Motion, Reduce Transparency, Increase Contrast and Low Power Mode have explicit renderer behaviour.
+- The previous IMG_2135.jpeg wallpaper is no longer added to the asset catalog or referenced by the workspace backdrop.
+- The iPad vertical rail and previous command bar are removed. One six-destination, shape-based black liquid-lens dock is shared by iPhone and iPad; original navigation destinations and actions are retained.
+- The animated account form follows the real Apple ID/password values and active field, without revealing password content.
+- The secure-access OTP card keeps the single real One-Time-Code AutoFill field, six animated slots, verification/error feedback and the original Engine callback.
+- The launch reveal displays "welcome to frozenapps" word by word, with an immediate completion path under Reduce Motion.
+- The install-only Stats card uses the icon from the signed app bundle and actual Engine percentage/stage data. Its three-step Progress Stack follows active, waiting, failed and final states and appears only while the Engine reports an active installation.
+- App-owned interface colors are grayscale, the app tint is white, and the launch background is OLED black. App-owned screen icons use the central AppIcon resolver and original local SVG vector assets, with a monochrome system fallback for dynamic or unmapped icons.
 
-- [x] Preserve licence text and required source attribution.
-- [x] Keep branding patches in the reproducible build script rather than only in generated source.
-- [ ] Verify branch build compiles the redesigned account views, tool glyphs, progress ring, and Local Network screen.
-- [ ] Inspect the built unsigned IPA for app version/build, Local Network purpose text and Bonjour declarations.
-- [ ] Test pairing on a device running a supported newer iPadOS version.
-- [ ] For iOS/iPadOS 17.4–26.7, test importing an existing pairing file; do not claim computer-free pairing unless prerequisites are met.
-- [ ] Verify LocalDevVPN, Local Network access, and required OS prompts.
-- [ ] Test authentication, password handling in Keychain, two-factor callbacks, provisioning, IPA signing, install, retry and failure recovery on physical hardware.
-- [ ] Test after reboot and clean install. Do not include credentials or verification codes in CI logs.
-- [ ] Verify the published unsigned IPA/checksum matches the latest successful main build.
-- [x] Keep release publication free of a required repository-variable toggle.
+## Preserved behavior
 
-## CI limits
+Authentication, AccountStore, Keychain, two-factor answer handling, pairing, provisioning, signing, installation, file import/export, app catalog, update checks, Local Network permissions and the pinned upstream engine are kept in their existing implementations.
 
-CI can prove compilation, expected bundle metadata/architecture, and IPA archive structure. It cannot prove Apple will accept a specific account, that pairing works on a particular iPadOS/device combination, or that a signed app installs and launches. Those checks require physical-device testing and a valid account.
+The React reference components are represented by native SwiftUI equivalents because the shipping target is a native iOS/iPadOS app; browser code is not embedded in the app.
+
+## Verification limits
+
+CI verifies source integration, icon migration and vector import, monochrome assets, the LiquidChrome parameter/accessibility contract, Metal compilation, screen coverage, Xcode compilation, app bundle metadata and unsigned IPA packaging. Static source checks do not establish visual quality, clipping, animation smoothness, VoiceOver behaviour, Dynamic Type layout, physical-device Apple authentication, pairing, signing or installation. Those require iPhone/iPad testing with screenshots and interaction recordings. The IPA remains unsigned until signed using a supported method.
