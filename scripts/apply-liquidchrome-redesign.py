@@ -7,6 +7,7 @@ import re
 
 ROOT = Path(__file__).resolve().parents[1]
 APP = ROOT / "Vendor" / "SideInstaller" / "ios-app"
+ACTIVITY = ROOT / "Vendor" / "SideInstaller" / "ios-live-activity"
 INTEGRATION = ROOT / "InstallerIntegration"
 
 def replace_once(path, old, new):
@@ -276,7 +277,9 @@ def normalize_swift(source):
     source = source.replace(".preferredColorScheme(.light)", ".preferredColorScheme(.dark)")
     return source
 
-for folder in (APP, INTEGRATION):
+for folder in (APP, ACTIVITY, INTEGRATION):
+    if not folder.is_dir():
+        continue
     for path in folder.rglob("*.swift"):
         original = path.read_text(encoding="utf-8")
         normalized = normalize_swift(original)

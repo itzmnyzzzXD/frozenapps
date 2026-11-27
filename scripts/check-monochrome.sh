@@ -10,6 +10,7 @@ import sys
 
 root = Path(sys.argv[1])
 app = root / "Vendor/SideInstaller/ios-app"
+activity = root / "Vendor/SideInstaller/ios-live-activity"
 integration = root / "InstallerIntegration"
 failures = []
 
@@ -19,8 +20,10 @@ def fail(message):
 if not (app / "SideInstallerApp.swift").is_file():
     fail("generated app source is missing")
 
-swift_files = list(app.rglob("*.swift")) + list(integration.rglob("*.swift"))
+swift_files = list(app.rglob("*.swift")) + list(activity.rglob("*.swift")) + list(integration.rglob("*.swift"))
 metal_files = list(app.rglob("*.metal")) + list(integration.rglob("*.metal"))
+if not (activity / "PairingActivityWidget.swift").is_file():
+    fail("Live Activity widget source is missing from the generated target")
 source_files = swift_files + metal_files
 
 material_pattern = re.compile(
@@ -177,6 +180,7 @@ if failures:
 print("PASS: 0 monochrome violations (no system materials, chromatic/gray tokens, system colors, raw constructors, off-step opacity or non-black/white source hex).")
 print("PASS: AccentColor is #FFFFFF; app root uses .tint(.white) and .preferredColorScheme(.dark).")
 print("PASS: black app window and launch screen; dark keyboard/status-bar scheme; all compiled color assets are grayscale.")
+print("PASS: separate Live Activity widget Swift source is included in the same strict monochrome scan.")
 print("PASS: no wallpaper or image-background references remain; original upstream image assets are retained, not deleted.")
 print("PASS: app root owns the shared LiquidChrome view; legacy sidebar and command bar are absent.")
 PY
